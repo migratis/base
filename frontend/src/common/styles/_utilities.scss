@@ -1,0 +1,67 @@
+// =============================================================================
+// _utilities.scss
+// Helper classes, width utilities (.w-5 → .w-100) and minor overrides.
+// =============================================================================
+
+// ── Typography helpers ────────────────────────────────────────────────────────
+.em-08 {
+  font-size: $font-size-small;
+}
+
+.text-small {
+  text-align: left;
+  font-size: $font-size-small;
+}
+
+// ── Overflow / scroll ─────────────────────────────────────────────────────────
+.overflow-x-scroll {
+  overflow-x: scroll;
+}
+
+// ── Fixed dimensions ──────────────────────────────────────────────────────────
+.fixed-height {
+  height: 168px !important;
+}
+
+// ── Loader spinner modal ──────────────────────────────────────────────────────
+.loader-modal {
+  margin: auto;
+  width: 100px;
+}
+
+// ── Borders ───────────────────────────────────────────────────────────────────
+.border-top {
+  border-top: 1px solid $color-border;
+}
+
+// ── Slider reset ──────────────────────────────────────────────────────────────
+.slider-reset {
+  position: relative;
+  top: 10px;
+}
+
+// ── Toast z-index override ────────────────────────────────────────────────────
+.Toastify__toast {
+  z-index: 999;
+}
+
+// ── Alert override ────────────────────────────────────────────────────────────
+.alert-danger {
+  --bs-alert-color:        #842029;
+  --bs-alert-bg:           #f8d7da;
+  --bs-alert-border-color: #f5c2c7;
+}
+
+// ── Generated width utilities (.w-5, .w-10, … .w-100) ────────────────────────
+// Fills the gap between Bootstrap's fixed .w-25 / .w-50 / .w-75 / .w-100.
+$_step: 5;
+$_max:  100;
+
+@for $i from $_step through $_max {
+  @if $i % $_step == 0 {
+    .w-#{$i} {
+      width: $i * 1%;
+      max-width: $i * 1%;
+    }
+  }
+}

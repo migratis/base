@@ -1,0 +1,22 @@
+services:
+  base-ui:
+    container_name: frontend-base
+    build:
+      context: .
+    volumes:
+      - '.:/frontend'
+      - /frontend/node_modules
+    ports:
+      - 3002:3002
+    networks:
+      static-network:
+        ipv4_address: 172.22.0.5   
+    environment:
+      - NODE_ENV=development    
+networks:
+  static-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.22.0.0/16
+

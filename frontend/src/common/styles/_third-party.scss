@@ -1,0 +1,148 @@
+// =============================================================================
+// _third-party.scss
+// Overrides and fixes for third-party component libraries.
+// =============================================================================
+
+// ── react-datepicker ─────────────────────────────────────────────────────────
+.react-datepicker-wrapper {
+  width: 100%;
+}
+
+.react-datepicker {
+  font-family: $font-stack-body;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+
+.react-datepicker-popper {
+  z-index: 1100 !important;
+}
+
+.react-datepicker__header {
+  background-color: var(--color-dark);
+  color: var(--color-light);
+  border-bottom: none;
+  padding: 12px;
+}
+
+.react-datepicker__navigation {
+  top: 12px !important;
+}
+
+.react-datepicker__current-month,
+.react-datepicker__day-name {
+  color: var(--color-light);
+}
+
+.react-datepicker__day {
+  border-radius: var(--border-radius);
+  
+  &:hover {
+    background-color: var(--color-light-gray);
+  }
+
+  &.react-datepicker__day--selected {
+    background-color: var(--color-primary);
+    color: var(--color-light);
+  }
+}
+
+.react-datepicker__triangle {
+  display: none;
+}
+
+// ── react-tooltip ─────────────────────────────────────────────────────────────
+.react-tooltip {
+  max-width: 300px !important;
+  background-color: var(--color-dark) !important;
+  color: var(--color-light) !important;
+  border-radius: var(--border-radius);
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  box-shadow: var(--shadow);
+}
+
+// ── react-colorful ────────────────────────────────────────────────────────────
+.react-colorful {
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow);
+}
+
+.react-colorful__saturation {
+  border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
+}
+
+.react-colorful__hue {
+  border-radius: 0 0 var(--border-radius-lg) var(--border-radius-lg);
+  height: 16px;
+}
+
+// ── react-flags-select ────────────────────────────────────────────────────────
+.react-flags-select {
+  .react-flags-select__options {
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--color-border);
+  }
+
+  .react-flags-select__option {
+    padding: 8px 12px;
+    
+    &:hover {
+      background-color: var(--color-light-gray);
+    }
+  }
+}
+
+// ── rc-slider (range sliders) ────────────────────────────────────────────────
+td.small_size {
+  max-width: 5%;
+  font-size: $font-size-small;
+}
+
+td.slider_size {
+  min-width: 60%;
+}
+
+td.step_mode_size {
+  min-width: 15%;
+  font-size: $font-size-small;
+}
+
+// ── react-select ─────────────────────────────────────────────────────────────
+.react-select {
+  .react-select__control {
+    border-radius: var(--border-radius);
+    border: 1px solid var(--color-border);
+    background-color: var(--color-white);
+    
+    &:hover {
+      border-color: var(--color-primary);
+    }
+
+    &.react-select__control--is-focused {
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px rgba(106, 155, 204, 0.15);
+    }
+  }
+
+  .react-select__menu {
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--color-border);
+  }
+
+  .react-select__option {
+    padding: 8px 12px;
+    
+    &:hover {
+      background-color: var(--color-light-gray);
+    }
+
+    &.react-select__option--is-selected {
+      background-color: var(--color-primary);
+      color: var(--color-light);
+    }
+  }
+}

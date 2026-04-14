@@ -1,0 +1,22 @@
+services:
+  api_dev:
+    build: 
+      context: .
+    entrypoint: /docker-entrypoint.sh
+    volumes:
+      - .:/backend
+    expose:
+      - "8003"
+    ports:
+      - "8003:8003"
+    networks:
+      static-network:
+        ipv4_address: 172.21.0.4
+networks:
+  static-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16
+volumes:
+  pgdata: {}

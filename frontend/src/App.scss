@@ -1,0 +1,35 @@
+// =============================================================================
+// App.scss — entry point
+// Import order matters:
+//   1. Variables (tokens + Bootstrap overrides) — must come first
+//   2. Bootstrap — consumes the overridden variables
+//   3. Core partials — layout, navigation, components, forms, buttons
+//   4. Utilities + third-party fixes
+//   5. Responsive rules — always last so they override correctly
+//   6. Feature modules — scoped per-module styles
+// =============================================================================
+
+// ── 1. Design tokens ──────────────────────────────────────────────────────────
+@import 'common/styles/variables';
+
+// ── 2. Bootstrap ──────────────────────────────────────────────────────────────
+@import 'common/styles/bootstrap';
+
+// ── 3. Core ───────────────────────────────────────────────────────────────────
+@import 'common/styles/layout';
+@import 'common/styles/navigation';
+@import 'common/styles/components';
+@import 'common/styles/forms';
+@import 'common/styles/buttons';
+
+// ── 4. Utilities & third-party ────────────────────────────────────────────────
+@import 'common/styles/utilities';
+@import 'common/styles/third-party';
+
+// ── 5. Responsive ─────────────────────────────────────────────────────────────
+@import 'common/styles/responsive';
+
+// ── 6. Feature modules ────────────────────────────────────────────────────────
+@import 'subscription/styles/module';
+@import 'support/styles/module';
+@import 'user/styles/module';

@@ -1,0 +1,42 @@
+services:
+  db:
+    image: postgres:14.2
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - /var/backups/pg_backups:/var/backups/pg_backups
+      - /var/log/pg_backups:/var/log/pg_backups
+    expose:
+      - "5433"
+    ports:
+      - "127.0.0.1:5435:5435"
+    command: -p 5435
+    networks:
+      static-network:
+        ipv4_address: 172.21.0.2
+  api:
+    build: 
+      context: .
+    entrypoint: /docker-entrypoint.sh
+    volumes:
+      - .:/backend
+    expose:
+      - "8002"
+    ports:
+      - "8002:8002"
+    networks:
+      static-network:
+        ipv4_address: 172.21.0.3
+    depends_on:
+      - db
+networks:
+  static-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16
+volumes:
+  pgdata: {}

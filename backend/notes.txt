@@ -1,0 +1,13 @@
+* stripe client launch for local development :
+    docker run --rm -it stripe/stripe-cli listen --api-key [stripe_test_secret_key]
+* Query to get the untranslated keys :
+    (select distinct key from i18n_translationkey) except (select distinct a.key from i18n_translationkey a, i18n_translationtext b where a.id = b.key_id);
+* Step to install a new database in postgresql :
+    # docker exec -it backend_db_1 bash
+    # su postgres
+    $ createdb migratis
+    $ createuser -P -S -D -R migratis
+    $ psql -U migratis < /var/backups/pg_backups/db.sql
+* before production deployment don't forget to change the settings in the .env file
+* check regularly if django-criptography v2 is available at pypi. if yes remove the line 'RUN pip install "git+https://github.com/saurav-codes/django-cryptography"'
+* Find another way to get the csrftoken value instead of this horrible hack using a template

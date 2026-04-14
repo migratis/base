@@ -1,0 +1,21 @@
+{% autoescape off %}
+
+Hello{% if support.user is not None %} {{ support.user.first_name }} {{ support.user.last_name }}{% endif %},
+
+{% if support.user is not None %}
+You have received a replied for your ticket number {{ support.ticket.id }} here: {{ url }}/support/ticket/?id={{ support.ticket.id }}
+{% else %}
+You have received a reply to your message.
+
+Your question : {{ support.ticket.content }} 
+
+Response from the {{ app }} support : {{ support.content }}
+{% endif %}
+
+Best regards
+
+-- 
+The team {{ app }}
+{{ url }}
+
+{% endautoescape %}

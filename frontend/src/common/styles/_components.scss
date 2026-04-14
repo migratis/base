@@ -1,0 +1,650 @@
+// =============================================================================
+// _components.scss
+// Anthropic-inspired reusable UI components.
+// Cards, modals, tables, accordions, badges, etc.
+// =============================================================================
+
+// ── Cards ─────────────────────────────────────────────────────────────────────
+.card {
+  background-color: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-lg);
+  padding: 20px;
+  margin: 16px 0;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--transition), transform var(--transition);
+
+  &:hover {
+    box-shadow: var(--shadow);
+  }
+}
+
+.card-container.card {
+  position: relative;
+  padding: 32px;
+  margin: 24px auto;
+  max-width: 600px;
+}
+
+// ── Profile card ──────────────────────────────────────────────────────────────
+.profile-img-card {
+  width: 96px;
+  height: 96px;
+  margin: 0 auto 16px;
+  display: block;
+  border-radius: 50%;
+  border: 3px solid var(--color-border);
+}
+
+// ── Modal ─────────────────────────────────────────────────────────────────────
+.modal {
+  z-index: $z-modal;
+}
+
+.modal-backdrop {
+  z-index: $z-modal-backdrop;
+}
+
+.modal-content {
+  border: none;
+  border-radius: var(--border-radius-xl);
+  box-shadow: var(--shadow-xl);
+  overflow: hidden;
+}
+
+// ── Migratis Modal (new style) ───────────────────────────────────────────────
+.migratis-modal {
+  .modal-dialog {
+    max-width: 520px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  &.modal-lg .modal-dialog {
+    max-width: 720px;
+  }
+
+  &.modal-xl .modal-dialog {
+    max-width: 960px;
+  }
+
+  .modal-content {
+    border-radius: 8px;
+    overflow: hidden;
+    max-height: calc(90vh - 40px);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .modal-header {
+    border-radius: 8px 8px 0 0;
+    padding: 10px 16px;
+    min-height: 40px;
+    flex-shrink: 0;
+  }
+
+  .modal-body {
+    overflow-y: auto;
+    flex: 1;
+  }
+
+  .modal-footer {
+    flex-shrink: 0;
+  }
+}
+
+.migratis-modal-header {
+  background-color: var(--color-dark) !important;
+  color: var(--color-light);
+  border-bottom: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  .migratis-modal-icon {
+    display: flex;
+    align-items: center;
+    font-size: 1rem;
+    color: var(--color-light);
+
+    svg {
+      width: 18px;
+      height: 18px;
+    }
+  }
+
+  .migratis-modal-title {
+    flex: 1;
+    font-family: $font-stack-heading;
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin: 0;
+    color: var(--color-light);
+  }
+
+  .migratis-modal-close {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--color-light);
+    transition: all var(--transition-fast);
+    padding: 0;
+
+    svg {
+      width: 12px;
+      height: 12px;
+    }
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+  }
+}
+
+.migratis-modal-body {
+  padding: 16px;
+  background-color: var(--color-white);
+  color: var(--color-text-dark);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  width: 100%;
+  box-sizing: border-box;
+  overflow-y: auto;
+
+  // Form styling within modals
+  .form-group {
+    margin-bottom: 12px;
+  }
+
+  label {
+    font-weight: 500;
+    margin-bottom: 6px;
+    display: block;
+    color: var(--color-text-dark);
+  }
+
+  input:not([type="checkbox"]):not([type="radio"]), 
+  select, 
+  textarea {
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius);
+    padding: 8px 12px;
+    width: 100%;
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+
+    &:focus {
+      outline: none;
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px rgba(217, 119, 87, 0.15);
+    }
+  }
+}
+
+// Action buttons in modal body
+.app-details-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+
+  .btn {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    min-width: 100px;
+    justify-content: center;
+  }
+}
+
+.migratis-modal-footer {
+  padding: 10px 16px;
+  background-color: var(--color-light-gray);
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+
+  .migratis-modal-btn {
+    padding: 6px 14px;
+    border-radius: var(--border-radius);
+    font-weight: 500;
+    font-size: 0.85rem;
+    transition: all var(--transition-fast);
+
+    &:hover {
+      transform: translateY(-1px);
+    }
+  }
+}
+
+// Legacy modal overrides
+.modal-header {
+  background-color: var(--color-dark);
+  color: var(--color-light);
+  padding: 20px 24px;
+  border-bottom: none;
+
+  .btn-close {
+    filter: invert(1);
+    opacity: 0.7;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+}
+
+.modal-body {
+  padding: 24px;
+}
+
+.modal-footer {
+  padding: 16px 24px;
+  background-color: var(--color-light-gray);
+  border-top: 1px solid var(--color-border);
+}
+
+// ── Bootstrap modal overrides ──────────────────────────────────────────────────
+.modal-dialog {
+  max-width: 500px;
+
+  &.modal-lg {
+    max-width: 700px;
+  }
+
+  &.modal-xl {
+    max-width: 900px;
+  }
+}
+
+// ── Striped rows (custom list rows) ──────────────────────────────────────────
+.striped {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--color-border);
+  padding: 12px 16px;
+  transition: background-color var(--transition-fast);
+
+  &.empty {
+    background-color: var(--color-light-gray);
+    padding: 24px;
+    text-align: center;
+    color: var(--color-text-muted);
+  }
+
+  &:nth-of-type(odd)  { background-color: var(--color-white); }
+  &:nth-of-type(even) { background-color: var(--color-light-gray); }
+
+  &:hover {
+    background-color: rgba(106, 155, 204, 0.08);
+  }
+}
+
+.col-head {
+  padding: 12px 16px;
+  font-weight: 600;
+  font-family: $font-stack-heading;
+  color: var(--color-text-dark);
+  background-color: var(--color-light-gray);
+}
+
+.col-action {
+  padding: 12px 16px;
+  text-align: right;
+}
+
+// ── AI Loader Modal ───────────────────────────────────────────────────────────
+.loader-modal-wide {
+  .modal-dialog {
+    max-width: 700px;
+    margin: 1.75rem auto;
+  }
+}
+
+// ── Info Popover ──────────────────────────────────────────────────────────────
+.info-popover {
+  max-width: 400px;
+  
+  .popover-body {
+    white-space: normal;
+    word-wrap: break-word;
+    
+    strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+    
+    hr {
+      border-color: var(--color-border);
+      opacity: 0.5;
+    }
+  }
+}
+
+.popover-trigger {
+  display: inline-flex;
+  align-items: center;
+  color: var(--color-muted);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.popover-trigger:hover {
+  color: var(--color-primary);
+}
+
+// ── Accordion (non-sidebar contexts) ─────────────────────────────────────────
+.accordion {
+  --bs-accordion-bg: transparent;
+  --bs-accordion-border-color: var(--color-border);
+  --bs-accordion-border-radius: var(--border-radius-lg);
+  --bs-accordion-inner-border-radius: var(--border-radius-lg);
+  --bs-accordion-btn-padding-x: 20px;
+  --bs-accordion-btn-padding-y: 16px;
+  --bs-accordion-btn-color: var(--color-text-dark);
+  --bs-accordion-btn-bg: var(--color-white);
+  --bs-accordion-btn-focus-border-color: var(--color-primary);
+  --bs-accordion-btn-focus-box-shadow: 0 0 0 3px rgba(106, 155, 204, 0.15);
+  --bs-accordion-btn-active-color: var(--color-primary);
+  --bs-accordion-btn-active-bg: var(--color-light-gray);
+  --bs-accordion-body-padding: 20px;
+  --bs-accordion-active-color: var(--color-primary);
+  --bs-accordion-active-bg: var(--color-light-gray);
+
+  margin-bottom: 16px;
+
+  .accordion-button {
+    font-family: $font-stack-heading;
+    font-weight: 500;
+
+    &:not(.collapsed) {
+      box-shadow: none;
+    }
+
+    &::after {
+      background-size: 16px;
+    }
+  }
+}
+
+// ── Row title bar ─────────────────────────────────────────────────────────────
+.row-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: var(--color-dark);
+  color: var(--color-light);
+  padding: 12px 16px;
+  margin: 16px 0;
+  border-radius: var(--border-radius);
+  font-family: $font-stack-heading;
+  font-weight: 500;
+}
+
+// ── Badges ────────────────────────────────────────────────────────────────────
+.badge {
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: var(--border-radius-sm);
+
+  &.bg-primary {
+    background-color: var(--color-primary) !important;
+  }
+
+  &.bg-success {
+    background-color: var(--color-success) !important;
+  }
+
+  &.bg-warning {
+    background-color: var(--color-orange) !important;
+    color: var(--color-dark);
+  }
+
+  &.bg-info {
+    background-color: var(--color-orange) !important;
+  }
+
+  &.bg-secondary {
+    background-color: var(--color-mid-gray) !important;
+  }
+}
+
+// ── Progress bars ─────────────────────────────────────────────────────────────
+.progress {
+  height: 6px;
+  background-color: var(--color-light-gray);
+  border-radius: 3px;
+  overflow: hidden;
+
+  .progress-bar {
+    background-color: var(--color-primary);
+    transition: width var(--transition);
+  }
+}
+
+// ── Recurrent / entry wording chips ──────────────────────────────────────────
+.recurrent-wording,
+.entry-wording {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background-color: var(--color-light-gray);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  margin: 4px;
+  font-size: 0.9rem;
+}
+
+.entry-wording {
+  max-height: 60px;
+  overflow: auto;
+}
+
+.recurrent-info {
+  display: block;
+  width: 100%;
+  text-align: center;
+  min-height: 24px;
+  padding: 8px;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+// ── Payment / invoice boxes ───────────────────────────────────────────────────
+.payment-info {
+  padding: 24px;
+  background-color: var(--color-light-gray);
+  border-radius: var(--border-radius-lg);
+  border: 1px solid var(--color-border);
+}
+
+.invoices {
+  text-align: left;
+  max-height: 300px;
+  overflow-y: auto;
+  background-color: var(--color-white);
+  padding: 16px;
+  border-radius: var(--border-radius);
+  border: 1px solid var(--color-border);
+}
+
+// ── Toast notifications ────────────────────────────────────────────────────────
+.toast-container {
+  .toast {
+    background-color: var(--color-white);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .toast-success {
+    border-left: 4px solid var(--color-green);
+  }
+
+  .toast-error {
+    border-left: 4px solid #dc3545;
+  }
+
+  .toast-warning {
+    border-left: 4px solid var(--color-orange);
+  }
+
+  .toast-info {
+    border-left: 4px solid var(--color-orange);
+  }
+}
+
+// ── Tooltips & Popovers ────────────────────────────────────────────────────────
+.tooltip {
+  font-size: 0.85rem;
+}
+
+.popover {
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 0;
+
+  .popover-header {
+    background-color: var(--color-dark);
+    color: var(--color-light);
+    border-bottom: none;
+    padding: 12px 16px;
+    font-family: $font-stack-heading;
+    font-weight: 500;
+  }
+
+  .popover-body {
+    padding: 16px;
+  }
+}
+
+// ── Miscellaneous ─────────────────────────────────────────────────────────────
+.separator {
+  height: 24px;
+  width: 1px;
+  background-color: var(--color-border);
+  margin: 0 8px;
+}
+
+.alarm {
+  color: var(--color-orange);
+}
+
+.tag-selector-row {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.tag-selector-col {
+  padding: 4px;
+}
+
+.tag-selector-minus {
+  color: var(--color-orange);
+  cursor: pointer;
+
+  &:hover {
+    transform: scale(1.2);
+  }
+}
+
+.list-group-item {
+  width: fit-content;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  margin: 4px;
+  background-color: var(--color-white);
+  transition: all var(--transition-fast);
+
+  &:hover {
+    background-color: var(--color-light-gray);
+  }
+}
+
+.budget-chart {
+  max-height: 500px !important;
+}
+
+// ── Links ─────────────────────────────────────────────────────────────────────
+.link {
+  color: var(--color-primary);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+
+  &:hover {
+    color: var(--color-dark);
+  }
+}
+
+// ── Expandable text toggle ──────────────────────────────────────────────────
+.expandable-text-toggle {
+  font-size: 0.85em;
+  white-space: nowrap;
+  color: var(--color-orange);
+  cursor: pointer;
+  transition: opacity var(--transition-fast);
+
+  &:hover {
+    opacity: 0.8;
+  }
+}
+
+// ── Popover trigger icon ───────────────────────────────────────────────────
+.popover-trigger {
+  color: var(--color-text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  transition: color var(--transition-fast);
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  &:hover {
+    color: var(--color-orange);
+  }
+}
+
+// ── Action links ──────────────────────────────────────────────────────────────
+.action {
+  cursor: pointer;
+  padding: 8px;
+  border-radius: var(--border-radius);
+  transition: all var(--transition-fast);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    background-color: var(--color-light-gray);
+    transform: scale(1.1);
+  }
+}
+
+// ── Application cards grid ────────────────────────────────────────────────────
+.application-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+
+  @media (max-width: 1200px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+}

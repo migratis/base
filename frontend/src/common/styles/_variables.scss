@@ -1,0 +1,140 @@
+// =============================================================================
+// _variables.scss
+// Anthropic-inspired design tokens for Migratis.
+// Single source of truth for all design tokens.
+// Edit this file to retheme the entire application.
+// =============================================================================
+
+// ── Anthropic color palette ───────────────────────────────────────────────────
+$color-dark:          #141413;                    // primary text, dark backgrounds
+$color-light:         #faf9f5;                    // light backgrounds, text on dark
+$color-mid-gray:      #b0aea5;                    // secondary elements
+$color-light-gray:    #e8e6dc;                    // subtle backgrounds
+
+// ── Accent colors ─────────────────────────────────────────────────────────────
+$color-orange:        #d97757;                    // primary accent
+$color-blue:         #6a9bcc;                    // secondary accent
+$color-green:        #788c5d;                    // tertiary accent
+
+// ── Semantic colors (using Anthropic palette) ──────────────────────────────────
+$color-primary:       $color-orange;               // buttons, links, primary actions
+$color-accent:        $color-orange;              // highlights, notifications
+$color-success:       $color-green;               // success states
+$color-bg-body:       $color-light;              // page background
+$color-bg-card:       #ffffff;                     // card backgrounds
+$color-bg-stripe-even:$color-light-gray;          // alternating rows
+$color-bg-payment:    $color-light-gray;          // payment section
+$color-border:        rgba(20, 20, 19, 0.08);     // subtle borders
+$color-white:         #ffffff;
+$color-text-dark:     $color-dark;                // primary text
+$color-text-muted:    $color-mid-gray;            // secondary text
+$color-nav-item-bg:   $color-light-gray;          // nav item backgrounds
+
+// ── Bootstrap variable overrides ──────────────────────────────────────────────
+$primary:             $color-primary;
+$secondary:           $color-mid-gray;
+$success:             $color-green;
+$info:                $color-blue;
+$warning:             $color-orange;
+$body-bg:             $color-bg-body;
+$body-color:          $color-text-dark;
+$border-color:        #dee2e6;
+$zindex-popover:      1102;
+
+// ── Layout ────────────────────────────────────────────────────────────────────
+$sidebar-width:       240px;                     // expanded sidebar
+$sidebar-collapsed:   64px;                      // collapsed (icon-only) sidebar
+$navbar-height:       0px;                       // no top navbar in new design
+
+// ── Border radius ─────────────────────────────────────────────────────────────
+$border-radius-sm:     6px;
+$border-radius:        8px;
+$border-radius-lg:      12px;
+$border-radius-xl:     16px;
+
+// ── Shadows ───────────────────────────────────────────────────────────────────
+$shadow-sm:           0 1px 2px rgba(20, 20, 19, 0.05);
+$shadow:              0 2px 8px rgba(20, 20, 19, 0.08);
+$shadow-lg:           0 4px 16px rgba(20, 20, 19, 0.12);
+$shadow-xl:           0 8px 32px rgba(20, 20, 19, 0.16);
+
+// ── Transitions ───────────────────────────────────────────────────────────────
+$transition-fast:     150ms ease;
+$transition:          200ms ease;
+$transition-slow:     300ms ease;
+
+// ── Z-index scale ─────────────────────────────────────────────────────────────
+$z-overlay:           1099;
+$z-menu-top:          1102;
+$z-burger:            1081;
+$z-modal-backdrop:    2000;
+$z-modal:             2001;
+$z-sidebar:           1050;
+$z-sidebar-tooltip:   1051;
+
+// ── Typography ────────────────────────────────────────────────────────────────
+$font-size-nav:       1.4rem;
+$font-size-menu:      1.4rem;
+$font-size-link:      1.5rem;
+$font-size-small:      0.85em;
+
+$font-stack-body:      'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+                       Roboto, 'Helvetica Neue', Arial, sans-serif;
+$font-stack-heading:   'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+                       Roboto, 'Helvetica Neue', Arial, sans-serif;
+$font-stack-code:     'JetBrains Mono', 'SF Mono', 'Fira Code', Consolas,
+                       'Liberation Mono', Menlo, monospace;
+
+// ── Spacing ───────────────────────────────────────────────────────────────────
+$sidebar-padding:     12px;
+$sidebar-item-gap:    4px;
+$content-padding:     24px;
+
+// ── CSS custom properties — runtime theming ───────────────────────────────────
+:root {
+  // Anthropic palette
+  --color-dark:          #{$color-dark};
+  --color-light:          #{$color-light};
+  --color-mid-gray:       #{$color-mid-gray};
+  --color-light-gray:     #{$color-light-gray};
+
+  // Accents
+  --color-orange:         #{$color-orange};
+  --color-blue:           #{$color-blue};
+  --color-green:          #{$color-green};
+
+  // Semantic
+  --color-primary:        #{$color-primary};
+  --color-accent:         #{$color-accent};
+  --color-success:        #{$color-success};
+
+  // Backgrounds
+  --color-bg-body:        #{$color-bg-body};
+  --color-bg-card:        #{$color-bg-card};
+  --color-white:          #ffffff;
+  --color-border:         #{$color-border};
+
+  // Text
+  --color-text-dark:      #{$color-text-dark};
+  --color-text-muted:     #{$color-text-muted};
+
+  // Layout
+  --sidebar-width:        #{$sidebar-width};
+  --sidebar-collapsed:    #{$sidebar-collapsed};
+  --navbar-height:        #{$navbar-height};
+
+  // Radius
+  --border-radius-sm:     #{$border-radius-sm};
+  --border-radius:        #{$border-radius};
+  --border-radius-lg:     #{$border-radius-lg};
+
+  // Shadows
+  --shadow-sm:            #{$shadow-sm};
+  --shadow:               #{$shadow};
+  --shadow-lg:            #{$shadow-lg};
+
+  // Transitions
+  --transition-fast:      #{$transition-fast};
+  --transition:           #{$transition};
+  --transition-slow:      #{$transition-slow};
+}

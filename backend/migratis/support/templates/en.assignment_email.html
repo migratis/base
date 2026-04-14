@@ -1,0 +1,11 @@
+{% autoescape off %}
+
+Hello {{ user.first_name }} {{ user.last_name }},
+
+You have just been assigned to this ticket : {{ url }}/support/ticket/{{ ticket }}/change
+
+-- 
+The team {{ app }}
+{{ url }}
+
+{% endautoescape %}

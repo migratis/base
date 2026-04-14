@@ -1,0 +1,8 @@
+// =============================================================================
+// _bootstrap.scss
+// Imports Bootstrap SCSS after all variable overrides have been set in
+// _variables.scss. Keep this file minimal — add Bootstrap module toggles here
+// if you ever need to disable specific Bootstrap components.
+// =============================================================================
+
+@import "bootstrap/scss/bootstrap";

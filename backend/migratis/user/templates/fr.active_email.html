@@ -1,0 +1,11 @@
+{% autoescape off %}
+
+Bonjour {{ user.first_name }} {{ user.last_name }},
+
+Veuillez clicker sur ce lien pour activer votre profil, {{ url }}/activate?uidb64={{ uidb64 }}&token={{ token }}
+
+-- 
+L'équipe {{ app }}
+{{ url }}
+
+{% endautoescape %}
