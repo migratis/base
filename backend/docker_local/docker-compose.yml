@@ -1,5 +1,5 @@
 services:
-#  db:
+#  base-db:
 #    image: postgres:18.3
 #    environment:
 #      - POSTGRES_DB=postgres

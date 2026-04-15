@@ -1,10 +1,11 @@
 services:
-  api_dev:
+  base-api_dev:
     build: 
       context: .
     entrypoint: /docker-entrypoint.sh
     volumes:
       - .:/backend
+      - ../frontend:/frontend      
     expose:
       - "8003"
     ports:

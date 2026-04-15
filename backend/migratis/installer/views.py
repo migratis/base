@@ -221,7 +221,7 @@ def _apply_package(zip_bytes: bytes) -> dict:
       8. Run `manage.py seed_<module>`.
     """
     backend_root  = Path(settings.BASE_DIR)
-    frontend_root = Path('/frontend/src')
+    frontend_root = Path(getattr(settings, 'FRONTEND_SRC_DIR', '/frontend/src'))
     installed_files = []
 
     with zipfile.ZipFile(io.BytesIO(zip_bytes), 'r') as zf:
@@ -268,8 +268,8 @@ def _apply_package(zip_bytes: bytes) -> dict:
         for key, rname, rmod, rpath in _FRAMEWORK_ROUTERS:
             if key not in modules_needed:
                 continue
-            imp_comment   = f'# from {rmod}.views import router as {rname}'
-            imp_active    = f'from {rmod}.views import router as {rname}'
+            imp_comment   = f'# from {rmod} import router as {rname}'
+            imp_active    = f'from {rmod} import router as {rname}'
             mount_comment = f'# api.add_router("{rpath}", {rname})'
             mount_active  = f'api.add_router("{rpath}", {rname})'
             if imp_comment in api_txt:

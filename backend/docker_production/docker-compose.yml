@@ -1,5 +1,5 @@
 services:
-  db:
+  base-db:
     image: postgres:14.2
     environment:
       - POSTGRES_DB=postgres
@@ -17,12 +17,13 @@ services:
     networks:
       static-network:
         ipv4_address: 172.21.0.2
-  api:
+  base-api:
     build: 
       context: .
     entrypoint: /docker-entrypoint.sh
     volumes:
       - .:/backend
+      - ../frontend:/frontend      
     expose:
       - "8002"
     ports:

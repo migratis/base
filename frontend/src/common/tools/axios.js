@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { API_SERVER } from "../../settings";
+import { API_SERVER, USER } from "../../settings";
 import { trackPromise } from 'react-promise-tracker';
 
 const customAxios = axios.create({
@@ -23,14 +23,14 @@ customAxios.interceptors.request.use(
       return request;
     }
 
-    if(request.method === "post") {
+    if (request.method === "post" && USER) {
 
       if (
-        request.url.match("user/login") 
-        || request.url.match("/user/change_password") 
+        request.url.match("user/login")
+        || request.url.match("/user/change_password")
         || request.url.match("/user/reset_password")
         || request.url.match("/user/activate")
-        || request.url.match("/user/register")              
+        || request.url.match("/user/register")
       ) {
         return request;
       }
@@ -39,7 +39,7 @@ customAxios.interceptors.request.use(
         const response = await cookieAxios.get("/csrftoken");
         const match = response.data.match(/value="([^"]+)"/);
         if (match) request.headers['X-CSRFToken'] = match[1];
-        return request;     
+        return request;
       } catch (error) {
         console.log(error);
       }
