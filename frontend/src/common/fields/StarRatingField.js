@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useFormContext } from 'react-hook-form';
 import { IoStar, IoStarOutline } from 'react-icons/io5';
 
-const RatingField = ({
+const StarRatingField = ({
   name,
   label,
   max = 5,
@@ -11,13 +11,14 @@ const RatingField = ({
   help = null,
   disabled = false,
 }) => {
-  const { watch } = useFormContext();
+  const { watch, setValue } = useFormContext();
   const [hoverValue, setHoverValue] = useState(null);
 
   const value = watch(name) || 0;
 
   const handleClick = (rating) => {
     if (disabled) return;
+    setValue(name, rating, { shouldValidate: true, shouldDirty: true });
   };
 
   const handleMouseEnter = (rating) => {
@@ -66,8 +67,6 @@ const RatingField = ({
         })}
       </div>
 
-      <input type="hidden" name={name} value={value} />
-
       {help && (
         <small className="form-text text-muted">{help}</small>
       )}
@@ -75,4 +74,4 @@ const RatingField = ({
   );
 };
 
-export default RatingField;
+export default StarRatingField;

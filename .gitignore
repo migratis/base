@@ -44,3 +44,4 @@ pgdata_*/
 backend/docker-compose.yml
 backend/Dockerfile
 backend/docker-entrypoint.sh
+backend/requirements.txt
