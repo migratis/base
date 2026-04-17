@@ -5,6 +5,7 @@ import "./App.scss";
 import 'react-toastify/dist/ReactToastify.css';
 import { Layout as Public, Layout as Private } from './common/components/Layout';
 import { SUPPORT, SUBSCRIPTION, USER, COOKIE, CONTACT, INSTALLER } from './settings';
+import { moduleRoutes } from './module_registry';
 
 const Home = lazyWithRetry(() => import('./common/components/Home'));
 const Message = lazyWithRetry(() => import('./common/components/Message'));
@@ -19,7 +20,6 @@ const Subscribe = lazyWithRetry(() => import('./subscription/components/Subscrib
 const Contact = lazyWithRetry(() => import('./support/components/Contact'));
 const Tickets = lazyWithRetry(() => import('./support/components/Tickets'));
 const Disclaimer = lazyWithRetry(() => import('./common/components/Disclaimer'));
-// MIGRATIS:IMPORTS
 const InstallerPage = lazyWithRetry(() => import('./installer/components/InstallerPage'));
 
 
@@ -48,31 +48,33 @@ const App = () => {
       <Routes>
         <Route element={<Public private={false}/>}>
           <Route exact path="/home" element={<Home />} />
-          <Route exact path="/Message" element={<Message />} />   
+          <Route exact path="/Message" element={<Message />} />
           { COOKIE &&
             <>
-              <Route exact path="/Cookies" element={<Cookies />} />                   
+              <Route exact path="/Cookies" element={<Cookies />} />
             </>
-          } 
+          }
           { USER &&
             <>
               <Route exact path="/register" element={<Register />} />
-              <Route exact path="/invitation" element={<Invitation />} />            
-              <Route exact path="/activate" element={<Activate />} />   
-              <Route exact path="/reset" element={<Reset />} />  
-              <Route exact path="/password" element={<Password />} />                
+              <Route exact path="/invitation" element={<Invitation />} />
+              <Route exact path="/activate" element={<Activate />} />
+              <Route exact path="/reset" element={<Reset />} />
+              <Route exact path="/password" element={<Password />} />
             </>
           }
           { (CONTACT || SUPPORT) &&
             <>
-              <Route exact path="/contact" element={<Contact />} />  
+              <Route exact path="/contact" element={<Contact />} />
             </>
           }
           <Route exact path="/disclaimer" element={<Disclaimer />} />
           { INSTALLER &&
             <Route exact path='/installer' element={<InstallerPage/>} />
           }
-          {/* MIGRATIS:ROUTES */}
+          {moduleRoutes.map(({ path, Component }) => (
+            <Route key={path} path={path} element={<Component />} />
+          ))}
           <Route path={"/"} element={<Home />} />
         </Route>
         <Route element={<Private private={true}/>}>
@@ -91,8 +93,8 @@ const App = () => {
               <Route exact path='/subscribe' element={<Subscribe/>} />
             </>
           }
-        </Route>          
-      </Routes>     
+        </Route>
+      </Routes>
     </>
   );
 };

@@ -71,13 +71,14 @@ if not USE_SQLITE:
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
-    'django.middleware.common.CommonMiddleware',     
+    'django.middleware.common.CommonMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django.middleware.common.CommonMiddleware',
+    'ninja.compatibility.files.fix_request_files_middleware',
 ]
 
 ROOT_URLCONF = 'migratis.urls'
@@ -224,3 +225,26 @@ PATHS_TO_EXCLUDE = [
 
 # Subscription gate — False means check_access() enforces subscription
 NO_SUBSCRIPTION = env.bool('NO_SUBSCRIPTION', default=False)
+
+# Path to the frontend src/ directory as seen from inside the container.
+# Mount the frontend volume in docker-compose for the installer to write files automatically.
+FRONTEND_SRC_DIR = env('FRONTEND_SRC_DIR', default='/frontend/src')
+
+
+
+
+INSTALLED_APPS += ['migratis.i18n.apps.I18NConfig']
+INSTALLED_APPS += ['migratis.cookie.apps.CookieConfig']
+
+# ── i18n ─────────────────────────────────────────────────────────────────
+LANGUAGE_CODE = 'fr'
+LANGUAGES = [('en', 'English'), ('fr', 'French'), ('pt', 'Portuguese'), ('zh', 'Chinese')]
+LOCALE_PATHS = [BASE_DIR / 'locale']
+USE_I18N = True
+
+# ── Auto-load installed app settings patches ──────────────────────────────
+import glob as _glob
+for _patch in sorted(_glob.glob(str(BASE_DIR / 'settings_patches' / '*.py'))):
+    if not _patch.endswith('__init__.py'):
+        with open(_patch) as _fh:
+            exec(compile(_fh.read(), _patch, 'exec'))

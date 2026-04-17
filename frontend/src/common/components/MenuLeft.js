@@ -20,8 +20,7 @@ import Login from "../../user/components/Login";
 import { BlockedModal as LoginModal } from "../modals/BlockedModal";
 import { USER, INSTALLER } from '../../settings';
 import logo from '../../img/logo.png';
-
-// MIGRATIS:MENU_IMPORTS
+import { moduleMenuItems } from '../../module_registry';
 
 export const MenuLeft = (props) => {
   const { t } = useTranslation('layout');
@@ -99,7 +98,11 @@ export const MenuLeft = (props) => {
             </div>
           )}
 
-          {/* MIGRATIS:MENU_SECTIONS */}
+          {moduleMenuItems.map(({ label, path }) => (
+            <NavLink key={path} to={path} className={({isActive}) => `sidebar-item ${isActive ? 'active' : ''}`} onClick={props.onMobileClose}>
+              <span className="sidebar-label">{label}</span>
+            </NavLink>
+          ))}
 
           {/* ── Auth-gated sections — activated when USER=true ────────────── */}
           { USER && props.user ? (

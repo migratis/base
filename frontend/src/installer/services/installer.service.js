@@ -18,6 +18,12 @@ const install = (appId) =>
 const frontendZipUrl = (appId) =>
   `/backend/api/installer/frontend-zip/${appId}`;
 
+const listInstalled = () =>
+  api.get("/installer/installed").then((r) => r.data);
+
+const uninstall = (module) =>
+  api.post(`/installer/uninstall/${encodeURIComponent(module)}`).then((r) => r.data);
+
 const InstallerService = {
   getSession,
   connect,
@@ -25,6 +31,8 @@ const InstallerService = {
   listApps,
   install,
   frontendZipUrl,
+  listInstalled,
+  uninstall,
 };
 
 export default InstallerService;

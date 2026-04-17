@@ -40,7 +40,7 @@ frontend/build/
 # Docker volumes
 pgdata_*/
 
-# backend temp files
+# backend docker temp files
 backend/docker-compose.yml
 backend/Dockerfile
 backend/docker-entrypoint.sh

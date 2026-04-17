@@ -297,6 +297,7 @@ const Entities = (props) => {
           serverErrors={serverErrors}
           disableSubmit={disableSubmit}
           saveEntity={saveEntity}
+          {...(props.formProps || {})}
         />
       </EditModal>    
     </>
