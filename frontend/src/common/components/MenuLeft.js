@@ -11,16 +11,17 @@ import {
   IoChevronDown as ChevronDown,
   IoChevronUp as ChevronUp,
   IoGridOutline as GridOutline,
-  IoDownloadOutline as DownloadOutline,
+  IoCodeSlashOutline as CodeIcon,
 } from 'react-icons/io5';
 import LangSelector from './LangSelector';
 import UserService from "../../user/services/user.service";
 import { toast } from 'react-toastify';
+import AIUsageIndicator from '../../generator/components/AIUsageIndicator';
 import Login from "../../user/components/Login";
 import { BlockedModal as LoginModal } from "../modals/BlockedModal";
-import { USER, INSTALLER } from '../../settings';
+import { MIGRATIS, GENERATOR } from '../../settings';
+import { LeftMenu as GeneratorLeftMenu } from '../../generator/components/LeftMenu';
 import logo from '../../img/logo.png';
-import { moduleMenuItems } from '../../module_registry';
 
 export const MenuLeft = (props) => {
   const { t } = useTranslation('layout');
@@ -78,36 +79,56 @@ export const MenuLeft = (props) => {
     <>
       <div className={`sidebar-container ${expanded ? 'expanded' : ''} ${props.mobileOpen ? 'mobile-open' : ''}`}>
         <div className="sidebar-header">
-          <img src={logo} alt="logo" className="sidebar-logo" />
-          <span className="sidebar-header-title">Base</span>
+          <img src={logo} alt="Migratis" className="sidebar-logo" />
+          <span className="sidebar-header-title">Migratis</span>
         </div>
 
         <div className="sidebar-content">
-
-          {/* ── Installer (always visible, no auth required) ──────────────── */}
-          { INSTALLER && (
-            <div className="sidebar-section">
-              <NavLink
-                to="/installer"
-                className={({isActive}) => `sidebar-item ${isActive ? 'active' : ''}`}
-                onClick={props.onMobileClose}
-              >
-                <DownloadOutline />
-                <span className="sidebar-label">Installer</span>
-              </NavLink>
-            </div>
-          )}
-
-          {moduleMenuItems.map(({ label, path }) => (
-            <NavLink key={path} to={path} className={({isActive}) => `sidebar-item ${isActive ? 'active' : ''}`} onClick={props.onMobileClose}>
-              <span className="sidebar-label">{label}</span>
-            </NavLink>
-          ))}
-
-          {/* ── Auth-gated sections — activated when USER=true ────────────── */}
-          { USER && props.user ? (
+          {props.user ? (
             <>
-              <div className="sidebar-divider" />
+              {GENERATOR && (
+                <div className="sidebar-section">
+                  <AIUsageIndicator compact />
+                  <GeneratorLeftMenu onMobileClose={props.onMobileClose} user={props.user} />
+                </div>
+              )}
+
+              {MIGRATIS && (
+                <div className="sidebar-section">
+                  <div
+                    className="sidebar-section-header"
+                    onClick={() => toggleSection('migratis')}
+                  >
+                    <GridOutline />
+                    <span className="sidebar-section-title">{t('migratis')}</span>
+                    <span className="sidebar-section-chevron">
+                      {openSections.migratis ? <ChevronUp /> : <ChevronDown />}
+                    </span>
+                  </div>
+                  {openSections.migratis && (
+                    <>
+                      <NavLink
+                        to="/migratis/item"
+                        className={({isActive}) => `sidebar-item ${isActive ? 'active' : ''}`}
+                        onClick={props.onMobileClose}
+                      >
+                        <AtOutline />
+                        <span className="sidebar-label">{t('items')}</span>
+                      </NavLink>
+                      <NavLink
+                        to="/migratis/subitem"
+                        className={({isActive}) => `sidebar-item ${isActive ? 'active' : ''}`}
+                        onClick={props.onMobileClose}
+                      >
+                        <AtCircleOutline />
+                        <span className="sidebar-label">{t('subitems')}</span>
+                      </NavLink>
+                    </>
+                  )}
+                </div>
+              )}
+
+<div className="sidebar-divider" />
 
               <div className="sidebar-section">
                 <NavLink
@@ -118,14 +139,14 @@ export const MenuLeft = (props) => {
                   <PersonOutline />
                   <span className="sidebar-label">{t('profile')}</span>
                 </NavLink>
-
+                
                 <div className="sidebar-item">
                   <GlobeOutline />
                   <span className="sidebar-label">
                     <LangSelector />
                   </span>
                 </div>
-
+                
                 <a href="/contact" className="sidebar-item" onClick={props.onMobileClose}>
                   <HelpOutline />
                   <span className="sidebar-label">{t('contact')}</span>
@@ -137,46 +158,39 @@ export const MenuLeft = (props) => {
                 </div>
               </div>
             </>
-          ) : USER && (
-            <>
-              <div className="sidebar-divider" />
-
-              <div className="sidebar-section">
-                <div className="sidebar-item" onClick={() => { handleLogin(); props.onMobileClose(); }}>
-                  <PersonOutline />
-                  <span className="sidebar-label">{t('login')}</span>
-                </div>
-
-                <div className="sidebar-item">
-                  <GlobeOutline />
-                  <span className="sidebar-label">
-                    <LangSelector />
-                  </span>
-                </div>
-
-                <a href="/contact" className="sidebar-item" onClick={props.onMobileClose}>
-                  <HelpOutline />
-                  <span className="sidebar-label">{t('contact')}</span>
-                </a>
+          ) : (
+            <div className="sidebar-section">
+              <div className="sidebar-item" onClick={() => { handleLogin(); props.onMobileClose(); }}>
+                <PersonOutline />
+                <span className="sidebar-label">{t('login')}</span>
               </div>
-            </>
+              
+              <div className="sidebar-item">
+                <GlobeOutline />
+                <span className="sidebar-label">
+                  <LangSelector />
+                </span>
+              </div>
+              
+              <a href="/contact" className="sidebar-item" onClick={props.onMobileClose}>
+                <HelpOutline />
+                <span className="sidebar-label">{t('contact')}</span>
+              </a>
+            </div>
           )}
-
         </div>
       </div>
 
-      { USER &&
-        <LoginModal
-          show={loginModalShow}
-          onHide={() => setLoginModalShow(false)}
-          title={t('login')}
-        >
-          <Login
-            setUser={props.setUser}
-            setLoginModalShow={setLoginModalShow}
-          />
-        </LoginModal>
-      }
+      <LoginModal
+        show={loginModalShow}
+        onHide={() => setLoginModalShow(false)}
+        title={t('login')}
+      >
+        <Login      
+          setUser={props.setUser}
+          setLoginModalShow={setLoginModalShow}
+        />
+      </LoginModal>
     </>
   );
 };

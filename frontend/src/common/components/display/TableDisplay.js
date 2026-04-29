@@ -112,6 +112,21 @@ const TableDisplay = ({
     const str = formatValue(field, value);
     const renderAs = fieldsConfig[field.name]?.render_as;
     const raw = value != null ? String(value).trim() : '';
+    if (renderAs === 'image' && raw.startsWith('data:')) {
+      return <img src={raw} alt="" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 3 }} />;
+    }
+    if (renderAs === 'images' && raw.startsWith('[')) {
+      try {
+        const arr = JSON.parse(raw);
+        const srcs = arr.filter(Boolean).slice(0, 3);
+        if (srcs.length) return (
+          <span className="d-inline-flex gap-1">
+            {srcs.map((src, i) => <img key={i} src={src} alt="" style={{ width: 32, height: 32, objectFit: 'cover', borderRadius: 3 }} />)}
+            {arr.length > 3 && <span className="text-muted small align-self-center">+{arr.length - 3}</span>}
+          </span>
+        );
+      } catch {}
+    }
     if (renderAs === 'color' || _isHexColor(raw)) {
       return (
         <span className="d-inline-flex align-items-center gap-1">

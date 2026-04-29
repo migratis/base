@@ -102,7 +102,7 @@ export default function SelectField ({
               if (isMulti) {
                 field.onChange(selected ? selected.map(o => o.value) : []);
               } else {
-                field.onChange(selected ? selected.value : null);
+                field.onChange(selected);
               }
             }}
           />

@@ -8,7 +8,7 @@ import { BlockedModal } from "../modals/BlockedModal";
 import Login from "../../user/components/Login";
 import { useTranslation } from "react-i18next";
 import { IoMenuOutline as MenuIcon } from 'react-icons/io5';
-import { USER } from '../../settings';
+import UserService from "../../user/services/user.service";
 
 export const Layout = (props) => {
   const { t } = useTranslation('layout');
@@ -23,6 +23,20 @@ export const Layout = (props) => {
       setAssistant(true);
       localStorage.removeItem("open-assistant");
     }
+  }, []);
+
+  // Refresh user profile from server on mount so fields added after login
+  // (e.g. is_staff) are always up to date in localStorage and React state.
+  useEffect(() => {
+    if (user) {
+      UserService.getProfile().then((fresh) => {
+        if (fresh && fresh.id) {
+          localStorage.setItem("user", JSON.stringify(fresh));
+          setUser(fresh);
+        }
+      }).catch(() => {});
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -85,19 +99,17 @@ export const Layout = (props) => {
       { location.pathname !== "/cookies" &&
         <SPCookieConsent/>
       }
-      { USER &&
-        <BlockedModal
-          show={sessionExpiredShow}
-          onHide={() => setSessionExpiredShow(false)}
-          title={t('session-expired')}
-          showCloseButton={false}
-        >
-          <Login
-            setUser={setUser}
-            setLoginModalShow={setSessionExpiredShow}
-          />
-        </BlockedModal>
-      }
+      <BlockedModal
+        show={sessionExpiredShow}
+        onHide={() => setSessionExpiredShow(false)}
+        title={t('session-expired')}
+        showCloseButton={false}
+      >
+        <Login      
+          setUser={setUser}
+          setLoginModalShow={setSessionExpiredShow}
+        />
+      </BlockedModal>
     </>
   );
 };

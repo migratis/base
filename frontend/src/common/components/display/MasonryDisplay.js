@@ -70,6 +70,21 @@ const MasonryDisplay = ({
   const renderValue = (field, value) => {
     const renderAs = fieldsConfig?.[field.name]?.render_as;
     const raw = value != null ? String(value).trim() : '';
+    if (renderAs === 'image' && raw.startsWith('data:')) {
+      return <img src={raw} alt="" style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 4 }} />;
+    }
+    if (renderAs === 'images' && raw.startsWith('[')) {
+      try {
+        const arr = JSON.parse(raw);
+        const srcs = arr.filter(Boolean).slice(0, 4);
+        if (srcs.length) return (
+          <span className="d-inline-flex flex-wrap gap-1">
+            {srcs.map((src, i) => <img key={i} src={src} alt="" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 3 }} />)}
+            {arr.length > 4 && <span className="text-muted small align-self-center">+{arr.length - 4}</span>}
+          </span>
+        );
+      } catch {}
+    }
     if (renderAs === 'color' || _isHexColor(raw)) {
       return (
         <span className="d-inline-flex align-items-center gap-1">

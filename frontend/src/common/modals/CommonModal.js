@@ -16,11 +16,17 @@ export const CommonModal = ({ closeLabel, onEntered, ...props }) => {
     };
 
     const handleEntered = () => {
-      scrollBodyToTop();
+      requestAnimationFrame(() => requestAnimationFrame(() => scrollBodyToTop()));
       if (onEntered) {
         onEntered();
       }
     };
+
+    useEffect(() => {
+      if (props.show) {
+        scrollBodyToTop();
+      }
+    }, [props.show]);
 
     useEffect(() => {
       if (!props.show) return;

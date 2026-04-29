@@ -20,6 +20,7 @@ const CardsDisplay = ({
   config = {},
   onEdit,
   onDelete,
+  onInteraction,
   t,
 }) => {
   const [expandedRecord, setExpandedRecord] = useState(null);
@@ -43,16 +44,19 @@ const CardsDisplay = ({
   const getThumbnailUrl = (record) => {
     if (!thumbnailFieldName) return null;
     const value = record.data[thumbnailFieldName];
-    if (!value || typeof value !== 'string') return null;
-    if (value.startsWith('data:') || value.startsWith('http') || value.startsWith('/')) {
-      return value;
+    if (!value) return null;
+    // Multi-image: JSON array — use first entry
+    if (typeof value === 'string' && value.startsWith('[')) {
+      try { const arr = JSON.parse(value); if (arr?.[0]) return arr[0]; } catch {}
     }
+    if (typeof value !== 'string') return null;
+    if (value.startsWith('data:') || value.startsWith('http') || value.startsWith('/')) return value;
     return null;
   };
 
   const imageFieldNames = new Set(
     entity.fields
-      .filter(f => f.field_type === 'file' || fieldsConfig[f.name]?.render_as === 'image')
+      .filter(f => f.field_type === 'file' || ['image', 'images'].includes(fieldsConfig[f.name]?.render_as))
       .map(f => f.name)
   );
   if (thumbnailFieldName) imageFieldNames.add(thumbnailFieldName);
@@ -215,6 +219,21 @@ const CardsDisplay = ({
                   </div>
                 );
               })}
+              {Array.isArray(config?.interactions) && config.interactions.length > 0 && onInteraction && (
+                <div className="d-flex flex-wrap gap-2 mt-2 pt-2 border-top">
+                  {config.interactions.map((it, i) => (
+                    <Button
+                      key={i}
+                      size="sm"
+                      variant="outline-primary"
+                      onClick={() => onInteraction(it.target, it.link_via ? { [it.link_via]: record.id } : {}, it.mode || 'form')}
+                      title={it.trigger || `${it.action} ${it.target}`}
+                    >
+                      {it.trigger || `${it.action} → ${it.target}`}
+                    </Button>
+                  ))}
+                </div>
+              )}
               {(onEdit || onDelete) && (
                 <div className="d-flex gap-2 mt-2 pt-2 border-top">
                   <span className="ms-auto"></span>
