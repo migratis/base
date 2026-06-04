@@ -20,7 +20,18 @@ const ALLOWED_TAGS = new Set([
   'B', 'STRONG', 'I', 'EM', 'U', 'P', 'BR', 'UL', 'OL', 'LI',
   'SPAN', 'DIV', 'A', 'H1', 'H2', 'H3', 'BLOCKQUOTE',
 ]);
-const UNSAFE_URL = /^\s*(javascript|data|vbscript):/i;
+// Allow-list anchor hrefs by scheme. A deny-list is bypassable (browsers strip
+// embedded control chars/whitespace before resolving the scheme), so resolve
+// with the URL parser — which performs that normalization — and permit only
+// http/https/mailto and relative URLs (which resolve to http/https).
+function isSafeHref(value) {
+  try {
+    const { protocol } = new URL(value, document.baseURI);
+    return protocol === 'http:' || protocol === 'https:' || protocol === 'mailto:';
+  } catch {
+    return false;
+  }
+}
 
 // Dependency-free whitelist sanitizer. The stored value is rendered via
 // innerHTML, so untrusted markup (e.g. a description authored by another user)
@@ -39,8 +50,9 @@ function sanitizeHtml(dirty) {
     }
     [...el.attributes].forEach((attr) => {
       const isHref = el.tagName === 'A' && attr.name.toLowerCase() === 'href';
-      // Keep only safe href on anchors; strip everything else (on*, style, …).
-      if (isHref && !UNSAFE_URL.test(attr.value)) return;
+      // Keep only safe (http/https/mailto/relative) hrefs on anchors; strip
+      // everything else (on*, style, unsafe schemes, …).
+      if (isHref && isSafeHref(attr.value)) return;
       el.removeAttribute(attr.name);
     });
   });
