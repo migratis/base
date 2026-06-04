@@ -64,16 +64,89 @@ Copy `backend/migratis/.env.example` and fill in your values. Key variables:
 | Variable | Default | Description |
 |---|---|---|
 | `USE_SQLITE` | `True` | Use SQLite instead of PostgreSQL |
+| `INSTALLER` | `True` | Enable/disable the installer (API + page) — see below |
 | `MIGRATIS_BACKEND_URL` | `http://host.docker.internal:8000` | URL of the migratis generator (from inside Docker) |
 | `SECRET_KEY` | — | Django secret key |
 | `ALLOWED_HOSTS` | `127.0.0.1,localhost` | Allowed hostnames |
 
 ---
 
-## After installation — switching to PostgreSQL
+## Enabling / disabling the installer
 
-Set `USE_SQLITE=False` in `.env`, fill in `DB_*` variables, uncomment the `db` service in `docker-compose.yml`, then rebuild:
+The installer is controlled **entirely by the backend** with a single setting —
+there is no separate frontend flag to keep in sync.
+
+In `backend/migratis/.env`:
 
 ```bash
-cd backend && bash build-docker-local.sh
+INSTALLER=True    # installer enabled (default)
+INSTALLER=False   # installer disabled
 ```
+
+Then restart the backend:
+
+```bash
+docker restart backend-base-api-1
+```
+
+Behaviour:
+
+- **`INSTALLER=True`** — the `/installer/` API is mounted and the
+  [`/installer`](http://127.0.0.1:3002/installer) page works normally.
+- **`INSTALLER=False`** — the `/installer/` API is **not mounted** (its endpoints
+  return `404`, so they cannot be reached). The `/installer` page is still
+  reachable, but it detects the disabled state (via the always-available
+  `/installer/status` endpoint) and shows instructions on how to turn it back
+  on, instead of the installer UI.
+
+Once you have installed your application you typically set `INSTALLER=False` so
+the installation API is no longer exposed in production.
+
+---
+
+## Switching to PostgreSQL
+
+PostgreSQL runs as the `base-db` service behind a Compose **profile**, so it is
+never started in the default SQLite setup (no unused database container).
+
+1. In `backend/migratis/.env`, set:
+
+   ```bash
+   USE_SQLITE=False
+   DB_NAME=migratis
+   DB_USER=migratis
+   DB_PASSWORD=change-me      # keep in sync with the base-db service
+   DB_HOST=base-db            # the base-db service name on the Compose network
+   DB_PORT=5432
+   ```
+
+2. Rebuild — `build-docker-local.sh` detects `USE_SQLITE=False` and automatically
+   enables the `postgres` profile, starting the `base-db` container:
+
+   ```bash
+   cd backend && bash build-docker-local.sh
+   ```
+
+   Or start it manually:
+
+   ```bash
+   cd backend && docker compose --profile postgres up --build
+   ```
+
+On first boot the entrypoint waits for the database, runs `migrate`, then
+`seed_translations` — so all translations are repopulated into the fresh
+PostgreSQL database automatically.
+
+> **Carrying over existing data** — switching engines points Django at a new,
+> empty database; it does not copy your SQLite rows. Translations come back via
+> re-seeding, but manual edits (and rows added by installed modules) do not. To
+> preserve them exactly, migrate the data while still on SQLite:
+>
+> ```bash
+> docker exec backend-base-api-1 python manage.py dumpdata i18n --indent 2 > i18n_dump.json
+> # after switching and migrating on PostgreSQL:
+> docker exec backend-base-api-1 python manage.py loaddata i18n_dump.json
+> ```
+
+To switch back to SQLite, set `USE_SQLITE=True` and rebuild — the `base-db`
+container stays off.

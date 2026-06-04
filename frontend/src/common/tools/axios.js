@@ -61,7 +61,12 @@ customAxios.interceptors.response.use(
   },
   async (err) => {
 
-    if (err && err.response && err.response.status === 401) {
+    // The installer manages its own connection to a remote migratis instance,
+    // so its 401s ("invalid credentials" / "not connected") are handled by the
+    // installer UI and must not trigger the local session-expired login modal.
+    const isInstaller = err?.config?.url?.includes('/installer/');
+
+    if (err && err.response && err.response.status === 401 && !isInstaller) {
       localStorage.setItem("user", false);
       localStorage.setItem("session_expired", "true");
       const event = new CustomEvent('session-expired', {

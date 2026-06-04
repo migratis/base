@@ -17,8 +17,7 @@ import Login from "../../user/components/Login";
 import { BlockedModal as LoginModal } from "../modals/BlockedModal";
 import { useQuery } from '../hooks/useQuery';
 import { useNavigate } from "react-router-dom";
-import { SUPPORT, SUBSCRIPTION, GENERATOR } from "../../settings";
-import AIUsageIndicator from '../../generator/components/AIUsageIndicator';
+import { SUPPORT, SUBSCRIPTION } from "../../settings";
 
 export const Header = (props) => {
   const { t } = useTranslation('layout');
@@ -100,9 +99,6 @@ export const Header = (props) => {
                         &nbsp;<CardOutline color={'#000000'} title={t('subscribe')} height="25px" width="25px"/>
                       </Nav.Link>
                     }
-                    { GENERATOR &&
-                      <AIUsageIndicator />
-                    }   
                     <Nav.Link className="nav-item btn btn-light" href="/profile">
                       {t('profile')}
                       &nbsp;<Person color={'#000000'} title={t('profile')} height="25px" width="25px"/>

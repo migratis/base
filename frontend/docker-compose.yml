@@ -1,3 +1,9 @@
+# Dedicated project name so this standalone app's frontend never collides with
+# another Compose project on the same host (network and `docker compose down`
+# stay scoped to "base-frontend"). It reaches the backend over the host port
+# 8004, so no shared Docker network is needed.
+name: base-frontend
+
 services:
   base-ui:
     container_name: frontend-base
@@ -8,15 +14,6 @@ services:
       - /frontend/node_modules
     ports:
       - 3002:3002
-    networks:
-      static-network:
-        ipv4_address: 172.22.0.5   
     environment:
-      - NODE_ENV=development    
-networks:
-  static-network:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 172.22.0.0/16
-
+      - NODE_ENV=development
+      - PORT=3002

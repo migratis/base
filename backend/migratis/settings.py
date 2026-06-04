@@ -120,7 +120,7 @@ else:
             'NAME': env('DB_NAME'),
             'USER': env('DB_USER'),
             'PASSWORD': env('DB_PASSWORD'),
-            'HOST': '172.21.0.2',
+            'HOST': env('DB_HOST', default='172.21.0.2'),
             'PORT': env('DB_PORT'),
         }
     }
@@ -229,6 +229,10 @@ NO_SUBSCRIPTION = env.bool('NO_SUBSCRIPTION', default=False)
 # Path to the frontend src/ directory as seen from inside the container.
 # Mount the frontend volume in docker-compose for the installer to write files automatically.
 FRONTEND_SRC_DIR = env('FRONTEND_SRC_DIR', default='/frontend/src')
+
+# Installer gate — when False, the /installer/ API is not mounted at all.
+# Keep in sync with INSTALLER in frontend/src/settings.js (which hides the route).
+INSTALLER = env.bool('INSTALLER', default=True)
 
 
 

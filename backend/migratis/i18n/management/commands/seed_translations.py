@@ -425,6 +425,220 @@ TRANSLATIONS['form'] = {
 }
 
 # ===========================================================================
+# installer
+# ===========================================================================
+TRANSLATIONS['installer'] = {
+    'installer-title': {
+        'en': 'Installer', 'fr': 'Installateur', 'es': 'Instalador', 'ro': 'Instalator',
+    },
+    'connect-to-migratis': {
+        'en': 'Connect to Migratis', 'fr': 'Se connecter à Migratis',
+        'es': 'Conectarse a Migratis', 'ro': 'Conectează-te la Migratis',
+    },
+    'email': {
+        'en': 'Email', 'fr': 'Courriel', 'es': 'Correo electrónico', 'ro': 'Email',
+    },
+    'password': {
+        'en': 'Password', 'fr': 'Mot de passe', 'es': 'Contraseña', 'ro': 'Parolă',
+    },
+    'migratis-url': {
+        'en': 'Migratis URL', 'fr': 'URL Migratis', 'es': 'URL de Migratis', 'ro': 'URL Migratis',
+    },
+    'leave-blank-default': {
+        'en': '(leave blank for default)', 'fr': '(laisser vide pour la valeur par défaut)',
+        'es': '(dejar en blanco para el valor predeterminado)', 'ro': '(lăsați gol pentru valoarea implicită)',
+    },
+    'connect': {
+        'en': 'Connect', 'fr': 'Se connecter', 'es': 'Conectar', 'ro': 'Conectează-te',
+    },
+    'disconnect': {
+        'en': 'Disconnect', 'fr': 'Se déconnecter', 'es': 'Desconectar', 'ro': 'Deconectează-te',
+    },
+    'select-app': {
+        'en': 'Select an application to install', 'fr': 'Sélectionnez une application à installer',
+        'es': 'Seleccione una aplicación para instalar', 'ro': 'Selectați o aplicație de instalat',
+    },
+    'no-apps': {
+        'en': 'No generated applications found.', 'fr': 'Aucune application générée trouvée.',
+        'es': 'No se encontraron aplicaciones generadas.', 'ro': 'Nu s-au găsit aplicații generate.',
+    },
+    'module-label': {
+        'en': 'module:', 'fr': 'module :', 'es': 'módulo:', 'ro': 'modul:',
+    },
+    'installed-badge': {
+        'en': 'Installed', 'fr': 'Installé', 'es': 'Instalado', 'ro': 'Instalat',
+    },
+    'install-selected': {
+        'en': 'Install selected app', 'fr': "Installer l'application sélectionnée",
+        'es': 'Instalar la aplicación seleccionada', 'ro': 'Instalează aplicația selectată',
+    },
+    'install-another': {
+        'en': 'Install another', 'fr': 'En installer une autre',
+        'es': 'Instalar otra', 'ro': 'Instalează alta',
+    },
+    'installed-modules': {
+        'en': 'Installed modules', 'fr': 'Modules installés',
+        'es': 'Módulos instalados', 'ro': 'Module instalate',
+    },
+    'uninstall': {
+        'en': 'Uninstall', 'fr': 'Désinstaller', 'es': 'Desinstalar', 'ro': 'Dezinstalează',
+    },
+    'uninstalling': {
+        'en': 'Uninstalling…', 'fr': 'Désinstallation…', 'es': 'Desinstalando…', 'ro': 'Se dezinstalează…',
+    },
+    'uninstall-result': {
+        'en': 'Uninstall result', 'fr': 'Résultat de la désinstallation',
+        'es': 'Resultado de la desinstalación', 'ro': 'Rezultatul dezinstalării',
+    },
+    'uninstalled-success': {
+        'en': 'Module {{module}} uninstalled successfully.',
+        'fr': 'Module {{module}} désinstallé avec succès.',
+        'es': 'Módulo {{module}} desinstalado correctamente.',
+        'ro': 'Modulul {{module}} a fost dezinstalat cu succes.',
+    },
+    'migrations-reverted': {
+        'en': 'Migrations reverted.', 'fr': 'Migrations annulées.',
+        'es': 'Migraciones revertidas.', 'ro': 'Migrările au fost anulate.',
+    },
+    'migration-revert-failed': {
+        'en': 'Warning: migration revert failed — check output below.',
+        'fr': "Avertissement : l'annulation de la migration a échoué — vérifiez la sortie ci-dessous.",
+        'es': 'Advertencia: la reversión de la migración falló — revise la salida a continuación.',
+        'ro': 'Avertisment: anularea migrării a eșuat — verificați rezultatul de mai jos.',
+    },
+    'restart-to-complete-removal': {
+        'en': 'Restart the backend container to complete the removal:',
+        'fr': 'Redémarrez le conteneur backend pour terminer la suppression :',
+        'es': 'Reinicie el contenedor del backend para completar la eliminación:',
+        'ro': 'Reporniți containerul backend pentru a finaliza eliminarea:',
+    },
+    'back': {
+        'en': 'Back', 'fr': 'Retour', 'es': 'Volver', 'ro': 'Înapoi',
+    },
+    'installer-disabled': {
+        'en': 'The installer is currently disabled.',
+        'fr': "L'installateur est actuellement désactivé.",
+        'es': 'El instalador está actualmente desactivado.',
+        'ro': 'Instalatorul este momentan dezactivat.',
+    },
+    'installer-disabled-set': {
+        'en': 'To re-enable it, set this in backend/migratis/.env:',
+        'fr': 'Pour le réactiver, définissez ceci dans backend/migratis/.env :',
+        'es': 'Para reactivarlo, configure esto en backend/migratis/.env:',
+        'ro': 'Pentru a-l reactiva, setați aceasta în backend/migratis/.env:',
+    },
+    'installer-disabled-restart': {
+        'en': 'Then restart the backend:',
+        'fr': 'Puis redémarrez le backend :',
+        'es': 'Luego reinicie el backend:',
+        'ro': 'Apoi reporniți backendul:',
+    },
+    'error-label': {
+        'en': 'Error', 'fr': 'Erreur', 'es': 'Error', 'ro': 'Eroare',
+    },
+    'installed-success': {
+        'en': 'Module "{{module}}" installed successfully.',
+        'fr': 'Module « {{module}} » installé avec succès.',
+        'es': 'Módulo «{{module}}» instalado correctamente.',
+        'ro': 'Modulul „{{module}}” a fost instalat cu succes.',
+    },
+    'install-failed-msg': {
+        'en': 'Installation failed.', 'fr': "L'installation a échoué.",
+        'es': 'La instalación falló.', 'ro': 'Instalarea a eșuat.',
+    },
+    'backend-migration': {
+        'en': 'Backend migration:', 'fr': 'Migration backend :',
+        'es': 'Migración del backend:', 'ro': 'Migrare backend:',
+    },
+    'seed-translations': {
+        'en': 'Seed translations:', 'fr': 'Initialiser les traductions :',
+        'es': 'Sembrar traducciones:', 'ro': 'Inițializare traduceri:',
+    },
+    'frontend-files': {
+        'en': 'Frontend files:', 'fr': 'Fichiers frontend :',
+        'es': 'Archivos del frontend:', 'ro': 'Fișiere frontend:',
+    },
+    'applied-on-restart': {
+        'en': 'Applied automatically on restart', 'fr': 'Appliqué automatiquement au redémarrage',
+        'es': 'Aplicado automáticamente al reiniciar', 'ro': 'Aplicat automat la repornire',
+    },
+    'ok': {
+        'en': 'OK', 'fr': 'OK', 'es': 'OK', 'ro': 'OK',
+    },
+    'failed': {
+        'en': 'Failed', 'fr': 'Échec', 'es': 'Falló', 'ro': 'Eșuat',
+    },
+    'installed-automatically': {
+        'en': 'Installed automatically', 'fr': 'Installé automatiquement',
+        'es': 'Instalado automáticamente', 'ro': 'Instalat automat',
+    },
+    'not-applied-volume': {
+        'en': 'Not applied (volume not mounted)', 'fr': 'Non appliqué (volume non monté)',
+        'es': 'No aplicado (volumen no montado)', 'ro': 'Neaplicat (volum nemontat)',
+    },
+    'almost-done': {
+        'en': 'Almost done!', 'fr': 'Presque terminé !', 'es': '¡Casi listo!', 'ro': 'Aproape gata!',
+    },
+    'restart-to-load-module': {
+        'en': 'Restart the backend container to load the new module:',
+        'fr': 'Redémarrez le conteneur backend pour charger le nouveau module :',
+        'es': 'Reinicie el contenedor del backend para cargar el nuevo módulo:',
+        'ro': 'Reporniți containerul backend pentru a încărca noul modul:',
+    },
+    'rebuild-static-assets': {
+        'en': 'If your frontend is served by nginx, also rebuild the static assets:',
+        'fr': 'Si votre frontend est servi par nginx, reconstruisez aussi les fichiers statiques :',
+        'es': 'Si su frontend es servido por nginx, reconstruya también los recursos estáticos:',
+        'ro': 'Dacă frontendul este servit de nginx, reconstruiți și fișierele statice:',
+    },
+    'confirm-uninstall': {
+        'en': 'Uninstall "{{module}}"?\n\nThis will revert all migrations and remove all files for this module.',
+        'fr': 'Désinstaller « {{module}} » ?\n\nCela annulera toutes les migrations et supprimera tous les fichiers de ce module.',
+        'es': '¿Desinstalar «{{module}}»?\n\nEsto revertirá todas las migraciones y eliminará todos los archivos de este módulo.',
+        'ro': 'Dezinstalați „{{module}}”?\n\nAceasta va anula toate migrările și va elimina toate fișierele acestui modul.',
+    },
+    # ── backend error codes (rendered via t(code)) ──────────────────────────
+    'connection-failed': {
+        'en': 'Could not connect to the Migratis instance.',
+        'fr': "Impossible de se connecter à l'instance Migratis.",
+        'es': 'No se pudo conectar a la instancia de Migratis.',
+        'ro': 'Nu s-a putut conecta la instanța Migratis.',
+    },
+    'invalid-credentials': {
+        'en': 'Invalid email or password.', 'fr': 'Courriel ou mot de passe invalide.',
+        'es': 'Correo o contraseña no válidos.', 'ro': 'Email sau parolă invalidă.',
+    },
+    'missing-credentials': {
+        'en': 'Please enter your email and password.',
+        'fr': 'Veuillez saisir votre courriel et votre mot de passe.',
+        'es': 'Introduzca su correo y contraseña.',
+        'ro': 'Introduceți emailul și parola.',
+    },
+    'invalid-request': {
+        'en': 'Invalid request.', 'fr': 'Requête invalide.',
+        'es': 'Solicitud no válida.', 'ro': 'Cerere invalidă.',
+    },
+    'not-connected': {
+        'en': 'Not connected. Please reconnect.', 'fr': 'Non connecté. Veuillez vous reconnecter.',
+        'es': 'No conectado. Vuelva a conectarse.', 'ro': 'Neconectat. Reconectați-vă.',
+    },
+    'install-failed': {
+        'en': 'Installation failed.', 'fr': "L'installation a échoué.",
+        'es': 'La instalación falló.', 'ro': 'Instalarea a eșuat.',
+    },
+    'download-failed': {
+        'en': 'Failed to download the application.',
+        'fr': "Échec du téléchargement de l'application.",
+        'es': 'Error al descargar la aplicación.',
+        'ro': 'Descărcarea aplicației a eșuat.',
+    },
+    'uninstall-failed': {
+        'en': 'Uninstallation failed.', 'fr': 'La désinstallation a échoué.',
+        'es': 'La desinstalación falló.', 'ro': 'Dezinstalarea a eșuat.',
+    },
+}
+
+# ===========================================================================
 # generator
 # ===========================================================================
 TRANSLATIONS['generator'] = {

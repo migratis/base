@@ -4,7 +4,7 @@ import { Routes, Route, useLocation } from "react-router-dom";
 import "./App.scss";
 import 'react-toastify/dist/ReactToastify.css';
 import { Layout as Public, Layout as Private } from './common/components/Layout';
-import { SUPPORT, SUBSCRIPTION, USER, COOKIE, CONTACT, INSTALLER } from './settings';
+import { SUPPORT, SUBSCRIPTION, USER, COOKIE, CONTACT } from './settings';
 import { moduleRoutes } from './module_registry';
 
 const Home = lazyWithRetry(() => import('./common/components/Home'));
@@ -69,9 +69,7 @@ const App = () => {
             </>
           }
           <Route exact path="/disclaimer" element={<Disclaimer />} />
-          { INSTALLER &&
-            <Route exact path='/installer' element={<InstallerPage/>} />
-          }
+          <Route exact path='/installer' element={<InstallerPage/>} />
           {moduleRoutes.map(({ path, Component }) => (
             <Route key={path} path={path} element={<Component />} />
           ))}

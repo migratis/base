@@ -7,7 +7,9 @@ export const CONTACT = false;
 export const SUBSCRIPTION = false;
 export const USER = false;
 export const COOKIE = false;
-export const INSTALLER = true;
+// The installer is driven by the backend INSTALLER setting (migratis/.env).
+// The /installer route is always registered; the page asks the backend whether
+// the installer is enabled and shows reactivation instructions when it is off.
 
 
 

@@ -52,7 +52,10 @@ api.add_router("/cookie/",  cookie_router)
 # api.add_router("/support/", support_router)
 # api.add_router("/subscription/", subscription_router)
 # api.add_router("/generator/", generator_router)
-api.add_router("/installer/", installer_router)
+# The installer is mounted only when enabled (INSTALLER setting), so its
+# endpoints are not reachable on deployments that ship without it.
+if django_settings.INSTALLER:
+    api.add_router("/installer/", installer_router)
 
 # ── Auto-mount routers for installed apps ─────────────────────────────────
 _FRAMEWORK_APPS = frozenset([
@@ -66,6 +69,13 @@ for _app in django_settings.INSTALLED_APPS:
                 api.add_router(f'/{_app}/', _mod.router)
         except ImportError:
             pass
+
+
+@api.get("/installer/status", auth=None)
+def installer_status(request):
+    """Always-available flag (even when the installer router is unmounted) so the
+    frontend can show how to reactivate the installer when it is disabled."""
+    return JsonResponse({'enabled': django_settings.INSTALLER})
 
 
 @api.get("/csrftoken")

@@ -1,23 +1,29 @@
+# Dedicated project name so this standalone app never collides with another
+# Compose project on the same host (networks, volumes and `docker compose down`
+# stay scoped to "base").
+name: base
+
 services:
-#  base-db:
-#    image: postgres:18.3
-#    environment:
-#      - POSTGRES_DB=postgres
-#      - POSTGRES_USER=postgres
-#      - POSTGRES_PASSWORD=postgres
-#    volumes:
-#      - pgdata_migratis:/var/lib/postgresql
-#      - /var/backups/pg_backups:/var/backups/pg_backups
-#      - /var/log/pg_backups:/var/log/pg_backups
-#    expose:
-#      - "5432"
-#    ports:
-#      - "5432"
-#    command: -p 5432      
-#    networks:
-#      static-network:
-#        ipv4_address: 172.21.0.2
+  # PostgreSQL — only started when the "postgres" profile is enabled, so the
+  # default SQLite setup never runs an unused database container.
+  #   Switch to Postgres:  set USE_SQLITE=False in migratis/.env, then
+  #                        docker compose --profile postgres up --build
+  # Credentials fall back to the same defaults as migratis/.env; override here
+  # (or via a backend/.env) if you change DB_USER / DB_PASSWORD / DB_NAME there.
+  base-db:
+    image: postgres:18.3
+    container_name: base-db
+    profiles: ["postgres"]
+    environment:
+      - POSTGRES_DB=${DB_NAME:-migratis}
+      - POSTGRES_USER=${DB_USER:-migratis}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-change-me}
+    volumes:
+      - pgdata_migratis:/var/lib/postgresql
+    expose:
+      - "5432"
   base-api:
+    container_name: backend-base-api-1
     build:
       context: .
     entrypoint: /docker-entrypoint.sh
@@ -30,16 +36,6 @@ services:
       - "8004:8004"
     extra_hosts:
       - "host.docker.internal:host-gateway"
-    networks:
-      static-network:
-        ipv4_address: 172.21.0.4
-    # depends_on:
-    #   - db
-networks:
-  static-network:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 172.21.0.0/16
+
 volumes:
   pgdata_migratis: {}

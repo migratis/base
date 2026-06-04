@@ -1,5 +1,8 @@
 import api from "../../common/tools/axios";
 
+const getStatus = () =>
+  api.get("/installer/status").then((r) => r.data);
+
 const getSession = () =>
   api.get("/installer/session").then((r) => r.data);
 
@@ -25,6 +28,7 @@ const uninstall = (module) =>
   api.post(`/installer/uninstall/${encodeURIComponent(module)}`).then((r) => r.data);
 
 const InstallerService = {
+  getStatus,
   getSession,
   connect,
   disconnect,

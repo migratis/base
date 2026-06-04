@@ -7,5 +7,15 @@ service cron start
 python manage.py collectstatic --noinput
 python manage.py crontab add
 #python manage.py loaddata db.json
-python manage.py migrate
+# Wait for the database to be reachable, then migrate. In SQLite mode this
+# succeeds on the first try; in Postgres mode (USE_SQLITE=False) it retries
+# until the base-db container accepts connections — no depends_on needed.
+until python manage.py migrate; do
+  echo "Database not ready — retrying migrate in 2s…"
+  sleep 2
+done
+# Translations are DB-backed (served from the i18n tables). Seed them on every
+# boot so the standalone app has its UI strings even on a fresh SQLite DB.
+# Idempotent (get_or_create), so it is safe to re-run.
+python manage.py seed_translations
 python manage.py runserver 0.0.0.0:8004

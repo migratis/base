@@ -1,10 +1,16 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import InstallerService from '../services/installer.service';
 import { LoaderIndicator } from '../../common/components/LoaderIndicator';
 
 const STEPS = { CONNECT: 'connect', SELECT: 'select', INSTALL: 'install' };
 
 const InstallerPage = () => {
+  const { t } = useTranslation('installer');
+
+  // Backend-driven on/off switch (null = still checking).
+  const [enabled, setEnabled] = useState(null);
+
   const [step, setStep]       = useState(STEPS.CONNECT);
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState('');
@@ -32,14 +38,27 @@ const InstallerPage = () => {
       .catch(() => {});
   }, []);
 
-  // Check existing session on mount
+  // Ask the backend whether the installer is enabled, then load state on mount.
   useEffect(() => {
-    fetchInstalled();
-    InstallerService.getSession()
+    // The installer is a public page that manages its own connection to the
+    // remote migratis instance, so it must not inherit the app's stale
+    // "session expired" state (which would pop the login modal on load).
+    localStorage.removeItem('session_expired');
+    InstallerService.getStatus()
       .then((data) => {
-        if (data.connected) fetchApps();
+        const on = data?.enabled !== false;
+        setEnabled(on);
+        if (!on) return;
+        fetchInstalled();
+        InstallerService.getSession()
+          .then((session) => {
+            if (session.connected) fetchApps();
+          })
+          .catch(() => {});
       })
-      .catch(() => {});
+      // If the status check itself fails, fall back to enabled and let the
+      // normal flow surface any backend error.
+      .catch(() => setEnabled(true));
   }, [fetchInstalled]);
 
   const fetchApps = () => {
@@ -59,7 +78,21 @@ const InstallerPage = () => {
     setLoading(true);
     setError('');
     InstallerService.connect(email, password, url || undefined)
-      .then(() => fetchApps())
+      .then((data) => {
+        // The axios interceptor resolves (not rejects) on error responses, so a
+        // failed connect arrives here as data without a `user`. Surface its error.
+        if (data?.user) {
+          fetchApps();
+          return;
+        }
+        const detail = data?.detail;
+        const msg = detail?.[0]?.credentials?.[0]
+          || detail?.[0]?.url?.[0]
+          || detail?.[0]?.form?.[0]
+          || 'connection-failed';
+        setError(msg);
+        setLoading(false);
+      })
       .catch((err) => {
         const detail = err?.response?.data?.detail;
         const msg = detail?.[0]?.credentials?.[0]
@@ -100,7 +133,7 @@ const InstallerPage = () => {
   };
 
   const handleUninstall = (module) => {
-    if (!window.confirm(`Uninstall "${module}"?\n\nThis will revert all migrations and remove all files for this module.`)) return;
+    if (!window.confirm(t('confirm-uninstall', { module }))) return;
     setUninstalling(module);
     setUninstallResult(null);
     InstallerService.uninstall(module)
@@ -116,23 +149,42 @@ const InstallerPage = () => {
       .finally(() => setUninstalling(null));
   };
 
+  // Still checking the backend switch.
+  if (enabled === null) return <LoaderIndicator />;
+
+  // Installer disabled on the backend — explain how to turn it back on.
+  if (enabled === false) {
+    return (
+      <div className="container mt-4" style={{ maxWidth: 720 }}>
+        <h2 className="mb-4">{t('installer-title')}</h2>
+        <div className="card p-4">
+          <div className="alert alert-warning mb-3">{t('installer-disabled')}</div>
+          <p className="mb-2">{t('installer-disabled-set')}</p>
+          <pre className="bg-light p-2 rounded mb-3">INSTALLER=True</pre>
+          <p className="mb-2">{t('installer-disabled-restart')}</p>
+          <pre className="bg-light p-2 rounded mb-0">docker restart backend-base-api-1</pre>
+        </div>
+      </div>
+    );
+  }
+
   if (loading) return <LoaderIndicator />;
 
   return (
     <div className="container mt-4" style={{ maxWidth: 720 }}>
-      <h2 className="mb-4">Installer</h2>
+      <h2 className="mb-4">{t('installer-title')}</h2>
 
       {/* ── Uninstall result ─────────────────────────────────────────────── */}
       {uninstallResult && (
         <div className="card p-4 mb-4">
-          <h5 className="mb-3">Uninstall result</h5>
+          <h5 className="mb-3">{t('uninstall-result')}</h5>
           <div className={`alert ${uninstallResult.success ? 'alert-success' : 'alert-danger'} mb-3`}>
             {uninstallResult.success
               ? <>
-                  Module <strong>{uninstallResult.module}</strong> uninstalled successfully.
+                  {t('uninstalled-success', { module: uninstallResult.module })}{' '}
                   {uninstallResult.migrate_ok
-                    ? ' Migrations reverted.'
-                    : ' Warning: migration revert failed — check output below.'}
+                    ? t('migrations-reverted')
+                    : t('migration-revert-failed')}
                   {!uninstallResult.migrate_ok && uninstallResult.migrate_output && (
                     <pre className="bg-light p-2 mt-2 small mb-0" style={{ maxHeight: 120, overflow: 'auto' }}>
                       {uninstallResult.migrate_output}
@@ -140,12 +192,12 @@ const InstallerPage = () => {
                   )}
                   {uninstallResult.restart_required && (
                     <div className="mt-2 small">
-                      Restart the backend container to complete the removal:
+                      {t('restart-to-complete-removal')}
                       <pre className="mb-0 mt-1 bg-white p-2 rounded">docker restart backend-base-api-1</pre>
                     </div>
                   )}
                 </>
-              : `Error: ${uninstallResult.error}`}
+              : `${t('error-label')}: ${t(uninstallResult.error)}`}
           </div>
           <button
             className="btn btn-secondary"
@@ -156,7 +208,7 @@ const InstallerPage = () => {
               setStep(apps.length > 0 ? STEPS.SELECT : STEPS.CONNECT);
             }}
           >
-            Back
+            {t('back')}
           </button>
         </div>
       )}
@@ -164,7 +216,7 @@ const InstallerPage = () => {
       {/* ── Installed modules ────────────────────────────────────────────── */}
       {installed.length > 0 && (
         <div className="card p-4 mb-4">
-          <h5 className="mb-3">Installed modules</h5>
+          <h5 className="mb-3">{t('installed-modules')}</h5>
           <ul className="list-group">
             {installed.map((mod) => (
               <li key={mod} className="list-group-item d-flex justify-content-between align-items-center">
@@ -174,7 +226,7 @@ const InstallerPage = () => {
                   disabled={uninstalling === mod}
                   onClick={() => handleUninstall(mod)}
                 >
-                  {uninstalling === mod ? 'Uninstalling…' : 'Uninstall'}
+                  {uninstalling === mod ? t('uninstalling') : t('uninstall')}
                 </button>
               </li>
             ))}
@@ -185,11 +237,11 @@ const InstallerPage = () => {
       {/* ── Step 1: Connect ──────────────────────────────────────────────── */}
       {!uninstallResult && step === STEPS.CONNECT && (
         <div className="card p-4">
-          <h5 className="mb-3">Connect to Migratis</h5>
-          {error && <div className="alert alert-danger">{error}</div>}
+          <h5 className="mb-3">{t('connect-to-migratis')}</h5>
+          {error && <div className="alert alert-danger">{t(error)}</div>}
           <form onSubmit={handleConnect}>
             <div className="mb-3">
-              <label className="form-label">Email</label>
+              <label className="form-label">{t('email')}</label>
               <input
                 type="email"
                 className="form-control"
@@ -199,7 +251,7 @@ const InstallerPage = () => {
               />
             </div>
             <div className="mb-3">
-              <label className="form-label">Password</label>
+              <label className="form-label">{t('password')}</label>
               <input
                 type="password"
                 className="form-control"
@@ -210,8 +262,8 @@ const InstallerPage = () => {
             </div>
             <div className="mb-3">
               <label className="form-label">
-                Migratis URL{' '}
-                <small className="text-muted">(leave blank for default)</small>
+                {t('migratis-url')}{' '}
+                <small className="text-muted">{t('leave-blank-default')}</small>
               </label>
               <input
                 type="url"
@@ -222,7 +274,7 @@ const InstallerPage = () => {
               />
             </div>
             <button type="submit" className="btn btn-primary">
-              Connect
+              {t('connect')}
             </button>
           </form>
         </div>
@@ -232,14 +284,14 @@ const InstallerPage = () => {
       {!uninstallResult && step === STEPS.SELECT && (
         <div className="card p-4">
           <div className="d-flex justify-content-between align-items-center mb-3">
-            <h5 className="mb-0">Select an application to install</h5>
+            <h5 className="mb-0">{t('select-app')}</h5>
             <button className="btn btn-sm btn-outline-secondary" onClick={handleDisconnect}>
-              Disconnect
+              {t('disconnect')}
             </button>
           </div>
-          {error && <div className="alert alert-danger">{error}</div>}
+          {error && <div className="alert alert-danger">{t(error)}</div>}
           {apps.length === 0 ? (
-            <div className="alert alert-info">No generated applications found.</div>
+            <div className="alert alert-info">{t('no-apps')}</div>
           ) : (
             <div className="list-group mb-3">
               {apps.map((app) => {
@@ -255,10 +307,10 @@ const InstallerPage = () => {
                     <div className="d-flex justify-content-between align-items-center">
                       <div>
                         <strong>{app.name}</strong>
-                        <span className="ms-2 text-muted small">module: {app.module}</span>
+                        <span className="ms-2 text-muted small">{t('module-label')} {app.module}</span>
                       </div>
                       {alreadyInstalled && (
-                        <span className="badge bg-success">Installed</span>
+                        <span className="badge bg-success">{t('installed-badge')}</span>
                       )}
                     </div>
                   </button>
@@ -271,7 +323,7 @@ const InstallerPage = () => {
             disabled={!selectedApp || installed.includes(selectedApp?.module)}
             onClick={handleInstall}
           >
-            Install selected app
+            {t('install-selected')}
           </button>
         </div>
       )}
@@ -281,15 +333,15 @@ const InstallerPage = () => {
         <div className="card p-4">
           <div className={`alert ${result.success ? 'alert-success' : 'alert-danger'} mb-3`}>
             {result.success
-              ? `Module "${result.module}" installed successfully.`
-              : 'Installation failed.'}
+              ? t('installed-success', { module: result.module })
+              : t('install-failed-msg')}
           </div>
 
           <div className="mb-3">
-            <strong>Backend migration:</strong>{' '}
+            <strong>{t('backend-migration')}</strong>{' '}
             {result.migrate_deferred
-              ? <span className="text-info">Applied automatically on restart</span>
-              : <span className={result.migrate_ok ? 'text-success' : 'text-danger'}>{result.migrate_ok ? 'OK' : 'Failed'}</span>
+              ? <span className="text-info">{t('applied-on-restart')}</span>
+              : <span className={result.migrate_ok ? 'text-success' : 'text-danger'}>{result.migrate_ok ? t('ok') : t('failed')}</span>
             }
             {!result.migrate_deferred && result.migrate_output && (
               <pre className="bg-light p-2 mt-1 small" style={{ maxHeight: 150, overflow: 'auto' }}>
@@ -299,10 +351,10 @@ const InstallerPage = () => {
           </div>
 
           <div className="mb-3">
-            <strong>Seed translations:</strong>{' '}
+            <strong>{t('seed-translations')}</strong>{' '}
             {result.migrate_deferred
-              ? <span className="text-info">Applied automatically on restart</span>
-              : <span className={result.seed_ok ? 'text-success' : 'text-danger'}>{result.seed_ok ? 'OK' : 'Failed'}</span>
+              ? <span className="text-info">{t('applied-on-restart')}</span>
+              : <span className={result.seed_ok ? 'text-success' : 'text-danger'}>{result.seed_ok ? t('ok') : t('failed')}</span>
             }
             {!result.migrate_deferred && result.seed_output && (
               <pre className="bg-light p-2 mt-1 small" style={{ maxHeight: 100, overflow: 'auto' }}>
@@ -312,17 +364,17 @@ const InstallerPage = () => {
           </div>
 
           <div className="mb-3">
-            <strong>Frontend files:</strong>{' '}
+            <strong>{t('frontend-files')}</strong>{' '}
             <span className={result.frontend_ok ? 'text-success' : 'text-warning'}>
-              {result.frontend_ok ? 'Installed automatically' : 'Not applied (volume not mounted)'}
+              {result.frontend_ok ? t('installed-automatically') : t('not-applied-volume')}
             </span>
           </div>
 
           {result.restart_required && (
             <div className="alert alert-warning">
-              <strong>Almost done!</strong> Restart the backend container to load the new module:
+              <strong>{t('almost-done')}</strong> {t('restart-to-load-module')}
               <pre className="mb-2 mt-2 small bg-white p-2 rounded">docker restart backend-base-api-1</pre>
-              If your frontend is served by nginx, also rebuild the static assets:
+              {t('rebuild-static-assets')}
               <pre className="mb-0 mt-2 small bg-white p-2 rounded">npm run build</pre>
             </div>
           )}
@@ -335,7 +387,7 @@ const InstallerPage = () => {
               setSelectedApp(null);
             }}
           >
-            Install another
+            {t('install-another')}
           </button>
         </div>
       )}
