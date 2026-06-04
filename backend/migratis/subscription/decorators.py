@@ -1,26 +1,7 @@
-from functools import wraps
-from django.http import JsonResponse
-from django.conf import settings
-from migratis.api.functions import formatErrors
-from ninja.errors import HttpError
+# Back-compat shim. The access-control decorator now lives in the neutral
+# migratis.api.decorators module so it no longer ties every caller to the
+# subscription app. Existing imports (migratis.subscription.decorators import
+# check_access) keep working through this re-export.
+from migratis.api.decorators import check_access, test_access
 
-from . import models
-
-def test_access(user):
-    if settings.NO_SUBSCRIPTION:
-        return True 
-        
-    access = models.Subscription.objects.select_related("user").filter(user=user.id, access=True)
-    if access:
-        return True
-    return False
-
-def check_access():
-    def decorator(view):
-        @wraps(view)
-        def _wrapped_view(request, *args, **kwargs):
-            if not test_access(request.user):
-                raise HttpError(403, "Forbidden") 
-            return view(request, *args, **kwargs)
-        return _wrapped_view
-    return decorator
+__all__ = ['check_access', 'test_access']

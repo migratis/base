@@ -15,9 +15,8 @@ from smtplib import SMTPRecipientsRefused
 from ninja import Form, Router
 from migratis.api.functions import formatErrors
 from migratis.i18n.views import t
-from migratis.subscription.decorators import check_access
-from migratis.subscription.views import hasTrial, hasAccess, doUnsubscribe, saveCustomer
-from migratis.subscription.models import Subscription
+from migratis.api.decorators import check_access
+from migratis.api import billing
 from . import models, schemas
 from pprint import pprint
 
@@ -102,13 +101,8 @@ def getProfile(request):
     try:
         userId = request.user.id
         user = models.User.objects.get(pk=userId)
-        trial = hasTrial(user)
-        user.trial = trial
-        try:
-            subscription = Subscription.objects.get(user=userId, access=True)
-            user.subscription = subscription
-        except Subscription.DoesNotExist:
-            user.subscription = None
+        user.trial = billing.has_trial(user)
+        user.subscription = billing.active_subscription(user)
     except(TypeError, ValueError, OverflowError, models.User.DoesNotExist):
         user = None
     if user is not None:
@@ -122,13 +116,8 @@ def getProfileWithToken(request, uidb64: str, token: str):
         user = models.User.objects.get(pk=uid)    
         if user is not None and not account_pass_token.check_token(user, token):
             return JsonResponse({"detail": formatErrors({"error": ["invitation-outdated-token"]})}, status=422)     
-        trial = hasTrial(user)
-        user.trial = trial
-        try:
-            subscription = Subscription.objects.get(user=user, access=True)
-            user.subscription = subscription
-        except Subscription.DoesNotExist:
-            user.subscription = None
+        user.trial = billing.has_trial(user)
+        user.subscription = billing.active_subscription(user)
     except(TypeError, ValueError, OverflowError, models.User.DoesNotExist):
         user = None
     if user is not None:
@@ -142,7 +131,7 @@ def update(request, profile: Form[schemas.UserSchemaUpdateIn]):
         user = models.User.objects.get(pk=userId)
         for attr, value in profile.dict().items():
             setattr(user, attr, value)
-        savedCustomer, error = saveCustomer(user)
+        savedCustomer, error = billing.save_customer(user)
         if savedCustomer:
             user.save()
         else:
@@ -156,8 +145,8 @@ def delete(request):
     userId = request.user.id            
     try:        
         user = models.User.objects.get(pk=userId)                    
-        if hasAccess(user):
-            response = doUnsubscribe(user.id)            
+        if billing.has_access(user):
+            response = billing.do_unsubscribe(user.id)            
     except Exception as e:
         pass
     try:
@@ -177,7 +166,7 @@ def invitation(request, user: Form[schemas.UserSchemaInvitation]):
         delattr(user, 'email')
         for attr, value in user.dict().items():
             setattr(token_user, attr, value)
-        if saveCustomer(token_user):
+        if billing.save_customer(token_user):
             token_user.is_active = True
             token_user.save()
         else:
@@ -193,7 +182,7 @@ def register(request, user: Form[schemas.UserSchemaIn]):
     try:
         user.is_active = False
         user.save()
-        if not saveCustomer(user):
+        if not billing.save_customer(user):
             user.delete()
             return JsonResponse({"detail": formatErrors({"taxnumber": ["taxnumber-invalid"]})}, status=422) 
         if not sendActivation(user):
@@ -255,12 +244,9 @@ def login(request, email: Form[str], password: Form[str]):
     if result is not None:
         django_login(request, result)
         user = models.User.objects.get(pk=result.id)
-        user.trial = hasTrial(user)
-        try:
-            subscription = Subscription.objects.get(user=user, access=True)
-            user.subscription = subscription.status
-        except Subscription.DoesNotExist:
-            user.subscription = None
+        user.trial = billing.has_trial(user)
+        sub = billing.active_subscription(user)
+        user.subscription = sub.status if sub else None
         response = JsonResponse({ 
             "user": {
                 "id": user.id,

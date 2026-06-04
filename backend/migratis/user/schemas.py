@@ -1,7 +1,17 @@
 from ninja import ModelSchema
 from pydantic import EmailStr, Field
+from django.conf import settings
 from . import models
-from migratis.subscription.schemas import SubscriptionSchema
+
+# Only bind the subscription app's schema when subscriptions are enforced; when
+# disabled the field is a passthrough (always None), so the user module does not
+# import — or depend on — the optional subscription app.
+if settings.NO_SUBSCRIPTION:
+    from typing import Any as SubscriptionField
+else:
+    from typing import Optional
+    from migratis.subscription.schemas import SubscriptionSchema
+    SubscriptionField = Optional[SubscriptionSchema]
 
 class UserSchemaInMin(ModelSchema):
     email : EmailStr | None = Field(default=None)
@@ -62,7 +72,7 @@ class UserSchemaOut(ModelSchema):
     address: str | None = None
     city: str | None = None
     zipcode: str | None = None
-    subscription: SubscriptionSchema | None = None
+    subscription: SubscriptionField = None
     trial: bool = True
     
     class Meta:
