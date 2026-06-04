@@ -14,6 +14,7 @@ import { ITEMS_PER_PAGE as pageSize } from '../../settings';
 import Badge from 'react-bootstrap/Badge';
 import { Tabs, Tab } from 'react-bootstrap';
 import Container from 'react-bootstrap/Container';
+import Button from 'react-bootstrap/Button';
 import { COLOR_LINK } from "../../settings";
 
 const Entities = (props) => {
@@ -67,12 +68,43 @@ const Entities = (props) => {
           if (response.detail[0].success) {
             toast.success(t(response.detail[0].success[0], {entity: t(props.entity)}));
             setRefresh(prev => !prev);
+          } else if (response.detail[0]?.loc) {
+            const errorMsg = response.detail[0].msg;
+            if (errorMsg) {
+              toast.error(t(errorMsg));
+            } else {
+              toast.error(t('error-occured'));
+            }
           } else {
             toast.error(t('error-occured'));
           }
         }
-      );    
-    }      
+      );
+    }
+  };
+
+  const handleDeleteAll = (active) => {
+    if (window.confirm(t('confirm-delete-all-entities'))) {
+      CommonService.deleteAllEntities(props.app, props.entity, active).then(
+        (response) => {
+          if (response.detail[0].success) {
+            toast.success(t(response.detail[0].success[0], { count: response.deleted || 0 }));
+            setRefresh(prev => !prev);
+          } else if (response.detail[0].warning) {
+            toast.warning(t(response.detail[0].warning[0]));
+          } else if (response.detail[0]?.loc) {
+            const errorMsg = response.detail[0].msg;
+            if (errorMsg) {
+              toast.error(t(errorMsg));
+            } else {
+              toast.error(t('error-occured'));
+            }
+          } else {
+            toast.error(t('error-occured'));
+          }
+        }
+      );
+    }
   };
 
   const handleRefresh = useCallback(() => {
@@ -224,8 +256,15 @@ const Entities = (props) => {
                   >
                     <Tab eventKey="active" title={t('active')}>
                       <Container>
-                        <div className="text-left p-2">
-                          {count > 1 && <> <Badge>{start}</Badge> {t('count-to')} <Badge>{end}</Badge> {t('count-of')} </> } <Badge>{count}</Badge>
+                        <div className="d-flex justify-content-between align-items-center p-2">
+                          <div>
+                            {count > 1 && <> <Badge>{start}</Badge> {t('count-to')} <Badge>{end}</Badge> {t('count-of')} </> } <Badge>{count}</Badge>
+                          </div>
+                          {count > 0 && props.app === 'generator' && props.entity === 'entity' && (
+                            <Button variant="outline-danger" size="sm" onClick={() => handleDeleteAll(true)}>
+                              {t('delete-all')}
+                            </Button>
+                          )}
                         </div>
                         <props.list
                           entities={entities}
@@ -244,8 +283,15 @@ const Entities = (props) => {
                     </Tab>
                     <Tab eventKey="inactive" title={t('inactive')}>
                       <Container>
-                        <div className="text-left p-2">
-                          {count > 1 && <> <Badge>{start}</Badge> {t('count-to')} <Badge>{end}</Badge> {t('count-of')} </> } <Badge>{count}</Badge>
+                        <div className="d-flex justify-content-between align-items-center p-2">
+                          <div>
+                            {count > 1 && <> <Badge>{start}</Badge> {t('count-to')} <Badge>{end}</Badge> {t('count-of')} </> } <Badge>{count}</Badge>
+                          </div>
+                          {count > 0 && props.app === 'generator' && props.entity === 'entity' && (
+                            <Button variant="outline-danger" size="sm" onClick={() => handleDeleteAll(false)}>
+                              {t('delete-all')}
+                            </Button>
+                          )}
                         </div>
                         <props.list
                           entities={entities}
@@ -263,17 +309,24 @@ const Entities = (props) => {
                       </Container>
                     </Tab>
                   </Tabs>
-                : 
+:
                   <>
-                    <div className="text-left p-2">
-                          {count > 1 && <> <Badge>{start}</Badge> {t('count-to')} <Badge>{end}</Badge> {t('count-of')} </> } <Badge>{count}</Badge>
-                    </div>                    
+                    <div className="d-flex justify-content-between align-items-center p-2">
+                      <div>
+                        {count > 1 && <> <Badge>{start}</Badge> {t('count-to')} <Badge>{end}</Badge> {t('count-of')} </> } <Badge>{count}</Badge>
+                      </div>
+                      {count > 0 && props.app === 'generator' && props.entity === 'entity' && (
+                        <Button variant="outline-danger" size="sm" onClick={() => handleDeleteAll(null)}>
+                          {t('delete-all')}
+                        </Button>
+                      )}
+                    </div>
                     <props.list
                       entities={entities}
                       handleEdit={handleEdit}
                       handleDelete={handleDelete}
-                      handleRefresh={handleRefresh}                       
-                    />  
+                      handleRefresh={handleRefresh}
+                    />
                     <MigratisPagination
                       page={page}
                       pages={pages}
@@ -292,6 +345,10 @@ const Entities = (props) => {
         onHide={() => setEditModalShow(false)}
         title={entity?.id?t(`update-${props.entity}`):t(`add-${props.entity}`)}
       >
+        {/* Spread props.formProps so callers can pass extra context to the
+            form (e.g. EntityForm / FieldForm need `applicationRoles` to
+            render the per-app role dropdown; without this forward they
+            silently fall back to the legacy public/user/admin triple). */}
         <props.form
           entity={entity}
           serverErrors={serverErrors}

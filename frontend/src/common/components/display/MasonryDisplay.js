@@ -3,6 +3,7 @@ import {
   IoSettingsOutline as EditIcon,
   IoTrashOutline as TrashIcon,
 } from 'react-icons/io5';
+import InteractionRowActions from '../InteractionRowActions';
 
 const MasonryDisplay = ({
   entity,
@@ -11,6 +12,9 @@ const MasonryDisplay = ({
   config = {},
   onEdit,
   onDelete,
+  onInteraction,
+  viewAs,
+  getRoleRank,
   t,
 }) => {
   if (!records || records.length === 0) {
@@ -170,6 +174,15 @@ const MasonryDisplay = ({
                 </div>
               );
             })}
+            <InteractionRowActions
+              interactions={config?.interactions}
+              recordData={record?.data}
+              recordId={record.id}
+              viewAs={viewAs}
+              getRoleRank={getRoleRank}
+              onInteraction={onInteraction}
+              className="d-flex flex-wrap gap-1 mt-2"
+            />
           </div>
           <div className="d-flex justify-content-end gap-2 p-2" style={{ position: 'absolute', bottom: 0, right: 0 }}>
             {onEdit && (

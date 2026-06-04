@@ -9,6 +9,7 @@ import {
   IoImageOutline as ImageIcon,
   IoInformationCircleOutline as InfoIcon,
 } from 'react-icons/io5';
+import InteractionRowActions from '../InteractionRowActions';
 
 const GalleryDisplay = ({
   entity,
@@ -17,6 +18,9 @@ const GalleryDisplay = ({
   config = {},
   onEdit,
   onDelete,
+  onInteraction,
+  viewAs,
+  getRoleRank,
   t,
 }) => {
   const [expandedRecord, setExpandedRecord] = useState(null);
@@ -177,6 +181,15 @@ const GalleryDisplay = ({
                     </div>
                   );
                 })}
+                <InteractionRowActions
+                  interactions={config?.interactions}
+                  recordData={record?.data}
+                  recordId={record.id}
+                  viewAs={viewAs}
+                  getRoleRank={getRoleRank}
+                  onInteraction={onInteraction}
+                  className="d-flex flex-wrap gap-1 mt-2"
+                />
                 <div className="d-flex justify-content-end gap-2 mt-2">
                   <span className="link action" onClick={() => onEdit(record)}>
                     <EditIcon />

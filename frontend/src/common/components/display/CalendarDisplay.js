@@ -15,6 +15,7 @@ import {
   IoChevronForwardOutline as NextIcon,
   IoTrashOutline as TrashIcon,
 } from 'react-icons/io5';
+import InteractionRowActions from '../InteractionRowActions';
 
 // -------------------------------------------------------------------
 // Helpers
@@ -93,44 +94,61 @@ const colorFor = (() => {
 // Sub-components
 // -------------------------------------------------------------------
 
-const EventChip = ({ record, titleField, colorVariant, onEdit, onDelete }) => {
+const EventChip = ({
+  record, titleField, colorVariant, onEdit, onDelete,
+  interactions, viewAs, getRoleRank, onInteraction,
+}) => {
   const title = titleField ? record.data[titleField] : null;
   const label = title ? String(title) : '—';
 
   return (
-    <div
-      className={`d-flex align-items-center gap-1 rounded px-1 mb-1`}
-      style={{
-        background: `var(--bs-${colorVariant}-bg, #e7f0ff)`,
-        border: `1px solid var(--bs-${colorVariant}, #0d6efd)`,
-        fontSize: '0.72rem',
-        cursor: onEdit ? 'pointer' : 'default',
-        overflow: 'hidden',
-      }}
-      onClick={(e) => { e.stopPropagation(); if (onEdit) onEdit(record); }}
-    >
-      <span
+    <div className="mb-1">
+      <div
+        className={`d-flex align-items-center gap-1 rounded px-1`}
         style={{
-          flex: 1,
+          background: `var(--bs-${colorVariant}-bg, #e7f0ff)`,
+          border: `1px solid var(--bs-${colorVariant}, #0d6efd)`,
+          fontSize: '0.72rem',
+          cursor: onEdit ? 'pointer' : 'default',
           overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-          color: `var(--bs-${colorVariant}-text, #0a58ca)`,
-          fontWeight: 500,
         }}
-        title={label}
+        onClick={(e) => { e.stopPropagation(); if (onEdit) onEdit(record); }}
       >
-        {label}
-      </span>
-      {onDelete && (
         <span
-          className="link action"
-          style={{ flexShrink: 0, fontSize: '0.8rem' }}
-          onClick={(e) => { e.stopPropagation(); onDelete(record.id); }}
+          style={{
+            flex: 1,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            color: `var(--bs-${colorVariant}-text, #0a58ca)`,
+            fontWeight: 500,
+          }}
+          title={label}
         >
-          <TrashIcon />
+          {label}
         </span>
-      )}
+        {onDelete && (
+          <span
+            className="link action"
+            style={{ flexShrink: 0, fontSize: '0.8rem' }}
+            onClick={(e) => { e.stopPropagation(); onDelete(record.id); }}
+          >
+            <TrashIcon />
+          </span>
+        )}
+      </div>
+      {/* Workflow buttons render below the chip so the chip itself stays
+          compact in the calendar grid. Component returns null when no
+          interactions survive the per-row filter — no extra DOM. */}
+      <InteractionRowActions
+        interactions={interactions}
+        recordData={record?.data}
+        recordId={record.id}
+        viewAs={viewAs}
+        getRoleRank={getRoleRank}
+        onInteraction={onInteraction}
+        className="d-flex flex-wrap gap-1 mt-1"
+      />
     </div>
   );
 };
@@ -147,6 +165,9 @@ const CalendarDisplay = ({
   onEdit,
   onDelete,
   onAdd,
+  onInteraction,
+  viewAs,
+  getRoleRank,
   t,
 }) => {
   const tval = (key, fallback) => (t ? t(key, fallback) : fallback || key);
@@ -342,6 +363,10 @@ const CalendarDisplay = ({
                     colorVariant={variant}
                     onEdit={onEdit}
                     onDelete={onDelete}
+                    interactions={config?.interactions}
+                    viewAs={viewAs}
+                    getRoleRank={getRoleRank}
+                    onInteraction={onInteraction}
                   />
                 );
               })}

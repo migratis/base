@@ -186,7 +186,6 @@ function renderCanvas(canvas, shape, a, b, scaleLabel, {
   // Which values to render (preview overrides during drag)
   const fa = parseFloat(previewA !== undefined ? previewA : a) || 0;
   const fb = parseFloat(previewB !== undefined ? previewB : b) || 0;
-  const isDragHandle = previewA !== undefined;
 
   // Draw the shape
   if (fa > 0) {
@@ -461,7 +460,7 @@ const ShapeField = ({
       push(parsed.shape === 'circle' ? { a: Math.max(a, b) } : { a, b });
       return;
     }
-  }, [toCanvas, parsed.shape, parsed.b, push, redraw]);
+  }, [toCanvas, parsed.shape, parsed.a, parsed.b, push, redraw]);
 
   // Release outside canvas
   useEffect(() => {

@@ -2,6 +2,7 @@ import {
   IoSettingsOutline as EditIcon,
   IoTrashOutline as TrashIcon,
 } from 'react-icons/io5';
+import InteractionRowActions from '../InteractionRowActions';
 
 const ListDisplay = ({
   entity,
@@ -10,6 +11,9 @@ const ListDisplay = ({
   config = {},
   onEdit,
   onDelete,
+  onInteraction,
+  viewAs,
+  getRoleRank,
   t,
 }) => {
   if (!records || records.length === 0) {
@@ -103,7 +107,15 @@ const ListDisplay = ({
               </small>
             )}
           </div>
-          <div className="d-flex gap-2">
+          <div className="d-flex align-items-center gap-2">
+            <InteractionRowActions
+              interactions={config?.interactions}
+              recordData={record?.data}
+              recordId={record.id}
+              viewAs={viewAs}
+              getRoleRank={getRoleRank}
+              onInteraction={onInteraction}
+            />
             <span className="link action" onClick={() => onEdit(record)}>
               <EditIcon />
             </span>

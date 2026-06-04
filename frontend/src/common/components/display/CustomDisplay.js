@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { getVisibleInteractions } from '../interactionVisibility';
 
 class CustomDisplayErrorBoundary extends React.Component {
   constructor(props) {
@@ -50,6 +51,7 @@ const CustomDisplay = ({
   onEdit,
   onDelete,
   t,
+  viewAs,
   sandboxConfig,
   FallbackDisplay,
   ...rest
@@ -63,6 +65,16 @@ const CustomDisplay = ({
     if (!componentName || !code) return null;
     return compileDisplay(componentName, code);
   }, [componentName, code]);
+
+  // AI-generated displays call getVisibleInteractions(config?.interactions,
+  // record?.data) without a viewerRole arg. Bind viewAs and the per-app
+  // role-rank lookup here so Stage A + Stage B run without touching every
+  // generated component.
+  const boundGetVisibleInteractions = useMemo(
+    () => (interactions, recordData, parentRecordData) =>
+      getVisibleInteractions(interactions, recordData, parentRecordData, viewAs, rest?.getRoleRank),
+    [viewAs, rest?.getRoleRank],
+  );
 
   const fallbackProps = { records, entityConfig, relOptions, onEdit, onDelete, t, ...rest };
 
@@ -80,6 +92,7 @@ const CustomDisplay = ({
         onEdit={onEdit}
         onDelete={onDelete}
         t={t}
+        getVisibleInteractions={boundGetVisibleInteractions}
         {...propsSchema}
         {...rest}
       />

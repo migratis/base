@@ -3,6 +3,7 @@ import {
   IoSettingsOutline as EditIcon,
   IoTrashOutline as TrashIcon,
 } from 'react-icons/io5';
+import InteractionRowActions from '../InteractionRowActions';
 
 const TableDisplay = ({
   entity,
@@ -11,6 +12,9 @@ const TableDisplay = ({
   config = {},
   onEdit,
   onDelete,
+  onInteraction,
+  viewAs,
+  getRoleRank,
   t,
   sortBy = '',
   sortDir = 'asc',
@@ -50,6 +54,13 @@ const TableDisplay = ({
   const columns = getFieldOrder();
   const maxColumns = config?.display_mode_options?.max_columns || 6;
   const displayColumns = columns.slice(0, maxColumns);
+
+  // Workflow-step buttons render in a trailing "Actions" column. The column
+  // only exists when the entity declares any interactions AND the caller is
+  // wired to handle them — otherwise we omit it so we don't add a dead empty
+  // column to entities (e.g. catalogs) with no admin workflow.
+  const hasInteractions =
+    Array.isArray(config?.interactions) && config.interactions.length > 0 && !!onInteraction;
 
   const resolveRelLabel = (fieldName, value) => {
     if (!value) return '—';
@@ -163,6 +174,7 @@ const TableDisplay = ({
                 </th>
               );
             })}
+            {hasInteractions && <th></th>}
           </tr>
         </thead>
         <tbody>
@@ -195,6 +207,18 @@ const TableDisplay = ({
                     : resolveRelLabel(col.field_name, record.data[col.field_name])}
                 </td>
               ))}
+              {hasInteractions && (
+                <td>
+                  <InteractionRowActions
+                    interactions={config.interactions}
+                    recordData={record?.data}
+                    recordId={record.id}
+                    viewAs={viewAs}
+                    getRoleRank={getRoleRank}
+                    onInteraction={onInteraction}
+                  />
+                </td>
+              )}
             </tr>
           ))}
         </tbody>

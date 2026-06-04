@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Badge from 'react-bootstrap/Badge';
 import Button from 'react-bootstrap/Button';
+import Carousel from 'react-bootstrap/Carousel';
 import Image from 'react-bootstrap/Image';
 import Modal from 'react-bootstrap/Modal';
 import OverlayTrigger from 'react-bootstrap/OverlayTrigger';
@@ -12,6 +13,7 @@ import {
   IoInformationCircleOutline as InfoIcon,
   IoImageOutline as ImagePlaceholderIcon,
 } from 'react-icons/io5';
+import InteractionRowActions from '../InteractionRowActions';
 
 const CardsDisplay = ({
   entity,
@@ -21,6 +23,8 @@ const CardsDisplay = ({
   onEdit,
   onDelete,
   onInteraction,
+  viewAs,
+  getRoleRank,
   t,
 }) => {
   const [expandedRecord, setExpandedRecord] = useState(null);
@@ -41,25 +45,44 @@ const CardsDisplay = ({
     return fieldsConfig[fieldName]?.label || fieldName;
   };
 
-  const getThumbnailUrl = (record) => {
-    if (!thumbnailFieldName) return null;
-    const value = record.data[thumbnailFieldName];
-    if (!value) return null;
-    // Multi-image: JSON array — use first entry
-    if (typeof value === 'string' && value.startsWith('[')) {
-      try { const arr = JSON.parse(value); if (arr?.[0]) return arr[0]; } catch {}
-    }
-    if (typeof value !== 'string') return null;
-    if (value.startsWith('data:') || value.startsWith('http') || value.startsWith('/')) return value;
-    return null;
-  };
-
   const imageFieldNames = new Set(
     entity.fields
       .filter(f => f.field_type === 'file' || ['image', 'images'].includes(fieldsConfig[f.name]?.render_as))
       .map(f => f.name)
   );
   if (thumbnailFieldName) imageFieldNames.add(thumbnailFieldName);
+
+  // Flatten every image field on a record into a deduped array of usable URLs.
+  // Handles three shapes per field: JSON string array (multi-image), single
+  // string URL/data URI, or empty. Thumbnail field comes first so the card
+  // cover keeps using the AI-chosen primary image.
+  const getAllImages = (record) => {
+    const out = [];
+    const seen = new Set();
+    const push = (v) => {
+      if (typeof v !== 'string' || seen.has(v)) return;
+      if (v.startsWith('data:') || v.startsWith('http') || v.startsWith('/')) {
+        seen.add(v);
+        out.push(v);
+      }
+    };
+    const orderedFields = Array.from(new Set(
+      [thumbnailFieldName, ...imageFieldNames].filter(Boolean)
+    ));
+    for (const fname of orderedFields) {
+      const value = record.data?.[fname];
+      if (!value) continue;
+      if (typeof value === 'string' && value.startsWith('[')) {
+        try {
+          const arr = JSON.parse(value);
+          if (Array.isArray(arr)) arr.forEach(push);
+        } catch {}
+      } else {
+        push(value);
+      }
+    }
+    return out;
+  };
 
   const displayFields = entity.fields
     .filter((f) => !imageFieldNames.has(f.name));
@@ -143,22 +166,37 @@ const CardsDisplay = ({
   return (
     <div className="d-flex flex-wrap gap-3">
       {records.map((record) => {
-        const thumbnailUrl = getThumbnailUrl(record);
+        const recordImages = getAllImages(record);
 
         return (
           <div key={record.id} className="card shadow-sm" style={{ minWidth: '280px', maxWidth: '350px', flex: '1 1 280px' }}>
             <div
-              style={{ height: '150px', overflow: 'hidden', background: '#f0f0f0', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              style={{ height: '150px', overflow: 'hidden', background: '#f0f0f0', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}
               onClick={() => setExpandedRecord(record)}
             >
-              {thumbnailUrl ? (
+              {recordImages.length > 0 ? (
                 <Image
-                  src={thumbnailUrl}
+                  src={recordImages[0]}
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   onError={(e) => { e.target.style.display = 'none'; }}
                 />
               ) : (
                 <ImagePlaceholderIcon style={{ fontSize: '3rem', color: '#ccc' }} />
+              )}
+              {recordImages.length > 1 && (
+                <span
+                  className="badge"
+                  style={{
+                    position:   'absolute',
+                    top:        8,
+                    right:      8,
+                    background: 'rgba(0,0,0,0.65)',
+                    color:      'white',
+                    fontSize:   '0.75rem',
+                  }}
+                >
+                  +{recordImages.length - 1}
+                </span>
               )}
             </div>
             <div className="card-body">
@@ -219,21 +257,15 @@ const CardsDisplay = ({
                   </div>
                 );
               })}
-              {Array.isArray(config?.interactions) && config.interactions.length > 0 && onInteraction && (
-                <div className="d-flex flex-wrap gap-2 mt-2 pt-2 border-top">
-                  {config.interactions.map((it, i) => (
-                    <Button
-                      key={i}
-                      size="sm"
-                      variant="outline-primary"
-                      onClick={() => onInteraction(it.target, it.link_via ? { [it.link_via]: record.id } : {}, it.mode || 'form')}
-                      title={it.trigger || `${it.action} ${it.target}`}
-                    >
-                      {it.trigger || `${it.action} → ${it.target}`}
-                    </Button>
-                  ))}
-                </div>
-              )}
+              <InteractionRowActions
+                interactions={config?.interactions}
+                recordData={record?.data}
+                recordId={record.id}
+                viewAs={viewAs}
+                getRoleRank={getRoleRank}
+                onInteraction={onInteraction}
+                className="d-flex flex-wrap gap-2 mt-2 pt-2 border-top"
+              />
               {(onEdit || onDelete) && (
                 <div className="d-flex gap-2 mt-2 pt-2 border-top">
                   <span className="ms-auto"></span>
@@ -267,13 +299,38 @@ const CardsDisplay = ({
           </button>
         </Modal.Header>
         <Modal.Body className="text-center">
-          {expandedRecord && getThumbnailUrl(expandedRecord) && (
-            <img
-              src={getThumbnailUrl(expandedRecord)}
-              alt={primaryField ? expandedRecord.data[primaryField.name] : ''}
-              style={{ maxWidth: '100%', maxHeight: '50vh', objectFit: 'contain' }}
-            />
-          )}
+          {expandedRecord && (() => {
+            const modalImages = getAllImages(expandedRecord);
+            if (modalImages.length === 0) return null;
+            const altBase = primaryField ? expandedRecord.data[primaryField.name] : '';
+            if (modalImages.length === 1) {
+              return (
+                <img
+                  src={modalImages[0]}
+                  alt={altBase}
+                  style={{ maxWidth: '100%', maxHeight: '50vh', objectFit: 'contain' }}
+                />
+              );
+            }
+            return (
+              <Carousel
+                interval={null}
+                variant="dark"
+                indicators={modalImages.length <= 8}
+                className="mb-3"
+              >
+                {modalImages.map((src, i) => (
+                  <Carousel.Item key={i}>
+                    <img
+                      src={src}
+                      alt={`${altBase} ${i + 1}`}
+                      style={{ maxWidth: '100%', maxHeight: '50vh', objectFit: 'contain', display: 'block', margin: '0 auto' }}
+                    />
+                  </Carousel.Item>
+                ))}
+              </Carousel>
+            );
+          })()}
           {expandedRecord && (
             <div className="text-start mt-3">
               {entity.fields.filter(f => f !== primaryField && !imageFieldNames.has(f.name)).map((field) => (
