@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import InstallerService from '../services/installer.service';
 import { LoaderIndicator } from '../../common/components/LoaderIndicator';
 
-const STEPS = { CONNECT: 'connect', SELECT: 'select', INSTALL: 'install' };
+const STEPS = { CONNECT: 'connect', TFA: 'tfa', SELECT: 'select', INSTALL: 'install' };
 
 const InstallerPage = () => {
   const { t } = useTranslation('installer');
@@ -19,6 +19,10 @@ const InstallerPage = () => {
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
   const [url, setUrl]           = useState('');
+
+  // Two-factor step
+  const [tfaEmail, setTfaEmail] = useState('');
+  const [tfaCode, setTfaCode]   = useState('');
 
   // App list
   const [apps, setApps]               = useState([]);
@@ -81,6 +85,13 @@ const InstallerPage = () => {
       .then((data) => {
         // The axios interceptor resolves (not rejects) on error responses, so a
         // failed connect arrives here as data without a `user`. Surface its error.
+        if (data?.tfa_required) {
+          setTfaEmail(data.email || email);
+          setTfaCode('');
+          setStep(STEPS.TFA);
+          setLoading(false);
+          return;
+        }
         if (data?.user) {
           fetchApps();
           return;
@@ -102,6 +113,39 @@ const InstallerPage = () => {
         setError(msg);
         setLoading(false);
       });
+  };
+
+  const handleTfa = (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    InstallerService.verifyTfa(tfaEmail, tfaCode)
+      .then((data) => {
+        if (data?.user) {
+          fetchApps();
+          return;
+        }
+        const detail = data?.detail;
+        const msg = detail?.[0]?.code?.[0]
+          || detail?.[0]?.url?.[0]
+          || 'tfa-code-invalid';
+        setError(msg);
+        setLoading(false);
+      })
+      .catch((err) => {
+        const detail = err?.response?.data?.detail;
+        const msg = detail?.[0]?.code?.[0]
+          || detail?.[0]?.url?.[0]
+          || 'tfa-code-invalid';
+        setError(msg);
+        setLoading(false);
+      });
+  };
+
+  const handleTfaCancel = () => {
+    setStep(STEPS.CONNECT);
+    setTfaCode('');
+    setError('');
   };
 
   const handleDisconnect = () => {
@@ -276,6 +320,38 @@ const InstallerPage = () => {
             <button type="submit" className="btn btn-primary">
               {t('connect')}
             </button>
+          </form>
+        </div>
+      )}
+
+      {/* ── Step 1b: Two-factor code ─────────────────────────────────────── */}
+      {!uninstallResult && step === STEPS.TFA && (
+        <div className="card p-4">
+          <h5 className="mb-3">{t('tfa-title')}</h5>
+          {error && <div className="alert alert-danger">{t(error)}</div>}
+          <p className="mb-3">{t('tfa-help', { email: tfaEmail })}</p>
+          <form onSubmit={handleTfa}>
+            <div className="mb-3">
+              <label className="form-label">{t('tfa-code')}</label>
+              <input
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                className="form-control"
+                value={tfaCode}
+                onChange={(e) => setTfaCode(e.target.value)}
+                required
+                autoFocus
+              />
+            </div>
+            <div className="d-flex gap-2">
+              <button type="submit" className="btn btn-primary">
+                {t('tfa-verify')}
+              </button>
+              <button type="button" className="btn btn-outline-secondary" onClick={handleTfaCancel}>
+                {t('back')}
+              </button>
+            </div>
           </form>
         </div>
       )}

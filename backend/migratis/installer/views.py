@@ -196,11 +196,79 @@ def installer_connect(request):
             '_debug': {'status': resp.status_code, 'body': resp.text[:500]},
         }, status=401)
 
+    try:
+        payload = resp.json()
+    except Exception:
+        payload = {}
+
+    # The Migratis login enforces 2FA: when valid credentials are supplied
+    # without a trusted-device cookie it returns 200 with {tfa_required: True}
+    # (a code is emailed) and does NOT log in. Surface that so the frontend can
+    # collect the code; remember the instance URL for the verify step.
+    if payload.get('tfa_required'):
+        request.session['migratis_url'] = url
+        request.session.pop('migratis_cookies', None)
+        request.session.modified = True
+        return JsonResponse({'tfa_required': True, 'email': email})
+
+    # A real login carries a user (and a session cookie). Anything else is not
+    # an authenticated session — do not store empty cookies and claim success.
+    if not payload.get('user'):
+        return JsonResponse({'detail': [{'credentials': ['invalid-credentials']}]}, status=401)
+
     request.session['migratis_cookies'] = dict(s.cookies)
     request.session['migratis_url']     = url
     request.session.modified            = True
 
-    return JsonResponse({'user': resp.json().get('user', {})})
+    return JsonResponse({'user': payload.get('user', {})})
+
+
+@router.post('/tfa', auth=None)
+def installer_tfa(request):
+    """Complete the Migratis 2FA flow: verify the emailed code, then store the
+    resulting authenticated session cookies so subsequent calls are connected."""
+    try:
+        body = json.loads(request.body)
+    except Exception:
+        return _err('form', 'invalid-request')
+
+    email = (body.get('email') or '').strip()
+    code  = (body.get('code') or '').strip()
+    url   = (body.get('url') or request.session.get('migratis_url') or MIGRATIS_BACKEND_URL).rstrip('/')
+
+    if not email or not code:
+        return JsonResponse({'detail': [{'code': ['tfa-code-required']}]}, status=400)
+
+    try:
+        s    = http_requests.Session()
+        resp = s.post(
+            f'{url}/backend/api/user/tfa/verify',
+            data={'email': email, 'code': code, 'remember_device': 'true'},
+            timeout=10,
+        )
+    except Exception:
+        return JsonResponse({'detail': [{'url': ['connection-failed']}]}, status=503)
+
+    if resp.status_code != 200:
+        # Propagate the remote's error key (tfa-code-invalid / -expired / -max-attempts).
+        try:
+            return JsonResponse(resp.json(), status=resp.status_code)
+        except Exception:
+            return JsonResponse({'detail': [{'code': ['tfa-code-invalid']}]}, status=400)
+
+    try:
+        payload = resp.json()
+    except Exception:
+        payload = {}
+
+    if not payload.get('user'):
+        return JsonResponse({'detail': [{'code': ['tfa-code-invalid']}]}, status=400)
+
+    request.session['migratis_cookies'] = dict(s.cookies)
+    request.session['migratis_url']     = url
+    request.session.modified            = True
+
+    return JsonResponse({'user': payload.get('user', {})})
 
 
 @router.delete('/connect', auth=None)

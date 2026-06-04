@@ -515,6 +515,47 @@ TRANSLATIONS['installer'] = {
     'back': {
         'en': 'Back', 'fr': 'Retour', 'es': 'Volver', 'ro': 'Înapoi',
     },
+    'tfa-title': {
+        'en': 'Two-factor authentication',
+        'fr': 'Authentification à deux facteurs',
+        'es': 'Autenticación de dos factores',
+        'ro': 'Autentificare în doi pași',
+    },
+    'tfa-help': {
+        'en': 'Enter the verification code we emailed to {{email}}.',
+        'fr': 'Saisissez le code de vérification que nous avons envoyé à {{email}}.',
+        'es': 'Introduzca el código de verificación que enviamos a {{email}}.',
+        'ro': 'Introduceți codul de verificare trimis prin email la {{email}}.',
+    },
+    'tfa-code': {
+        'en': 'Verification code', 'fr': 'Code de vérification',
+        'es': 'Código de verificación', 'ro': 'Cod de verificare',
+    },
+    'tfa-verify': {
+        'en': 'Verify', 'fr': 'Vérifier', 'es': 'Verificar', 'ro': 'Verifică',
+    },
+    'tfa-code-required': {
+        'en': 'Please enter the verification code.',
+        'fr': 'Veuillez saisir le code de vérification.',
+        'es': 'Introduzca el código de verificación.',
+        'ro': 'Introduceți codul de verificare.',
+    },
+    'tfa-code-invalid': {
+        'en': 'Invalid verification code.', 'fr': 'Code de vérification invalide.',
+        'es': 'Código de verificación no válido.', 'ro': 'Cod de verificare invalid.',
+    },
+    'tfa-code-expired': {
+        'en': 'The verification code has expired. Please reconnect to get a new one.',
+        'fr': 'Le code de vérification a expiré. Veuillez vous reconnecter pour en obtenir un nouveau.',
+        'es': 'El código de verificación ha caducado. Vuelva a conectarse para obtener uno nuevo.',
+        'ro': 'Codul de verificare a expirat. Reconectați-vă pentru a primi unul nou.',
+    },
+    'tfa-max-attempts': {
+        'en': 'Too many invalid attempts. Please reconnect to get a new code.',
+        'fr': 'Trop de tentatives invalides. Veuillez vous reconnecter pour obtenir un nouveau code.',
+        'es': 'Demasiados intentos no válidos. Vuelva a conectarse para obtener un nuevo código.',
+        'ro': 'Prea multe încercări invalide. Reconectați-vă pentru a primi un cod nou.',
+    },
     'installer-disabled': {
         'en': 'The installer is currently disabled.',
         'fr': "L'installateur est actuellement désactivé.",
