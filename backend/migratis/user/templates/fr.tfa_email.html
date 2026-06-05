@@ -1,0 +1,14 @@
+{% autoescape off %}
+
+Bonjour {{ user.first_name }} {{ user.last_name }},
+
+Votre code de sécurité est : {{ code }}
+
+Ce code expirera dans 5 minutes.
+
+Si vous n'avez pas demandé ce code, veuillez ignorer cet email.
+
+-- 
+L'équipe {{ app }}
+
+{% endautoescape %}

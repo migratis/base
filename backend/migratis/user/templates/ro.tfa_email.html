@@ -1,0 +1,14 @@
+{% autoescape off %}
+
+Bună ziua {{ user.first_name }} {{ user.last_name }},
+
+Codul tău de securitate este: {{ code }}
+
+Acest cod va expira în 5 minute.
+
+Dacă nu ai solicitat acest cod, te rugăm să ignori acest email.
+
+-- 
+Echipa {{ app }}
+
+{% endautoescape %}

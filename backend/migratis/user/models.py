@@ -87,9 +87,12 @@ class User(SaveMixin, AbstractUser):
     country = CountryField(max_length=2, null=True, blank=False)
     cgu = models.BooleanField(default=False)  
     old_passwords = JSONField(null=True, blank=True)  # list of hashed passwords; JSONField works with SQLite and PostgreSQL
-    deleted = models.BooleanField(default=False)  
+    deleted = models.BooleanField(default=False)
+    tfa_code = models.CharField(max_length=6, null=True, blank=True)
+    tfa_code_expires = models.DateTimeField(null=True, blank=True)
+    tfa_attempts = models.PositiveSmallIntegerField(default=0)
     cdate = models.DateTimeField(auto_now_add=True)
-    mdate = models.DateTimeField(auto_now=True) 
+    mdate = models.DateTimeField(auto_now=True)
     
     objects = UserManager()
 

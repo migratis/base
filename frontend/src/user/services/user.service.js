@@ -5,9 +5,42 @@ import moment from 'moment';
 const login = (data) => {
   return api.post("/user/login", qs.stringify({
     email: data.email,
-    password: data.password
+    password: data.password,
+    remember_device: data.remember_device !== false
   }),
-  {    
+  {
+    headers: {
+      'content-type': 'application/x-www-form-urlencoded'
+    }
+  }).then((response) => {
+    return response.data;
+  }).catch((error) => {
+    return error.response.data;
+  });
+};
+
+const tfaVerify = (data) => {
+  return api.post("/user/tfa/verify", qs.stringify({
+    email: data.email,
+    code: data.code,
+    remember_device: data.remember_device !== false
+  }),
+  {
+    headers: {
+      'content-type': 'application/x-www-form-urlencoded'
+    }
+  }).then((response) => {
+    return response.data;
+  }).catch((error) => {
+    return error.response.data;
+  });
+};
+
+const tfaResend = (email) => {
+  return api.post("/user/tfa/resend", qs.stringify({
+    email: email
+  }),
+  {
     headers: {
       'content-type': 'application/x-www-form-urlencoded'
     }
@@ -242,6 +275,8 @@ const createUser = (data) => {
 
 const UserService = {
   login,
+  tfaVerify,
+  tfaResend,
   logout,
   register,
   activate,
