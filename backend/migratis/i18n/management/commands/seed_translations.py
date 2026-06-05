@@ -677,6 +677,68 @@ TRANSLATIONS['installer'] = {
         'en': 'Uninstallation failed.', 'fr': 'La désinstallation a échoué.',
         'es': 'La desinstalación falló.', 'ro': 'Dezinstalarea a eșuat.',
     },
+    # ── Install-time configuration step ───────────────────────────────────
+    'config-title': {
+        'en': 'Configure {{app}}', 'fr': 'Configurer {{app}}',
+        'es': 'Configurar {{app}}', 'ro': 'Configurează {{app}}',
+    },
+    'config-help': {
+        'en': 'This app needs a few settings to work. Leave a field blank to set it later in the environment file.',
+        'fr': "Cette application a besoin de quelques réglages pour fonctionner. Laissez un champ vide pour le définir plus tard dans le fichier d'environnement.",
+        'es': 'Esta aplicación necesita algunos ajustes para funcionar. Deje un campo en blanco para definirlo más tarde en el archivo de entorno.',
+        'ro': 'Această aplicație are nevoie de câteva setări pentru a funcționa. Lăsați un câmp gol pentru a-l defini mai târziu în fișierul de mediu.',
+    },
+    'config-admin': {
+        'en': 'Administrator account', 'fr': 'Compte administrateur',
+        'es': 'Cuenta de administrador', 'ro': 'Cont de administrator',
+    },
+    'admin-email': {
+        'en': 'Admin email', 'fr': "Courriel de l'administrateur",
+        'es': 'Correo del administrador', 'ro': 'Email administrator',
+    },
+    'admin-password': {
+        'en': 'Admin password', 'fr': "Mot de passe de l'administrateur",
+        'es': 'Contraseña del administrador', 'ro': 'Parolă administrator',
+    },
+    'config-email': {
+        'en': 'Email (SMTP) transport', 'fr': 'Transport courriel (SMTP)',
+        'es': 'Transporte de correo (SMTP)', 'ro': 'Transport email (SMTP)',
+    },
+    'smtp-host': {
+        'en': 'SMTP host', 'fr': 'Hôte SMTP', 'es': 'Host SMTP', 'ro': 'Gazdă SMTP',
+    },
+    'smtp-user': {
+        'en': 'SMTP user', 'fr': 'Utilisateur SMTP',
+        'es': 'Usuario SMTP', 'ro': 'Utilizator SMTP',
+    },
+    'smtp-password': {
+        'en': 'SMTP password', 'fr': 'Mot de passe SMTP',
+        'es': 'Contraseña SMTP', 'ro': 'Parolă SMTP',
+    },
+    'email-sender': {
+        'en': 'Sender address', 'fr': "Adresse d'expéditeur",
+        'es': 'Dirección del remitente', 'ro': 'Adresă expeditor',
+    },
+    'email-moderator': {
+        'en': 'Moderator address', 'fr': 'Adresse du modérateur',
+        'es': 'Dirección del moderador', 'ro': 'Adresă moderator',
+    },
+    'config-stripe': {
+        'en': 'Stripe keys', 'fr': 'Clés Stripe',
+        'es': 'Claves de Stripe', 'ro': 'Chei Stripe',
+    },
+    'stripe-publishable': {
+        'en': 'Publishable key', 'fr': 'Clé publiable',
+        'es': 'Clave publicable', 'ro': 'Cheie publicabilă',
+    },
+    'stripe-secret': {
+        'en': 'Secret key', 'fr': 'Clé secrète',
+        'es': 'Clave secreta', 'ro': 'Cheie secretă',
+    },
+    'stripe-webhook': {
+        'en': 'Webhook signing secret', 'fr': 'Secret de signature du webhook',
+        'es': 'Secreto de firma del webhook', 'ro': 'Secret de semnare webhook',
+    },
 }
 
 # ===========================================================================

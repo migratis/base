@@ -3,7 +3,19 @@ import { useTranslation } from 'react-i18next';
 import InstallerService from '../services/installer.service';
 import { LoaderIndicator } from '../../common/components/LoaderIndicator';
 
-const STEPS = { CONNECT: 'connect', TFA: 'tfa', SELECT: 'select', INSTALL: 'install' };
+const STEPS = { CONNECT: 'connect', TFA: 'tfa', SELECT: 'select', CONFIG: 'config', INSTALL: 'install' };
+
+const EMPTY_CONFIG = {
+  admin:  { email: '', password: '' },
+  email:  { EMAIL_HOST: '', EMAIL_HOST_USER: '', EMAIL_HOST_PASSWORD: '', EMAIL_SENDER: '', EMAIL_MODERATOR: '' },
+  stripe: { STRIPE_API_KEY: '', STRIPE_SECRET_KEY: '', STRIPE_WEBHOOK_SECRET_KEY: '' },
+};
+
+// Which config groups an app needs, derived from its modules_needed.
+const requiredGroups = (app) => {
+  const mods = app?.modules_needed || [];
+  return { user: mods.includes('user'), subscription: mods.includes('subscription') };
+};
 
 // The axios interceptor resolves (not rejects) error responses, so a dead
 // upstream session arrives in `.then` as a payload carrying this signal. The
@@ -33,6 +45,11 @@ const InstallerPage = () => {
   // App list
   const [apps, setApps]               = useState([]);
   const [selectedApp, setSelectedApp] = useState(null);
+
+  // Per-module install config (admin / SMTP / Stripe)
+  const [config, setConfig] = useState(EMPTY_CONFIG);
+  const setConfigField = (group, key, value) =>
+    setConfig((c) => ({ ...c, [group]: { ...c[group], [key]: value } }));
 
   // Install result
   const [result, setResult] = useState(null);
@@ -178,11 +195,38 @@ const InstallerPage = () => {
     });
   };
 
-  const handleInstall = () => {
+  // From the app list: collect config first when the app needs it, else install.
+  const handleProceedToInstall = () => {
+    if (!selectedApp) return;
+    const groups = requiredGroups(selectedApp);
+    setError('');
+    if (groups.user || groups.subscription) {
+      setConfig(EMPTY_CONFIG);
+      setStep(STEPS.CONFIG);
+    } else {
+      handleInstall();
+    }
+  };
+
+  // Build the payload sent to the installer, including only the groups the app needs.
+  const buildConfigPayload = () => {
+    const groups = requiredGroups(selectedApp);
+    const payload = {};
+    if (groups.user) {
+      payload.admin = config.admin;
+      payload.email = config.email;
+    }
+    if (groups.subscription) {
+      payload.stripe = config.stripe;
+    }
+    return payload;
+  };
+
+  const handleInstall = (cfg = {}) => {
     if (!selectedApp) return;
     setLoading(true);
     setError('');
-    InstallerService.install(selectedApp.id)
+    InstallerService.install(selectedApp.id, cfg)
       .then((data) => {
         if (isDisconnected(data)) {
           showLogin();
@@ -421,10 +465,102 @@ const InstallerPage = () => {
           <button
             className="btn btn-primary"
             disabled={!selectedApp || installed.includes(selectedApp?.module)}
-            onClick={handleInstall}
+            onClick={handleProceedToInstall}
           >
             {t('install-selected')}
           </button>
+        </div>
+      )}
+
+      {/* ── Step 2b: Per-module configuration ────────────────────────────── */}
+      {!uninstallResult && step === STEPS.CONFIG && selectedApp && (
+        <div className="card p-4">
+          <h5 className="mb-1">{t('config-title', { app: selectedApp.name })}</h5>
+          <p className="text-muted small mb-3">{t('config-help')}</p>
+          {error && <div className="alert alert-danger">{t(error)}</div>}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleInstall(buildConfigPayload());
+            }}
+          >
+            {requiredGroups(selectedApp).user && (
+              <>
+                <h6 className="mt-2">{t('config-admin')}</h6>
+                <div className="mb-3">
+                  <label className="form-label">{t('admin-email')}</label>
+                  <input
+                    type="email"
+                    className="form-control"
+                    value={config.admin.email}
+                    onChange={(e) => setConfigField('admin', 'email', e.target.value)}
+                  />
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">{t('admin-password')}</label>
+                  <input
+                    type="password"
+                    className="form-control"
+                    value={config.admin.password}
+                    onChange={(e) => setConfigField('admin', 'password', e.target.value)}
+                  />
+                </div>
+
+                <h6 className="mt-3">{t('config-email')}</h6>
+                {[
+                  ['EMAIL_HOST', 'smtp-host'],
+                  ['EMAIL_HOST_USER', 'smtp-user'],
+                  ['EMAIL_HOST_PASSWORD', 'smtp-password'],
+                  ['EMAIL_SENDER', 'email-sender'],
+                  ['EMAIL_MODERATOR', 'email-moderator'],
+                ].map(([key, label]) => (
+                  <div className="mb-3" key={key}>
+                    <label className="form-label">{t(label)}</label>
+                    <input
+                      type={key === 'EMAIL_HOST_PASSWORD' ? 'password' : 'text'}
+                      className="form-control"
+                      value={config.email[key]}
+                      onChange={(e) => setConfigField('email', key, e.target.value)}
+                    />
+                  </div>
+                ))}
+              </>
+            )}
+
+            {requiredGroups(selectedApp).subscription && (
+              <>
+                <h6 className="mt-3">{t('config-stripe')}</h6>
+                {[
+                  ['STRIPE_API_KEY', 'stripe-publishable'],
+                  ['STRIPE_SECRET_KEY', 'stripe-secret'],
+                  ['STRIPE_WEBHOOK_SECRET_KEY', 'stripe-webhook'],
+                ].map(([key, label]) => (
+                  <div className="mb-3" key={key}>
+                    <label className="form-label">{t(label)}</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={config.stripe[key]}
+                      onChange={(e) => setConfigField('stripe', key, e.target.value)}
+                    />
+                  </div>
+                ))}
+              </>
+            )}
+
+            <div className="d-flex gap-2 mt-2">
+              <button type="submit" className="btn btn-primary">
+                {t('install-selected')}
+              </button>
+              <button
+                type="button"
+                className="btn btn-outline-secondary"
+                onClick={() => { setStep(STEPS.SELECT); setError(''); }}
+              >
+                {t('back')}
+              </button>
+            </div>
+          </form>
         </div>
       )}
 

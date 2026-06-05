@@ -343,6 +343,12 @@ def installer_install(request, app_id: int):
     if s is None:
         return JsonResponse({'detail': [{'session': ['not-connected']}]}, status=401)
 
+    # Optional install-time config collected by the wizard: {admin, email, stripe}.
+    try:
+        config = json.loads(request.body) if request.body else {}
+    except Exception:
+        config = {}
+
     try:
         resp = s.get(f'{url}/backend/api/generator/application/{app_id}/download', timeout=60)
     except Exception:
@@ -355,7 +361,7 @@ def installer_install(request, app_id: int):
         return JsonResponse({'detail': [{'download': ['download-failed']}]}, status=resp.status_code)
 
     try:
-        result = _apply_package(resp.content)
+        result = _apply_package(resp.content, config=config)
     except Exception as exc:
         return JsonResponse({'detail': [{'install': [str(exc)]}]}, status=500)
 
@@ -436,7 +442,7 @@ def installer_uninstall(request, module: str):
 # Package application logic
 # --------------------------------------------------------------------------- #
 
-def _apply_package(zip_bytes: bytes) -> dict:
+def _apply_package(zip_bytes: bytes, config: dict = None) -> dict:
     """
     Extract a generated package ZIP and apply it to this project.
 
@@ -490,6 +496,16 @@ def _apply_package(zip_bytes: bytes) -> dict:
             dest.write_bytes(content)
             installed_files.append(f'backend/{rel}')
 
+        # IMPORTANT — ordering vs. the StatReloader.
+        # Writing api/views.py (an imported module) triggers Django's autoreloader,
+        # which restarts the process ~1 s later and kills this request handler.
+        # The new app dir (step 1) and settings_patches/*.py are NOT watched (not
+        # imported / exec'd), so they don't trigger it. Therefore every write that
+        # MUST complete — settings patch, .env/config, language, feature flags,
+        # the slow frontend copy, and the pending marker — happens first, and the
+        # api/views.py router activation is done LAST so the reload fires only
+        # after the response is composed.
+
         # ── 2. Settings patch file (idempotent) ────────────────────────────
         patch_file = patches_dir / f'{module}.py'
         if not patch_file.exists():
@@ -503,22 +519,48 @@ def _apply_package(zip_bytes: bytes) -> dict:
             )
             patch_file.write_text(filtered)
 
-        # ── 3. Framework router activation ─────────────────────────────────
-        # Reconcile api/views.py against the apps now in INSTALLED_APPS (the
-        # patch written above plus settings.py). Same code path as uninstall,
-        # so install and uninstall can never drift out of sync.
-        _sync_framework_routers(backend_root)
+        # Persist the manifest so reconciliation can recompute the language set
+        # and module metadata after any later install/uninstall.
+        manifest_file = patches_dir / f'{module}_manifest.json'
+        manifest_file.write_text(json.dumps(manifest, indent=2, ensure_ascii=False))
 
-        # ── 4. Frontend additions metadata ────────────────────────────────
+        # ── 3. Install-time config (.env + frontend Stripe key) ────────────
+        # Fast and critical — do it before the slow frontend copy. Returns admin
+        # creds to defer (user tables don't exist until migrate runs).
+        admin = _apply_install_config(backend_root, frontend_root, config)
+
+        # ── 4. Default language (backend patch) ────────────────────────────
+        _write_language_patch(backend_root)
+
+        # ── 5. Frontend additions metadata ────────────────────────────────
         additions = {}
         if 'frontend/app_additions.json' in names:
             additions = json.loads(zf.read('frontend/app_additions.json'))
             additions_file = patches_dir / f'{module}_additions.json'
             additions_file.write_text(json.dumps(additions, indent=2, ensure_ascii=False))
 
-        # ── 5. Frontend source files ───────────────────────────────────────
-        frontend_ok = False
-        if frontend_root.exists():
+        # ── 6. Feature flags + frontend language (fast, before the copy) ───
+        # Turn on USER/SUBSCRIPTION/SUPPORT/COOKIE so module routes/links render,
+        # and point the frontend default language at the app's main_language.
+        frontend_ok = frontend_root.exists()
+        if frontend_ok:
+            _sync_frontend_flags(backend_root, frontend_root)
+            _sync_frontend_language(backend_root, frontend_root)
+
+        # ── 7. Defer migrate + seed (+ admin) to InstallerConfig.ready() ───
+        # Written before the slow copy so it survives even if a stray reload
+        # interrupts the request. The user app tables don't exist until the
+        # deferred migrate runs, so admin creation is deferred alongside it.
+        pending = patches_dir / '_pending_install.json'
+        pending_payload = {'module': module}
+        if admin:
+            # Stash admin creds for deferred create_superuser (file removed after
+            # the deferred run succeeds). Local-container installer only.
+            pending_payload['admin'] = admin
+        pending.write_text(json.dumps(pending_payload))
+
+        # ── 8. Frontend source files + registry (the slow part) ────────────
+        if frontend_ok:
             for name in names:
                 if not name.startswith('frontend/src/'):
                     continue
@@ -529,12 +571,9 @@ def _apply_package(zip_bytes: bytes) -> dict:
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 dest.write_bytes(zf.read(name))
                 installed_files.append(f'frontend/src/{rel}')
-            frontend_ok = True
-
-            # ── 6. Rebuild module_registry.js ─────────────────────────────
             _rebuild_registry(backend_root, frontend_root)
 
-        # ── 7. Fix ownership — chown written files back to the volume owner ─
+        # ── 9. Fix ownership — chown written files back to the volume owner ─
         uid, gid = _volume_owner(backend_root)
         if uid != 0:  # only needed when container runs as root
             _chown_tree(backend_root / module, uid, gid)
@@ -548,18 +587,11 @@ def _apply_package(zip_bytes: bytes) -> dict:
                     except OSError:
                         pass
 
-        # ── 8. Defer migrate + seed to InstallerConfig.ready() ────────────
-        # Writing apps.py in step 1 triggers StatReloader within ~1 s, which
-        # kills this request handler before subprocess.run(['migrate']) could
-        # complete.  Instead, write a marker that InstallerConfig.ready()
-        # picks up on the very next startup (after StatReloader restarts).
-        pending = patches_dir / '_pending_install.json'
-        pending.write_text(json.dumps({'module': module}))
-        if uid != 0:
-            try:
-                os.chown(pending, uid, gid)
-            except OSError:
-                pass
+        # ── 10. Framework router activation — LAST (triggers the reload) ───
+        # Reconcile api/views.py against the apps now in INSTALLED_APPS. Done last
+        # so the autoreload restart happens only after every critical write above
+        # has completed and the response is ready to return.
+        _sync_framework_routers(backend_root)
 
     return {
         'success':          True,
@@ -642,13 +674,206 @@ def _sync_framework_routers(backend_root: Path) -> bool:
 
     if changed:
         api_views.write_text(txt)
-        uid, gid = _volume_owner(backend_root)
-        if uid != 0:
-            try:
-                os.chown(api_views, uid, gid)
-            except OSError:
-                pass
+        _chown_to_owner(api_views, backend_root)
     return changed
+
+
+# --------------------------------------------------------------------------- #
+# Frontend feature flags + language reconciliation
+# --------------------------------------------------------------------------- #
+
+# Frontend feature flag (frontend/src/settings.js) → framework app key. Toggled
+# to match the apps currently in INSTALLED_APPS so module routes/links light up
+# (without this, /register and friends stay gated off and render blank).
+_FRONTEND_FLAGS = [
+    ('USER',         'user'),
+    ('SUBSCRIPTION', 'subscription'),
+    ('SUPPORT',      'support'),
+    ('COOKIE',       'cookie'),
+]
+
+_LANG_NAMES = {
+    'en': 'English', 'fr': 'French', 'es': 'Spanish', 'ro': 'Romanian',
+    'pt': 'Portuguese', 'de': 'German', 'it': 'Italian', 'nl': 'Dutch',
+    'zh': 'Chinese',
+}
+
+
+def _chown_to_owner(path: Path, backend_root: Path):
+    """Best-effort chown a single written file back to the volume owner so files
+    created while the container runs as root stay editable by the host user."""
+    uid, gid = _volume_owner(backend_root)
+    if uid != 0:
+        try:
+            os.chown(path, uid, gid)
+        except OSError:
+            pass
+
+
+def _sync_frontend_flags(backend_root: Path, frontend_root: Path) -> bool:
+    """
+    Reconcile the feature flags in frontend/src/settings.js with the framework
+    apps currently in INSTALLED_APPS. Mirrors _sync_framework_routers: install
+    turns a flag on, uninstall turns it back off once no module needs it. Without
+    this the user/subscription/support/cookie routes in App.js stay gated off
+    (e.g. /register renders blank). Idempotent.
+    """
+    settings_js = frontend_root / 'settings.js'
+    if not settings_js.exists():
+        return False
+
+    txt     = settings_js.read_text()
+    active  = _installed_framework_apps(backend_root)
+    changed = False
+    for flag, key in _FRONTEND_FLAGS:
+        desired = 'true' if key in active else 'false'
+        pattern = re.compile(rf'(export const {flag}\s*=\s*)(?:true|false)(\s*;)')
+        new_txt = pattern.sub(rf'\g<1>{desired}\g<2>', txt)
+        if new_txt != txt:
+            txt = new_txt
+            changed = True
+
+    if changed:
+        settings_js.write_text(txt)
+        _chown_to_owner(settings_js, backend_root)
+    return changed
+
+
+def _installed_manifests(backend_root: Path) -> list:
+    """Return manifest dicts for every installed module, ordered oldest→newest by
+    file mtime so the most-recently-installed app wins for the primary language."""
+    patches_dir = _patches_dir(backend_root)
+    out = []
+    if patches_dir.exists():
+        for mf in patches_dir.glob('*_manifest.json'):
+            try:
+                out.append((mf.stat().st_mtime, json.loads(mf.read_text())))
+            except (OSError, ValueError):
+                pass
+    out.sort(key=lambda t: t[0])
+    return [m for _mtime, m in out]
+
+
+def _language_config(backend_root: Path):
+    """Compute (primary_language, [codes]) from installed manifests. primary =
+    most-recently-installed app's main_language; codes = union of every app's
+    main_language ∪ languages. Returns (None, []) when no app is installed."""
+    manifests = _installed_manifests(backend_root)
+    if not manifests:
+        return None, []
+    codes = set()
+    primary = None
+    for m in manifests:
+        main = m.get('main_language') or 'en'
+        codes.add(main)
+        codes.update(m.get('languages') or [])
+        primary = main  # newest wins (manifests are oldest→newest)
+    return primary, sorted(codes)
+
+
+def _write_language_patch(backend_root: Path) -> None:
+    """Write settings_patches/zzz_language.py so backend LANGUAGE_CODE/LANGUAGES
+    follow the installed app's main_language. Named to sort last among patches so
+    it wins over the base settings.py default and any module patch. Removed when
+    no app remains."""
+    patch = _patches_dir(backend_root) / 'zzz_language.py'
+    primary, codes = _language_config(backend_root)
+    if not primary:
+        if patch.exists():
+            patch.unlink()
+        return
+    langs = ', '.join(f"('{c}', '{_LANG_NAMES.get(c, c.upper())}')" for c in codes)
+    patch.write_text(
+        "# ── language ── managed by the installer; follows the installed app ──\n"
+        f"LANGUAGE_CODE = '{primary}'\n"
+        f"LANGUAGES = [{langs}]\n"
+    )
+    _chown_to_owner(patch, backend_root)
+
+
+def _sync_frontend_language(backend_root: Path, frontend_root: Path) -> bool:
+    """Patch frontend/src/i18n.js fallbackLng + supportedLngs to match the
+    installed app's languages (reverts to 'en' when none). The default language
+    becomes the app's main_language; with the i18n module its chosen languages
+    become selectable. Idempotent."""
+    i18n_js = frontend_root / 'i18n.js'
+    if not i18n_js.exists():
+        return False
+    primary, codes = _language_config(backend_root)
+    if not primary:
+        primary, codes = 'en', ['en']
+    supported = '[' + ', '.join(f"'{c}'" for c in codes) + ']'
+
+    txt = i18n_js.read_text()
+    new = re.sub(r"fallbackLng:\s*'[^']*'", f"fallbackLng: '{primary}'", txt)
+    new = re.sub(r"supportedLngs:\s*\[[^\]]*\]", f"supportedLngs: {supported}", new)
+    if new != txt:
+        i18n_js.write_text(new)
+        _chown_to_owner(i18n_js, backend_root)
+        return True
+    return False
+
+
+def _update_env(backend_root: Path, updates: dict) -> None:
+    """Upsert keys into the base .env (backend/migratis/.env), preserving other
+    lines and order. Only non-empty values are written. Persists the EMAIL_*/
+    STRIPE_* settings collected by the install wizard."""
+    updates = {k: v for k, v in (updates or {}).items() if v not in (None, '')}
+    if not updates:
+        return
+    env_path  = backend_root / 'migratis' / '.env'
+    lines     = env_path.read_text().splitlines() if env_path.exists() else []
+    remaining = dict(updates)
+    out = []
+    for line in lines:
+        key = line.split('=', 1)[0].strip() if '=' in line else ''
+        if key in remaining:
+            out.append(f'{key}={remaining.pop(key)}')
+        else:
+            out.append(line)
+    for key, val in remaining.items():
+        out.append(f'{key}={val}')
+    env_path.write_text('\n'.join(out) + '\n')
+    _chown_to_owner(env_path, backend_root)
+
+
+def _set_frontend_stripe_key(backend_root: Path, frontend_root: Path, pub_key: str):
+    """Override the publishable STRIPE_API_KEY literal in frontend/src/settings.js."""
+    if not pub_key:
+        return
+    settings_js = frontend_root / 'settings.js'
+    if not settings_js.exists():
+        return
+    txt = settings_js.read_text()
+    new = re.sub(
+        r"(export const STRIPE_API_KEY\s*=\s*).*?(;)",
+        lambda m: f'{m.group(1)}"{pub_key}"{m.group(2)}',
+        txt, count=1,
+    )
+    if new != txt:
+        settings_js.write_text(new)
+        _chown_to_owner(settings_js, backend_root)
+
+
+def _apply_install_config(backend_root: Path, frontend_root: Path, config: dict) -> dict:
+    """Apply the wizard config: write EMAIL_*/STRIPE_* to .env, set the frontend
+    publishable key, and return the admin credentials to defer for superuser
+    creation (the user tables don't exist until migrate runs). Returns {} when no
+    admin was supplied."""
+    config = config or {}
+    env_updates = {}
+    env_updates.update(config.get('email') or {})
+    stripe = config.get('stripe') or {}
+    env_updates.update({k: v for k, v in stripe.items() if k != 'STRIPE_API_KEY'})
+    _update_env(backend_root, env_updates)
+
+    if frontend_root.exists():
+        _set_frontend_stripe_key(backend_root, frontend_root, stripe.get('STRIPE_API_KEY', ''))
+
+    admin = config.get('admin') or {}
+    if admin.get('email') and admin.get('password'):
+        return {'email': admin['email'], 'password': admin['password']}
+    return {}
 
 
 def _remove_module(module: str, backend_root: Path) -> dict:
@@ -690,7 +915,7 @@ def _remove_module(module: str, backend_root: Path) -> dict:
     # directory is removed. The StatReloader fires here and reloads Django
     # cleanly (no app, no migration warning). Deleting the directory afterwards
     # triggers at most another harmless reload.
-    for fname in [f'{module}.py', f'{module}_additions.json']:
+    for fname in [f'{module}.py', f'{module}_additions.json', f'{module}_manifest.json']:
         f = patches_dir / fname
         if f.exists():
             f.unlink()
@@ -702,6 +927,14 @@ def _remove_module(module: str, backend_root: Path) -> dict:
     # Runs after the patch file is deleted so the active-app scan reflects the
     # removal, and before the app directory is gone.
     _sync_framework_routers(backend_root)
+
+    # ── 2c. Reconcile feature flags + language for the remaining apps ──────
+    # Mirror install: turn flags back off and revert the default language once no
+    # remaining app needs them (resets to base 'en' when the last app is removed).
+    _write_language_patch(backend_root)
+    if frontend_root.exists():
+        _sync_frontend_flags(backend_root, frontend_root)
+        _sync_frontend_language(backend_root, frontend_root)
 
     # ── 3. Remove backend app directory ───────────────────────────────────
     app_dir = backend_root / module

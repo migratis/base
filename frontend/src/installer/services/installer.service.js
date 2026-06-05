@@ -18,8 +18,8 @@ const disconnect = () =>
 const listApps = () =>
   api.get("/installer/apps").then((r) => r.data);
 
-const install = (appId) =>
-  api.post(`/installer/install/${appId}`).then((r) => r.data);
+const install = (appId, config) =>
+  api.post(`/installer/install/${appId}`, config || {}).then((r) => r.data);
 
 const frontendZipUrl = (appId) =>
   `/backend/api/installer/frontend-zip/${appId}`;

@@ -46,6 +46,22 @@ class InstallerConfig(AppConfig):
                             call_command(f'seed_{module}', verbosity=1)
                         except Exception:
                             pass  # seed command optional
+
+                    # Create the admin superuser collected by the install wizard.
+                    # Deferred to here because the user app tables only exist once
+                    # migrate (above) has run. Best-effort; never blocks startup.
+                    admin = data.get('admin') or {}
+                    if admin.get('email') and admin.get('password'):
+                        try:
+                            from django.contrib.auth import get_user_model
+                            User = get_user_model()
+                            if not User.objects.filter(email=admin['email']).exists():
+                                User.objects.create_superuser(
+                                    email=admin['email'], password=admin['password'],
+                                )
+                        except Exception:
+                            pass
+
                     pending.unlink()  # only removed on success
                 except Exception:
                     pass  # never crash Django startup; file stays → retries next restart
