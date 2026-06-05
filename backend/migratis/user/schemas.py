@@ -65,7 +65,7 @@ class UserSchemaUpdateIn(ModelSchema):
         fields = ['language', 'first_name', 'last_name', 'birthdate', 'address', 'zipcode', 'city', 'country', 'professional', 'company', 'taxnumber', 'address', 'zipcode', 'city', ]
 
 class UserSchemaOut(ModelSchema):
-    country_code: str
+    country_code: str | None = None
     professional: bool | None = False
     company: str | None = None
     taxnumber: str | None = None

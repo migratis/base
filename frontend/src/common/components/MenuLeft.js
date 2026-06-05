@@ -6,6 +6,7 @@ import {
   IoLogOutOutline as LogOutOutline,
   IoHelpBuoyOutline as HelpOutline,
   IoGlobeOutline as GlobeOutline,
+  IoGridOutline as GridOutline,
 } from 'react-icons/io5';
 import LangSelector from './LangSelector';
 import UserService from "../../user/services/user.service";
@@ -13,6 +14,7 @@ import { toast } from 'react-toastify';
 import Login from "../../user/components/Login";
 import { BlockedModal as LoginModal } from "../modals/BlockedModal";
 import { SUPPORT } from '../../settings';
+import { moduleMenuItems } from '../../module_registry';
 import logo from '../../img/logo.png';
 
 export const MenuLeft = (props) => {
@@ -78,7 +80,7 @@ export const MenuLeft = (props) => {
                   <PersonOutline />
                   <span className="sidebar-label">{t('profile')}</span>
                 </NavLink>
-                
+
                 <div className="sidebar-item">
                   <GlobeOutline />
                   <span className="sidebar-label">
@@ -123,6 +125,26 @@ export const MenuLeft = (props) => {
                 <span className="sidebar-label">{t('contact')}</span>
               </a>
             </div>
+          )}
+
+          {/* Pages contributed by installed modules (built into module_registry.js) */}
+          {moduleMenuItems.length > 0 && (
+            <>
+              <div className="sidebar-divider" />
+              <div className="sidebar-section">
+                {moduleMenuItems.map((item) => (
+                  <NavLink
+                    key={item.path}
+                    to={item.path}
+                    className={({isActive}) => `sidebar-item ${isActive ? 'active' : ''}`}
+                    onClick={props.onMobileClose}
+                  >
+                    <GridOutline />
+                    <span className="sidebar-label">{t(item.label, item.label)}</span>
+                  </NavLink>
+                ))}
+              </div>
+            </>
           )}
         </div>
       </div>
