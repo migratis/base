@@ -5,6 +5,12 @@ import { LoaderIndicator } from '../../common/components/LoaderIndicator';
 
 const STEPS = { CONNECT: 'connect', TFA: 'tfa', SELECT: 'select', INSTALL: 'install' };
 
+// The axios interceptor resolves (not rejects) error responses, so a dead
+// upstream session arrives in `.then` as a payload carrying this signal. The
+// backend clears the stale cookies and returns it whenever the Migratis session
+// is no longer alive, so the UI can drop back to the login form.
+const isDisconnected = (payload) => payload?.detail?.[0]?.session?.[0] === 'not-connected';
+
 const InstallerPage = () => {
   const { t } = useTranslation('installer');
 
@@ -65,11 +71,25 @@ const InstallerPage = () => {
       .catch(() => setEnabled(true));
   }, [fetchInstalled]);
 
+  // Connection to the Migratis instance is gone — return to the login form
+  // (with a reconnect message) instead of leaving the user on a failed screen.
+  const showLogin = () => {
+    setApps([]);
+    setSelectedApp(null);
+    setResult(null);
+    setStep(STEPS.CONNECT);
+    setError('not-connected');
+  };
+
   const fetchApps = () => {
     setLoading(true);
     setError('');
     InstallerService.listApps()
       .then((data) => {
+        if (isDisconnected(data)) {
+          showLogin();
+          return;
+        }
         setApps(data.apps || []);
         setStep(STEPS.SELECT);
       })
@@ -164,6 +184,10 @@ const InstallerPage = () => {
     setError('');
     InstallerService.install(selectedApp.id)
       .then((data) => {
+        if (isDisconnected(data)) {
+          showLogin();
+          return;
+        }
         setResult(data);
         setStep(STEPS.INSTALL);
         fetchInstalled();

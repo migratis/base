@@ -74,6 +74,18 @@ def _err(key, msg):
     return JsonResponse({'detail': [{key: [msg]}]}, status=400)
 
 
+def _clear_migratis_session(request):
+    """Drop the stored Migratis session cookies after the upstream rejects them.
+    Keeps `migratis_url` so the login form can prefill the instance. This makes
+    /session report disconnected, so the UI shows login instead of failures."""
+    request.session.pop('migratis_cookies', None)
+    request.session.modified = True
+
+
+def _session_expired_response():
+    return JsonResponse({'detail': [{'session': ['not-connected']}]}, status=401)
+
+
 def _patches_dir(backend_root: Path) -> Path:
     return backend_root / 'settings_patches'
 
@@ -309,8 +321,13 @@ def installer_list_apps(request):
     except Exception:
         return JsonResponse({'detail': [{'session': ['connection-failed']}]}, status=503)
 
+    # The stored Migratis session went stale (logged out / expired upstream).
+    # Forget it so the UI returns to the login form rather than looping on errors.
+    if resp.status_code in (401, 403):
+        _clear_migratis_session(request)
+        return _session_expired_response()
     if resp.status_code != 200:
-        return JsonResponse({'detail': [{'session': ['not-connected']}]}, status=401)
+        return _session_expired_response()
 
     apps = [a for a in resp.json().get('items', []) if a.get('status') == 'generated']
     return JsonResponse({'apps': apps})
@@ -331,6 +348,9 @@ def installer_install(request, app_id: int):
     except Exception:
         return JsonResponse({'detail': [{'download': ['download-failed']}]}, status=503)
 
+    if resp.status_code in (401, 403):
+        _clear_migratis_session(request)
+        return _session_expired_response()
     if resp.status_code != 200:
         return JsonResponse({'detail': [{'download': ['download-failed']}]}, status=resp.status_code)
 
@@ -353,6 +373,9 @@ def installer_frontend_zip(request, app_id: int):
     except Exception:
         return JsonResponse({'detail': [{'download': ['download-failed']}]}, status=503)
 
+    if resp.status_code in (401, 403):
+        _clear_migratis_session(request)
+        return _session_expired_response()
     if resp.status_code != 200:
         return JsonResponse({'detail': [{'download': ['download-failed']}]}, status=resp.status_code)
 
