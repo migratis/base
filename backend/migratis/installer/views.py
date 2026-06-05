@@ -44,6 +44,17 @@ _FRAMEWORK_MODULES = frozenset([
     'user', 'i18n', 'cookie', 'support', 'subscription', 'generator', 'installer',
 ])
 
+# Framework routers that modules may activate in api/views.py. Each tuple is
+# (app key, router var name, views module path, mount path). i18n and cookie are
+# always-on in the base project; the rest are toggled by install/uninstall.
+_FRAMEWORK_ROUTERS = [
+    ('user',         'user_router',         'migratis.user.views',         '/user/'),
+    ('i18n',         'i18n_router',         'migratis.i18n.views',         '/i18n/'),
+    ('cookie',       'cookie_router',       'migratis.cookie.views',       '/cookie/'),
+    ('support',      'support_router',      'migratis.support.views',      '/support/'),
+    ('subscription', 'subscription_router', 'migratis.subscription.views', '/subscription/'),
+]
+
 
 # --------------------------------------------------------------------------- #
 # Helpers
@@ -456,37 +467,7 @@ def _apply_package(zip_bytes: bytes) -> dict:
             dest.write_bytes(content)
             installed_files.append(f'backend/{rel}')
 
-        # ── 2. Framework router activation (idempotent uncomment) ─────────
-        api_views  = backend_root / 'migratis' / 'api' / 'views.py'
-        api_txt    = api_views.read_text()
-        modules_needed = manifest.get('modules_needed', [])
-        _FRAMEWORK_ROUTERS = [
-            ('user',         'user_router',         'migratis.user.views',         '/user/'),
-            ('i18n',         'i18n_router',         'migratis.i18n.views',         '/i18n/'),
-            ('cookie',       'cookie_router',       'migratis.cookie.views',       '/cookie/'),
-            ('support',      'support_router',      'migratis.support.views',      '/support/'),
-            ('subscription', 'subscription_router', 'migratis.subscription.views', '/subscription/'),
-        ]
-        changed = False
-        for key, rname, rmod, rpath in _FRAMEWORK_ROUTERS:
-            if key not in modules_needed:
-                continue
-            if f'# from {rmod} import router as {rname}' in api_txt:
-                api_txt = api_txt.replace(
-                    f'# from {rmod} import router as {rname}',
-                    f'from {rmod} import router as {rname}',
-                )
-                changed = True
-            if f'# api.add_router("{rpath}", {rname})' in api_txt:
-                api_txt = api_txt.replace(
-                    f'# api.add_router("{rpath}", {rname})',
-                    f'api.add_router("{rpath}", {rname})',
-                )
-                changed = True
-        if changed:
-            api_views.write_text(api_txt)
-
-        # ── 3. Settings patch file (idempotent) ────────────────────────────
+        # ── 2. Settings patch file (idempotent) ────────────────────────────
         patch_file = patches_dir / f'{module}.py'
         if not patch_file.exists():
             # Only write the module's own INSTALLED_APPS line — filter out
@@ -498,6 +479,12 @@ def _apply_package(zip_bytes: bytes) -> dict:
                 if not (line.startswith('INSTALLED_APPS +=') and line in settings_txt)
             )
             patch_file.write_text(filtered)
+
+        # ── 3. Framework router activation ─────────────────────────────────
+        # Reconcile api/views.py against the apps now in INSTALLED_APPS (the
+        # patch written above plus settings.py). Same code path as uninstall,
+        # so install and uninstall can never drift out of sync.
+        _sync_framework_routers(backend_root)
 
         # ── 4. Frontend additions metadata ────────────────────────────────
         additions = {}
@@ -566,6 +553,81 @@ def _apply_package(zip_bytes: bytes) -> dict:
     }
 
 
+def _installed_framework_apps(backend_root: Path) -> set:
+    """
+    Return the set of framework router keys whose Django app is currently active
+    in INSTALLED_APPS — scanning base settings.py plus every remaining
+    settings_patches/<module>.py. Commented-out lines are ignored, so a framework
+    app counts as active only if some currently-installed module still requires it.
+    """
+    texts = []
+    settings_file = backend_root / 'migratis' / 'settings.py'
+    if settings_file.exists():
+        texts.append(settings_file.read_text())
+    patches_dir = _patches_dir(backend_root)
+    if patches_dir.exists():
+        for patch in patches_dir.glob('*.py'):
+            try:
+                texts.append(patch.read_text())
+            except OSError:
+                pass
+
+    active = set()
+    for key, _rname, _rmod, _rpath in _FRAMEWORK_ROUTERS:
+        token = f'migratis.{key}.apps'
+        for txt in texts:
+            if any(token in line and not line.strip().startswith('#')
+                   for line in txt.splitlines()):
+                active.add(key)
+                break
+    return active
+
+
+def _sync_framework_routers(backend_root: Path) -> bool:
+    """
+    Reconcile the framework router imports/mounts in api/views.py with the set of
+    framework apps still present in INSTALLED_APPS. Uncomment routers whose app is
+    active; comment routers whose app is no longer installed. Idempotent.
+
+    This is the uninstall counterpart to step 2 of _apply_package: install
+    uncomments routers a module needs, and this re-comments them once no remaining
+    module needs them — preventing api/views.py from importing models for an app
+    that is no longer in INSTALLED_APPS.
+    """
+    api_views = backend_root / 'migratis' / 'api' / 'views.py'
+    if not api_views.exists():
+        return False
+
+    txt    = api_views.read_text()
+    active = _installed_framework_apps(backend_root)
+    changed = False
+    for key, rname, rmod, rpath in _FRAMEWORK_ROUTERS:
+        for stmt in (f'from {rmod} import router as {rname}',
+                     f'api.add_router("{rpath}", {rname})'):
+            commented = f'# {stmt}'
+            if key in active:
+                if commented in txt:
+                    txt = txt.replace(commented, stmt)
+                    changed = True
+            else:
+                # Only comment a statement that is currently active (the commented
+                # form absent guards against double-commenting and against the
+                # aligned always-on i18n/cookie mounts that use different spacing).
+                if commented not in txt and stmt in txt:
+                    txt = txt.replace(stmt, commented)
+                    changed = True
+
+    if changed:
+        api_views.write_text(txt)
+        uid, gid = _volume_owner(backend_root)
+        if uid != 0:
+            try:
+                os.chown(api_views, uid, gid)
+            except OSError:
+                pass
+    return changed
+
+
 def _remove_module(module: str, backend_root: Path) -> dict:
     """
     Reverse _apply_package for a given module.
@@ -609,6 +671,14 @@ def _remove_module(module: str, backend_root: Path) -> dict:
         f = patches_dir / fname
         if f.exists():
             f.unlink()
+
+    # ── 2b. Re-comment framework routers no longer needed ─────────────────
+    # Install uncomments routers in api/views.py; mirror that on uninstall so we
+    # never import models for an app that has just left INSTALLED_APPS (which
+    # Django reports as "Model ... doesn't declare an explicit app_label").
+    # Runs after the patch file is deleted so the active-app scan reflects the
+    # removal, and before the app directory is gone.
+    _sync_framework_routers(backend_root)
 
     # ── 3. Remove backend app directory ───────────────────────────────────
     app_dir = backend_root / module
