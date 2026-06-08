@@ -480,6 +480,18 @@ TRANSLATIONS['installer'] = {
         'en': 'Installed modules', 'fr': 'Modules installés',
         'es': 'Módulos instalados', 'ro': 'Module instalate',
     },
+    'recompiling-frontend': {
+        'en': 'Finishing up — rebuilding the frontend…',
+        'fr': 'Finalisation — reconstruction du frontend…',
+        'es': 'Finalizando — reconstruyendo el frontend…',
+        'ro': 'Se finalizează — se reconstruiește frontendul…',
+    },
+    'recompiling-frontend-help': {
+        'en': 'Please wait for the rebuild to complete before continuing.',
+        'fr': 'Veuillez attendre la fin de la reconstruction avant de continuer.',
+        'es': 'Espere a que termine la reconstrucción antes de continuar.',
+        'ro': 'Așteptați finalizarea reconstrucției înainte de a continua.',
+    },
     'uninstall': {
         'en': 'Uninstall', 'fr': 'Désinstaller', 'es': 'Desinstalar', 'ro': 'Dezinstalează',
     },
