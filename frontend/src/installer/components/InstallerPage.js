@@ -23,6 +23,69 @@ const requiredGroups = (app) => {
 // is no longer alive, so the UI can drop back to the login form.
 const isDisconnected = (payload) => payload?.detail?.[0]?.session?.[0] === 'not-connected';
 
+// After an install/uninstall writes files into the mounted frontend, the CRA dev
+// server recompiles — and a module_registry.js change forces a full page reload,
+// which would wipe the in-memory result. Persist it so the reloaded page can
+// restore and show it. A short TTL prevents a stale result resurfacing later.
+// How the frontend is served, baked in by CRA at build time:
+//   `react-scripts start` (hot-reload dev container) → 'development'
+//   `react-scripts build` (static bundle served by nginx) → 'production'
+// In dev a written file auto-recompiles, so we wait for the rebuild; in
+// production the change needs `npm run build`, so there is nothing to wait for.
+const IS_DEV = process.env.NODE_ENV === 'development';
+
+const PENDING_KEY = 'installer_pending_result';
+const PENDING_TTL = 60000;
+
+const persistPending = (payload) => {
+  try { localStorage.setItem(PENDING_KEY, JSON.stringify({ ...payload, ts: Date.now() })); } catch (_) {}
+};
+const readPending = () => {
+  try {
+    const raw = localStorage.getItem(PENDING_KEY);
+    if (!raw) return null;
+    const p = JSON.parse(raw);
+    if (!p || (Date.now() - (p.ts || 0)) > PENDING_TTL) {
+      localStorage.removeItem(PENDING_KEY);
+      return null;
+    }
+    return p;
+  } catch (_) { return null; }
+};
+const clearPending = () => { try { localStorage.removeItem(PENDING_KEY); } catch (_) {} };
+
+// Resolve once the webpack dev server finishes the recompile triggered by the
+// freshly written module files. Listens to the WDS socket (an `invalid` recompile
+// start followed by `ok`/`hash`) and falls back to a bounded timeout so the UI
+// never hangs. A recompile that forces a full reload is handled by mount restore.
+const waitForRecompile = (onDone) => {
+  let finished = false;
+  let sawInvalid = false;
+  let ws = null;
+  const done = () => {
+    if (finished) return;
+    finished = true;
+    clearTimeout(timer);
+    try { if (ws) ws.close(); } catch (_) {}
+    onDone();
+  };
+  try {
+    ws = new WebSocket(`ws://${window.location.host}/ws`);
+    ws.onmessage = (evt) => {
+      let msg;
+      try { msg = JSON.parse(evt.data); } catch (_) { return; }
+      const type = msg && msg.type;
+      if (['invalid', 'static-changed', 'content-changed'].includes(type)) {
+        sawInvalid = true;
+      } else if (sawInvalid && ['ok', 'hash', 'errors'].includes(type)) {
+        done(); // recompilation finished (with or without warnings/errors)
+      }
+    };
+    ws.onerror = () => {}; // fall back to the timeout / reload-restore path
+  } catch (_) {}
+  const timer = setTimeout(done, 20000);
+};
+
 const InstallerPage = () => {
   const { t } = useTranslation('installer');
 
@@ -54,6 +117,10 @@ const InstallerPage = () => {
   // Install result
   const [result, setResult] = useState(null);
 
+  // True while waiting for the dev server to finish rebuilding after an
+  // install/uninstall, so the result is shown only once the frontend is ready.
+  const [recompiling, setRecompiling] = useState(false);
+
   // Installed modules
   const [installed, setInstalled]           = useState([]);
   const [uninstalling, setUninstalling]     = useState(null);
@@ -71,6 +138,20 @@ const InstallerPage = () => {
     // remote migratis instance, so it must not inherit the app's stale
     // "session expired" state (which would pop the login modal on load).
     localStorage.removeItem('session_expired');
+
+    // If a recompile-triggered full reload interrupted a pending install/uninstall,
+    // the dev server only reloads after a successful compile — so the rebuild is
+    // already done. Restore the stored result and show it.
+    const pending = readPending();
+    if (pending) {
+      if (pending.kind === 'uninstall') {
+        setUninstallResult(pending.data);
+      } else {
+        setResult(pending.data);
+        setStep(STEPS.INSTALL);
+      }
+    }
+
     InstallerService.getStatus()
       .then((data) => {
         const on = data?.enabled !== false;
@@ -79,7 +160,9 @@ const InstallerPage = () => {
         fetchInstalled();
         InstallerService.getSession()
           .then((session) => {
-            if (session.connected) fetchApps();
+            // Keep the restored result on screen — load apps without resetting
+            // the step back to the selection list.
+            if (session.connected) fetchApps(pending ? { keepStep: true } : {});
           })
           .catch(() => {});
       })
@@ -98,8 +181,8 @@ const InstallerPage = () => {
     setError('not-connected');
   };
 
-  const fetchApps = () => {
-    setLoading(true);
+  const fetchApps = (opts = {}) => {
+    if (!opts.keepStep) setLoading(true);
     setError('');
     InstallerService.listApps()
       .then((data) => {
@@ -108,10 +191,10 @@ const InstallerPage = () => {
           return;
         }
         setApps(data.apps || []);
-        setStep(STEPS.SELECT);
+        if (!opts.keepStep) setStep(STEPS.SELECT);
       })
       .catch(() => setError('connection-failed'))
-      .finally(() => setLoading(false));
+      .finally(() => { if (!opts.keepStep) setLoading(false); });
   };
 
   const handleConnect = (e) => {
@@ -232,9 +315,20 @@ const InstallerPage = () => {
           showLogin();
           return;
         }
-        setResult(data);
-        setStep(STEPS.INSTALL);
-        fetchInstalled();
+        const showResult = () => {
+          setResult(data);
+          setStep(STEPS.INSTALL);
+          fetchInstalled();
+        };
+        if (IS_DEV && data?.frontend_ok) {
+          // Dev server: files landed in the mounted frontend; wait for it to
+          // finish rebuilding before revealing the result.
+          persistPending({ kind: 'install', data });
+          setRecompiling(true);
+          waitForRecompile(() => { setRecompiling(false); showResult(); });
+        } else {
+          showResult();
+        }
       })
       .catch((err) => {
         const detail = err?.response?.data?.detail;
@@ -250,8 +344,20 @@ const InstallerPage = () => {
     setUninstallResult(null);
     InstallerService.uninstall(module)
       .then((data) => {
-        setUninstallResult(data);
-        fetchInstalled();
+        if (IS_DEV && data?.frontend_ok) {
+          // Dev server: the removed module's files were deleted from the mounted
+          // frontend; wait for the rebuild before showing the result.
+          persistPending({ kind: 'uninstall', data });
+          setRecompiling(true);
+          waitForRecompile(() => {
+            setRecompiling(false);
+            setUninstallResult(data);
+            fetchInstalled();
+          });
+        } else {
+          setUninstallResult(data);
+          fetchInstalled();
+        }
       })
       .catch((err) => {
         const detail = err?.response?.data?.detail;
@@ -281,6 +387,20 @@ const InstallerPage = () => {
   }
 
   if (loading) return <LoaderIndicator />;
+
+  // Waiting for the dev server to finish rebuilding after an install/uninstall.
+  if (recompiling) {
+    return (
+      <div className="container mt-4" style={{ maxWidth: 720 }}>
+        <h2 className="mb-4">{t('installer-title')}</h2>
+        <div className="card p-4 text-center">
+          <LoaderIndicator />
+          <p className="mt-3 mb-1">{t('recompiling-frontend')}</p>
+          <small className="text-muted">{t('recompiling-frontend-help')}</small>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mt-4" style={{ maxWidth: 720 }}>
@@ -314,6 +434,7 @@ const InstallerPage = () => {
           <button
             className="btn btn-secondary"
             onClick={() => {
+              clearPending();
               setUninstallResult(null);
               setResult(null);
               setSelectedApp(null);
@@ -439,7 +560,7 @@ const InstallerPage = () => {
           ) : (
             <div className="list-group mb-3">
               {apps.map((app) => {
-                const alreadyInstalled = installed.includes(app.module);
+                const alreadyInstalled = app.installed || installed.includes(app.module);
                 return (
                   <button
                     key={app.id}
@@ -451,10 +572,12 @@ const InstallerPage = () => {
                     <div className="d-flex justify-content-between align-items-center">
                       <div>
                         <strong>{app.name}</strong>
-                        <span className="ms-2 text-muted small">{t('module-label')} {app.module}</span>
                       </div>
                       {alreadyInstalled && (
-                        <span className="badge bg-success">{t('installed-badge')}</span>
+                        <>
+                          &nbsp;
+                          <span className="badge bg-success">{t('installed-badge')}</span>
+                        </>
                       )}
                     </div>
                   </button>
@@ -464,7 +587,7 @@ const InstallerPage = () => {
           )}
           <button
             className="btn btn-primary"
-            disabled={!selectedApp || installed.includes(selectedApp?.module)}
+            disabled={!selectedApp || selectedApp?.installed || installed.includes(selectedApp?.module)}
             onClick={handleProceedToInstall}
           >
             {t('install-selected')}
@@ -606,18 +729,32 @@ const InstallerPage = () => {
             </span>
           </div>
 
-          {result.restart_required && (
+          {/* Manual steps left for the user. Each is shown only when its side
+              actually needs it: the backend restart when the server doesn't
+              autoreload (production), and `npm run build` when the frontend is a
+              static bundle (production). In dev both auto-apply, so this is hidden. */}
+          {(result.restart_required || !IS_DEV) && (
             <div className="alert alert-warning">
-              <strong>{t('almost-done')}</strong> {t('restart-to-load-module')}
-              <pre className="mb-2 mt-2 small bg-white p-2 rounded">docker restart backend-base-api-1</pre>
-              {t('rebuild-static-assets')}
-              <pre className="mb-0 mt-2 small bg-white p-2 rounded">npm run build</pre>
+              <strong>{t('almost-done')}</strong>
+              {result.restart_required && (
+                <>
+                  {' '}{t('restart-to-load-module')}
+                  <pre className={`${IS_DEV ? 'mb-0' : 'mb-2'} mt-2 small bg-white p-2 rounded`}>docker restart backend-base-api-1</pre>
+                </>
+              )}
+              {!IS_DEV && (
+                <>
+                  {t('rebuild-static-assets')}
+                  <pre className="mb-0 mt-2 small bg-white p-2 rounded">npm run build</pre>
+                </>
+              )}
             </div>
           )}
 
           <button
             className="btn btn-secondary"
             onClick={() => {
+              clearPending();
               setStep(STEPS.SELECT);
               setResult(null);
               setSelectedApp(null);

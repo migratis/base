@@ -29,6 +29,7 @@ import re
 import shutil
 import subprocess
 import zipfile
+from datetime import datetime, timedelta, timezone as dt_timezone
 from pathlib import Path
 
 import requests as http_requests
@@ -39,6 +40,15 @@ from ninja import Router
 router = Router()
 
 MIGRATIS_BACKEND_URL = getattr(settings, 'MIGRATIS_BACKEND_URL', 'http://host.docker.internal:8000')
+
+# Migratis' trusted-device cookie: once a 2FA code is verified with
+# remember_device, Migratis sets this cookie and subsequent logins skip 2FA for
+# TRUST_DAYS. The installer talks to Migratis over a fresh server-side
+# requests.Session per connect, so it must persist this cookie itself and replay
+# it on login — otherwise every connect re-prompts for a code. Mirrors
+# migratis.user.views.TFA_COOKIE_NAME / TFA_COOKIE_DURATION.
+MIGRATIS_TFA_COOKIE     = 'tfa_verified'
+MIGRATIS_TFA_TRUST_DAYS = 7
 
 _FRAMEWORK_MODULES = frozenset([
     'user', 'i18n', 'cookie', 'support', 'subscription', 'generator', 'installer',
@@ -86,6 +96,16 @@ def _session_expired_response():
     return JsonResponse({'detail': [{'session': ['not-connected']}]}, status=401)
 
 
+def _backend_autoreloads() -> bool:
+    """True when the Django dev server's autoreloader is active, so rewriting
+    api/views.py (done last in _apply_package) restarts the worker automatically
+    and the deferred migrate runs on its own — no manual restart needed. The
+    autoreloader runs the request-handling worker with RUN_MAIN=true; production
+    WSGI servers (gunicorn/uwsgi behind nginx) do not set it, so a restart is
+    required there."""
+    return os.environ.get('RUN_MAIN') == 'true'
+
+
 def _patches_dir(backend_root: Path) -> Path:
     return backend_root / 'settings_patches'
 
@@ -111,14 +131,25 @@ def _chown_tree(path: Path, uid: int, gid: int):
 
 
 def _get_installed_modules(backend_root: Path) -> list:
-    """Return modules that have a settings_patches/<module>.py file."""
+    """Return modules that correspond to an actually-installed app — i.e. a
+    settings_patches/<module>.py paired with a <module>_manifest.json. Managed
+    internal patches (e.g. zzz_language.py, written by _write_language_patch) have
+    no manifest, so they are not mistaken for installed apps."""
     d = _patches_dir(backend_root)
     if not d.exists():
         return []
     return sorted(
         p.stem for p in d.glob('*.py')
-        if p.stem != '__init__' and p.stem not in _FRAMEWORK_MODULES
+        if p.stem != '__init__'
+        and p.stem not in _FRAMEWORK_MODULES
+        and (d / f'{p.stem}_manifest.json').exists()
     )
+
+
+def _module_name(name: str) -> str:
+    """Mirror Migratis' generator module-name derivation so installed apps can be
+    matched against the remote app list (which doesn't expose the module name)."""
+    return (name or '').lower().replace(' ', '_').replace('-', '_')
 
 
 def _rebuild_registry(backend_root: Path, frontend_root: Path):
@@ -189,6 +220,43 @@ def _rebuild_registry(backend_root: Path, frontend_root: Path):
 # Auth endpoints
 # --------------------------------------------------------------------------- #
 
+def _store_tfa_cookie(request, url, session):
+    """Persist the Migratis trusted-device cookie (`tfa_verified`) for this
+    instance so future logins skip 2FA for up to a week — the installer's
+    counterpart to the browser keeping the cookie. Keyed by instance URL with an
+    expiry mirroring Migratis' max-age, so it survives disconnects and stale
+    Migratis sessions but is not honoured forever."""
+    value = session.cookies.get(MIGRATIS_TFA_COOKIE)
+    if not value:
+        return
+    trust = request.session.get('migratis_tfa') or {}
+    trust[url] = {
+        'value':   value,
+        'expires': (datetime.now(dt_timezone.utc)
+                    + timedelta(days=MIGRATIS_TFA_TRUST_DAYS)).isoformat(),
+    }
+    request.session['migratis_tfa'] = trust
+    request.session.modified = True
+
+
+def _trusted_tfa_cookie(request, url):
+    """Return the stored, non-expired trusted-device cookie value for `url`, or
+    None. Drops the entry once it has expired so 2FA is asked again after a week."""
+    trust = request.session.get('migratis_tfa') or {}
+    entry = trust.get(url)
+    if not entry:
+        return None
+    try:
+        if datetime.fromisoformat(entry['expires']) <= datetime.now(dt_timezone.utc):
+            trust.pop(url, None)
+            request.session['migratis_tfa'] = trust
+            request.session.modified = True
+            return None
+    except (ValueError, KeyError, TypeError):
+        return None
+    return entry.get('value')
+
+
 @router.post('/connect', auth=None)
 def installer_connect(request):
     try:
@@ -203,11 +271,17 @@ def installer_connect(request):
     if not email or not password:
         return _err('form', 'missing-credentials')
 
+    # Replay the stored trusted-device cookie so a remembered device skips 2FA
+    # (the Migratis login logs in directly when `tfa_verified` is present).
+    trusted = _trusted_tfa_cookie(request, url)
+    login_cookies = {MIGRATIS_TFA_COOKIE: trusted} if trusted else None
+
     try:
         s    = http_requests.Session()
         resp = s.post(
             f'{url}/backend/api/user/login',
             data={'email': email, 'password': password},
+            cookies=login_cookies,
             timeout=10,
         )
     except Exception:
@@ -291,6 +365,9 @@ def installer_tfa(request):
     request.session['migratis_url']     = url
     request.session.modified            = True
 
+    # Remember this device so the next connect skips 2FA for a week.
+    _store_tfa_cookie(request, url, s)
+
     return JsonResponse({'user': payload.get('user', {})})
 
 
@@ -329,7 +406,18 @@ def installer_list_apps(request):
     if resp.status_code != 200:
         return _session_expired_response()
 
-    apps = [a for a in resp.json().get('items', []) if a.get('status') == 'generated']
+    # Annotate each app with its derived module name and whether it is already
+    # installed, so the UI can present installed apps as installed rather than
+    # offering to install them again. The remote schema does not expose `module`.
+    installed = set(_get_installed_modules(Path(settings.BASE_DIR)))
+    apps = []
+    for a in resp.json().get('items', []):
+        if a.get('status') != 'generated':
+            continue
+        module = _module_name(a.get('name'))
+        a['module'] = module
+        a['installed'] = module in installed
+        apps.append(a)
     return JsonResponse({'apps': apps})
 
 
@@ -604,7 +692,9 @@ def _apply_package(zip_bytes: bytes, config: dict = None) -> dict:
         'seed_ok':          None,
         'seed_output':      'Deferred — will run automatically on backend restart.',
         'migrate_deferred': True,
-        'restart_required': True,
+        # Dev autoreloader restarts the worker (and runs the deferred migrate) on
+        # its own when api/views.py is rewritten; only production needs a manual one.
+        'restart_required': not _backend_autoreloads(),
     }
 
 
@@ -959,7 +1049,9 @@ def _remove_module(module: str, backend_root: Path) -> dict:
         'frontend_ok':      frontend_ok,
         'migrate_ok':       migrate.returncode == 0,
         'migrate_output':   (migrate.stdout or migrate.stderr)[-1000:],
-        'restart_required': True,
+        # See _apply_package: in dev the autoreloader reloads on the api/views.py
+        # change; only production requires a manual restart to drop the module.
+        'restart_required': not _backend_autoreloads(),
     }
 
 
