@@ -19,7 +19,9 @@ environ.Env.read_env()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-DEBUG = env('DEBUG')
+# env('…') returns the raw string, so 'False' would be truthy and leave DEBUG on
+# in production. Parse as a real boolean. (Same fix applied to the *_SECURE flags.)
+DEBUG = env.bool('DEBUG', default=False)
 
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['*'])
 
@@ -173,8 +175,12 @@ CORS_ALLOW_HEADERS = [
 
 CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS')
 
-SESSION_COOKIE_SECURE = env('SESSION_COOKIE_SECURE')
-CSRF_COOKIE_SECURE = env('CSRF_COOKIE_SECURE')
+# NOTE: env('…') returns the raw string, so 'False' is truthy and would force
+# the Secure flag on even in local HTTP dev — which stops the session cookie from
+# round-tripping (every request gets a fresh session, losing the installer's
+# remembered-2FA trust and the login session). Parse as a real boolean instead.
+SESSION_COOKIE_SECURE = env.bool('SESSION_COOKIE_SECURE', default=False)
+CSRF_COOKIE_SECURE = env.bool('CSRF_COOKIE_SECURE', default=False)
 
 SECURE_BROWSER_XSS_FILTER = True
 
