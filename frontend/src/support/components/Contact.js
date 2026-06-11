@@ -46,7 +46,7 @@ const Contact = () => {
 
   const onSubmit = async (data) => {
     setDisableSubmit(true);
-    data.topic_id = data.topic_id.value;
+    data.topic_id = data.topic_id?.value ?? data.topic_id;
     data.language = localStorage.getItem('i18nextLng');
     SupportService.sendSupport(data).then(
       (response) => {

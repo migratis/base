@@ -96,13 +96,18 @@ export default function SelectField ({
             isLoading={isLoading}
             value={isMulti
               ? (Array.isArray(field.value) ? field.value.map(v => options.find(o => o.value === v) || v).filter(Boolean) : [])
-              : (field.value ? options.find(o => o.value === field.value) || field.value : null)
+              // Store the raw value, not the option object. Guard against falsy-but-valid
+              // values (e.g. 0/false) so they still render as the selected option.
+              : (field.value !== '' && field.value != null ? options.find(o => o.value === field.value) || field.value : null)
             }
             onChange={(selected) => {
               if (isMulti) {
                 field.onChange(selected ? selected.map(o => o.value) : []);
               } else {
-                field.onChange(selected);
+                // Single select: store the raw value (consistent with the multi branch
+                // and the value lookup above), not the whole {value,label} option object —
+                // otherwise the backend receives an object and int/FK fields 422.
+                field.onChange(selected ? selected.value : null);
               }
             }}
           />

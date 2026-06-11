@@ -88,7 +88,7 @@ const TicketForm = (props) => {
       data.id = props.ticket.id;
     }
     setDisableSubmit(true);
-    data.topic_id = data.topic_id.value;
+    data.topic_id = data.topic_id?.value ?? data.topic_id;
     data.language = localStorage.getItem('i18nextLng');
     SupportService.saveTicket(data).then(
       (response) => {
