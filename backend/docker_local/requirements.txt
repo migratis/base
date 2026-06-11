@@ -1,7 +1,12 @@
 csv-reader>=1.2.0
 django>=5.0.3
 django-clearcache>=1.2.1
-django-ninja>=1.1.0
+# Pinned to the major API the generator targets (modern django-ninja 1.x +
+# pydantic 2.x: Meta/fields, check_fields=False). Floats to latest stable
+# WITHIN the major; the <N caps stop a future major from silently breaking
+# generated apps. See memory: project-generator-ninja-version-skew.
+django-ninja>=1.1.0,<2
+pydantic>=2.0,<3
 psycopg2>=2.9.3
 django-countries>=7.3.2
 django-colorfield>=0.8.0
