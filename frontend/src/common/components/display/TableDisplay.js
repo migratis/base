@@ -1,3 +1,4 @@
+import { Fragment } from 'react';
 import Table from 'react-bootstrap/Table';
 import {
   IoSettingsOutline as EditIcon,
@@ -20,6 +21,11 @@ const TableDisplay = ({
   sortDir = 'asc',
   onSort,
   sortableFields = [],
+  // Embedded children (sandbox merged tabs): generated lists pass the child
+  // descriptors ({entity, fk_field, fields}) plus their fetched rows
+  // ({Child: [{id, data}]}) so line items render under each parent record.
+  embeddedChildren = [],
+  embeddedRecords = {},
 }) => {
   if (!records || records.length === 0) {
     return null;
@@ -61,6 +67,59 @@ const TableDisplay = ({
   // column to entities (e.g. catalogs) with no admin workflow.
   const hasInteractions =
     Array.isArray(config?.interactions) && config.interactions.length > 0 && !!onInteraction;
+
+  const hasEmbedded = Array.isArray(embeddedChildren) && embeddedChildren.length > 0;
+
+  // Inline rows for embedded children — one compact sub-table per child
+  // entity, filtered to the current parent record via its FK. Returns null
+  // when the parent has no child rows at all (no empty grey band).
+  const renderEmbeddedRows = (record, totalCols) => {
+    const sections = embeddedChildren
+      .map((child) => ({
+        child,
+        rows: (embeddedRecords[child.entity] || []).filter(
+          (row) => String((row.data || {})[child.fk_field]) === String(record.id)
+        ),
+      }))
+      .filter((s) => s.rows.length > 0);
+    if (sections.length === 0) return null;
+    return (
+      <tr>
+        <td colSpan={totalCols} className="bg-light p-2">
+          {sections.map(({ child, rows }) => (
+            <div key={child.entity} className="mb-2">
+              <div className="small fw-bold text-muted mb-1">
+                {tval(child.entity, child.entity)} ({rows.length})
+              </div>
+              <Table size="sm" bordered className="mb-0 bg-white">
+                <thead>
+                  <tr>
+                    {child.fields.map((f) => (
+                      <th key={f.name} className="small">{tval(f.label, f.label)}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((row) => (
+                    <tr key={row.id}>
+                      {child.fields.map((f) => {
+                        const v = (row.data || {})[f.name];
+                        return (
+                          <td key={f.name} className="small">
+                            {v === null || v === undefined || v === '' ? '—' : String(v)}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+            </div>
+          ))}
+        </td>
+      </tr>
+    );
+  };
 
   const resolveRelLabel = (fieldName, value) => {
     if (!value) return '—';
@@ -179,7 +238,8 @@ const TableDisplay = ({
         </thead>
         <tbody>
           {records.map((record) => (
-            <tr key={record.id} className="align-middle">
+            <Fragment key={record.id}>
+            <tr className="align-middle">
               <td>
                 <div className="d-flex gap-1">
                   {onEdit && (
@@ -220,6 +280,11 @@ const TableDisplay = ({
                 </td>
               )}
             </tr>
+            {hasEmbedded && renderEmbeddedRows(
+              record,
+              1 + displayColumns.length + (hasInteractions ? 1 : 0),
+            )}
+            </Fragment>
           ))}
         </tbody>
       </Table>
