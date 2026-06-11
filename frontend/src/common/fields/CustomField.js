@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { useFormContext } from 'react-hook-form';
 import InputField from './InputField';
+import { sanitizeHtml } from './sanitizeHtml';
 
 // ── ErrorBoundary ─────────────────────────────────────────────────────────────
 
@@ -35,9 +36,11 @@ class CustomFieldErrorBoundary extends React.Component {
  */
 function compileComponent(componentName, code) {
   try {
+    // `sanitizeHtml` is injected into scope so AI code may safely render
+    // sanitized rich text via dangerouslySetInnerHTML without an import.
     // eslint-disable-next-line no-new-func
-    const factory = new Function('React', `${code}; return ${componentName};`);
-    return factory(React);
+    const factory = new Function('React', 'sanitizeHtml', `${code}; return ${componentName};`);
+    return factory(React, sanitizeHtml);
   } catch (err) {
     console.warn(`[CustomField] Failed to compile ${componentName}:`, err);
     return null;

@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { getVisibleInteractions } from '../interactionVisibility';
+import { sanitizeHtml } from '../../fields/sanitizeHtml';
 
 class CustomDisplayErrorBoundary extends React.Component {
   constructor(props) {
@@ -25,9 +26,11 @@ function compileDisplay(componentName, code) {
   try {
     // Normalize literal escape sequences the AI sometimes emits in JSON strings
     const src = code.replace(/\\n/g, '\n').replace(/\\t/g, '\t').replace(/\\r/g, '');
+    // `sanitizeHtml` is injected into scope so AI code may safely render
+    // sanitized rich text via dangerouslySetInnerHTML without an import.
     // eslint-disable-next-line no-new-func
-    const factory = new Function('React', `${src}; return ${componentName};`);
-    return factory(React);
+    const factory = new Function('React', 'sanitizeHtml', `${src}; return ${componentName};`);
+    return factory(React, sanitizeHtml);
   } catch (err) {
     console.warn(`[CustomDisplay] Failed to compile ${componentName}:`, err);
     return null;
