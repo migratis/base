@@ -30,6 +30,12 @@ const listInstalled = () =>
 const uninstall = (module) =>
   api.post(`/installer/uninstall/${encodeURIComponent(module)}`).then((r) => r.data);
 
+const upgradePreview = (appId) =>
+  api.post(`/installer/upgrade/${appId}/preview`).then((r) => r.data);
+
+const upgrade = (appId, confirm) =>
+  api.post(`/installer/upgrade/${appId}`, { confirm: !!confirm }).then((r) => r.data);
+
 const InstallerService = {
   getStatus,
   getSession,
@@ -41,6 +47,8 @@ const InstallerService = {
   frontendZipUrl,
   listInstalled,
   uninstall,
+  upgradePreview,
+  upgrade,
 };
 
 export default InstallerService;

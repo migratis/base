@@ -23,6 +23,9 @@ venv/
 db.sqlite3
 media/
 
+# Upgrade backups written by the installer (data dumps + code snapshots)
+backend/backups/
+
 # Node
 node_modules/
 npm-debug.log*

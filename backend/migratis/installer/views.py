@@ -14,6 +14,8 @@ Endpoints (all under /backend/api/installer/):
     GET    /frontend-zip/{id}    — stream frontend-only ZIP for manual extraction
     GET    /installed            — list modules currently installed in this project
     POST   /uninstall/{module}   — remove a previously installed module
+    POST   /upgrade/{id}/preview — dry-run: the changes an upgrade would apply
+    POST   /upgrade/{id}         — upgrade an installed module keeping its data
 
 Design: the installer never patches settings.py, api/views.py, App.js, or
 MenuLeft.js. Instead it:
@@ -409,7 +411,10 @@ def installer_list_apps(request):
     # Annotate each app with its derived module name and whether it is already
     # installed, so the UI can present installed apps as installed rather than
     # offering to install them again. The remote schema does not expose `module`.
-    installed = set(_get_installed_modules(Path(settings.BASE_DIR)))
+    # Installed apps also get upgrade info: the remote `generation` counter vs
+    # the schema_version recorded in the local manifest at install time.
+    backend_root = Path(settings.BASE_DIR)
+    installed = set(_get_installed_modules(backend_root))
     apps = []
     for a in resp.json().get('items', []):
         if a.get('status') != 'generated':
@@ -417,6 +422,17 @@ def installer_list_apps(request):
         module = _module_name(a.get('name'))
         a['module'] = module
         a['installed'] = module in installed
+        if a['installed']:
+            manifest = _read_installed_manifest(backend_root, module) or {}
+            installed_version = manifest.get('schema_version')
+            remote_version    = a.get('generation') or 0
+            # Apps installed before schema versioning have no recorded version;
+            # they are treated as v1 (the first versioned generation freezes
+            # the existing 0001_initial as its baseline) and flagged legacy so
+            # the UI can warn that pre-versioning spec changes are not covered.
+            a['installed_schema_version'] = installed_version
+            a['upgrade_legacy']     = installed_version is None
+            a['upgrade_available']  = remote_version > (installed_version or 1)
         apps.append(a)
     return JsonResponse({'apps': apps})
 
@@ -523,6 +539,401 @@ def installer_uninstall(request, module: str):
     except Exception as exc:
         return JsonResponse({'detail': [{'uninstall': [str(exc)]}]}, status=500)
 
+    return JsonResponse(result)
+
+
+# --------------------------------------------------------------------------- #
+# Upgrade
+# --------------------------------------------------------------------------- #
+#
+# An installed module is upgraded in place, keeping its data:
+#   preview — download the package, read upgrade.json (the per-version
+#             operation lists Migratis records at each generation), pick the
+#             versions newer than the locally installed schema_version, and
+#             annotate destructive/lossy operations with live row counts so
+#             the user confirms exactly what the upgrade will touch.
+#   apply   — backup (dumpdata + code snapshot), write ONLY the new migration
+#             files (not watched by the autoreloader), run `migrate <module>`
+#             synchronously, and only on success write the rest of the package
+#             (watched backend sources last, mirroring _apply_package's
+#             ordering). On migrate failure the DB is unwound to the previously
+#             applied migration and the new migration files are removed, so
+#             the old version keeps running untouched.
+#
+# Seeds are intentionally NOT re-run on upgrade (user-edited data must
+# survive); the response carries the command to refresh translations manually.
+
+def _read_installed_manifest(backend_root: Path, module: str):
+    f = _patches_dir(backend_root) / f'{module}_manifest.json'
+    try:
+        return json.loads(f.read_text())
+    except (OSError, ValueError):
+        return None
+
+
+def _download_package(request, s, url, app_id):
+    """Download a generated package ZIP. Returns (zip_bytes, error_response)."""
+    try:
+        resp = s.get(f'{url}/backend/api/generator/application/{app_id}/download', timeout=60)
+    except Exception:
+        return None, JsonResponse({'detail': [{'download': ['download-failed']}]}, status=503)
+    if resp.status_code in (401, 403):
+        _clear_migratis_session(request)
+        return None, _session_expired_response()
+    if resp.status_code != 200:
+        return None, JsonResponse({'detail': [{'download': ['download-failed']}]}, status=resp.status_code)
+    return resp.content, None
+
+
+def _op_severity(op):
+    if op.get('destructive') or op.get('op') in ('remove_field', 'delete_model'):
+        return 'destructive'
+    if op.get('lossy'):
+        return 'lossy'
+    return 'safe'
+
+
+def _probe_rows(module, op):
+    """Best-effort live row count for a destructive/lossy operation, shown on
+    the confirmation screen ('column X dropped — 1240 rows hold a value').
+    ORM-based — the module is installed, so its (pre-upgrade) models are in
+    the app registry, and the queries work on any backend (SQLite in local
+    bases, Postgres in production). Returns None when the count cannot be
+    computed (e.g. ops on a model renamed in the same upgrade)."""
+    from django.apps import apps as django_apps
+    from django.db.models.functions import Length
+
+    model_name = op.get('model')
+    if not model_name:
+        return None
+    try:
+        model = django_apps.get_model(module, model_name)
+    except Exception:
+        return None
+
+    name = op.get('name')
+    try:
+        if op.get('op') == 'delete_model':
+            return model.objects.count()
+        if not name:
+            return None
+        if op.get('field') == 'ManyToManyField':
+            return None  # the data lives in a join table, not a column
+        non_null = model.objects.exclude(**{f'{name}__isnull': True})
+        if op.get('op') == 'remove_field':
+            return non_null.count()
+        probe = op.get('probe') or {}
+        kind  = probe.get('kind')
+        if kind == 'non_numeric':
+            return non_null.exclude(
+                **{f'{name}__regex': probe.get('pattern', r'^-?[0-9]+$')}
+            ).count()
+        if kind == 'too_long':
+            return (non_null.annotate(_probe_len=Length(name))
+                    .filter(_probe_len__gt=probe.get('max_length', 255)).count())
+        if kind == 'non_boolean':
+            return non_null.exclude(
+                **{f'{name}__iregex': r'^(true|false|t|f|0|1|yes|no)$'}
+            ).count()
+        if kind == 'null_required':
+            return model.objects.filter(**{f'{name}__isnull': True}).count()
+        if kind == 'time_truncated':
+            return non_null.exclude(**{f'{name}__time': '00:00:00'}).count()
+        return non_null.count()
+    except Exception:
+        return None
+
+
+def _build_upgrade_preview(zip_bytes: bytes, backend_root: Path) -> dict:
+    with zipfile.ZipFile(io.BytesIO(zip_bytes), 'r') as zf:
+        manifest = json.loads(zf.read('manifest.json'))
+        upgrade  = (json.loads(zf.read('upgrade.json'))
+                    if 'upgrade.json' in zf.namelist() else {})
+    module = manifest['module']
+    if module not in _get_installed_modules(backend_root):
+        raise ValueError('not-installed')
+
+    local             = _read_installed_manifest(backend_root, module) or {}
+    installed_version = local.get('schema_version')
+    # Pre-versioning installs have no recorded version: the first versioned
+    # generation froze the already-applied 0001_initial as its v1 baseline,
+    # so they are treated as v1 (flagged legacy for the UI caveat).
+    effective = installed_version or 1
+    target    = manifest.get('schema_version') or upgrade.get('schema_version') or 1
+
+    changes = []
+    requires_confirmation = False
+    for v in (upgrade.get('versions') or []):
+        if not (effective < v.get('version', 0) <= target):
+            continue
+        for op in (v.get('operations') or []):
+            severity = _op_severity(op)
+            entry = {
+                'version':  v['version'],
+                'op':       op.get('op'),
+                'model':    op.get('model') or op.get('new_model') or op.get('old_model'),
+                'name':     op.get('name') or op.get('new_name'),
+                'old_name': op.get('old_name'),
+                'from':     (op.get('from_decl') or {}).get('field'),
+                'to':       (op.get('to_decl') or {}).get('field'),
+                'severity': severity,
+                'rows':     None,
+            }
+            if severity != 'safe':
+                entry['rows'] = _probe_rows(module, op)
+                requires_confirmation = True
+            changes.append(entry)
+
+    return {
+        'module':                module,
+        'installed_version':     effective,
+        'target_version':        target,
+        'legacy':                installed_version is None,
+        'up_to_date':            target <= effective,
+        'changes':               changes,
+        'requires_confirmation': requires_confirmation,
+    }
+
+
+def _last_applied_migration(module: str):
+    from django.db import connection
+    with connection.cursor() as cur:
+        cur.execute(
+            'SELECT name FROM django_migrations WHERE app = %s ORDER BY id DESC LIMIT 1',
+            [module],
+        )
+        row = cur.fetchone()
+    return row[0] if row else None
+
+
+def _apply_upgrade(zip_bytes: bytes, backend_root: Path, confirm: bool) -> dict:
+    frontend_root = Path(getattr(settings, 'FRONTEND_SRC_DIR', '/frontend/src'))
+    patches_dir   = _patches_dir(backend_root)
+
+    preview = _build_upgrade_preview(zip_bytes, backend_root)
+    module  = preview['module']
+    if preview['up_to_date']:
+        raise ValueError('already-up-to-date')
+    if preview['requires_confirmation'] and not confirm:
+        return {'needs_confirmation': True, 'preview': preview}
+
+    with zipfile.ZipFile(io.BytesIO(zip_bytes), 'r') as zf:
+        names    = zf.namelist()
+        manifest = json.loads(zf.read('manifest.json'))
+
+        # ── 1. Backup: data dump + code snapshot ───────────────────────────
+        ts = datetime.now(dt_timezone.utc).strftime('%Y%m%d_%H%M%S')
+        backup_dir = backend_root / 'backups' / f"{module}_v{preview['installed_version']}_{ts}"
+        backup_dir.mkdir(parents=True, exist_ok=True)
+        dump = subprocess.run(
+            ['python', 'manage.py', 'dumpdata', module, '--indent', '2',
+             '-o', str(backup_dir / 'data.json')],
+            cwd=str(backend_root), capture_output=True, text=True, timeout=300,
+        )
+        if dump.returncode != 0:
+            # No backup → no upgrade. The whole point is never to risk the data.
+            shutil.rmtree(backup_dir, ignore_errors=True)
+            raise RuntimeError(f"backup-failed: {(dump.stderr or dump.stdout)[-500:]}")
+        if (backend_root / module).exists():
+            shutil.copytree(backend_root / module, backup_dir / 'backend')
+        if (frontend_root / module).exists():
+            shutil.copytree(frontend_root / module, backup_dir / 'frontend')
+        for fname in (f'{module}.py', f'{module}_manifest.json', f'{module}_additions.json'):
+            src = patches_dir / fname
+            if src.exists():
+                shutil.copy2(src, backup_dir / fname)
+
+        # ── 2. Write ONLY the new migration files ──────────────────────────
+        # Migration modules already on disk are identical (the chain is
+        # append-only) and skipping them avoids touching files the
+        # autoreloader watches before migrate has run.
+        last_applied   = _last_applied_migration(module)
+        new_migrations = []
+        mig_prefix     = f'backend/{module}/migrations/'
+        for name in names:
+            if not name.startswith(mig_prefix) or name.endswith('/'):
+                continue
+            content = zf.read(name)
+            if name.endswith('.py'):
+                content = content.replace(b'backend.', b'')
+            dest = backend_root / name[len('backend/'):]
+            if dest.exists() and dest.read_bytes() == content:
+                continue
+            existed = dest.exists()
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_bytes(content)
+            if not existed:
+                new_migrations.append(dest)
+        pycache = backend_root / module / 'migrations' / '__pycache__'
+        if pycache.exists():
+            shutil.rmtree(pycache, ignore_errors=True)
+
+        # ── 3. Migrate synchronously (the app is already installed, so the
+        #       subprocess sees it in INSTALLED_APPS) ───────────────────────
+        migrate = subprocess.run(
+            ['python', 'manage.py', 'migrate', module],
+            cwd=str(backend_root), capture_output=True, text=True, timeout=300,
+        )
+        if migrate.returncode != 0:
+            # ── Auto-rollback: unwind the DB, drop the new migration files ──
+            rolled_back = False
+            if last_applied:
+                undo = subprocess.run(
+                    ['python', 'manage.py', 'migrate', module, last_applied],
+                    cwd=str(backend_root), capture_output=True, text=True, timeout=300,
+                )
+                rolled_back = undo.returncode == 0
+            for f in new_migrations:
+                try:
+                    f.unlink()
+                except OSError:
+                    pass
+            return {
+                'success':        False,
+                'module':         module,
+                'from_version':   preview['installed_version'],
+                'to_version':     preview['target_version'],
+                'migrate_ok':     False,
+                'migrate_output': (migrate.stdout or migrate.stderr)[-2000:],
+                'rolled_back':    rolled_back,
+                'backup_path':    str(backup_dir.relative_to(backend_root)),
+            }
+
+        # ── 4. Frontend module — mirror the package exactly (drop files of
+        #       removed entities), then metadata + registry ─────────────────
+        frontend_ok = frontend_root.exists()
+        if frontend_ok:
+            module_dir = frontend_root / module
+            if module_dir.exists():
+                shutil.rmtree(module_dir)
+            for name in names:
+                if not name.startswith('frontend/src/'):
+                    continue
+                rel = name[len('frontend/src/'):]
+                if not rel or rel.endswith('/'):
+                    continue
+                dest = frontend_root / rel
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                dest.write_bytes(zf.read(name))
+
+        manifest_file = patches_dir / f'{module}_manifest.json'
+        manifest_file.write_text(json.dumps(manifest, indent=2, ensure_ascii=False))
+        if 'frontend/app_additions.json' in names:
+            additions = json.loads(zf.read('frontend/app_additions.json'))
+            (patches_dir / f'{module}_additions.json').write_text(
+                json.dumps(additions, indent=2, ensure_ascii=False)
+            )
+
+        # The settings patch follows the new package (modules_needed may have
+        # changed); settings_patches/*.py are exec'd, not imported, so writing
+        # them does not trigger the autoreloader.
+        if 'backend/settings_patch.py' in names:
+            settings_txt = (backend_root / 'migratis' / 'settings.py').read_text()
+            patch_src    = zf.read('backend/settings_patch.py').decode('utf-8')
+            filtered = '\n'.join(
+                line for line in patch_src.splitlines()
+                if not (line.startswith('INSTALLED_APPS +=') and line in settings_txt)
+            )
+            (patches_dir / f'{module}.py').write_text(filtered)
+
+        _write_language_patch(backend_root)
+        if frontend_ok:
+            _sync_frontend_flags(backend_root, frontend_root)
+            _sync_frontend_language(backend_root, frontend_root)
+            _rebuild_registry(backend_root, frontend_root)
+
+        # ── 5. Backend source files LAST — they are watched by the
+        #       autoreloader, so the dev reload fires only after everything
+        #       above has completed (mirrors _apply_package's ordering) ─────
+        for name in names:
+            if not name.startswith('backend/'):
+                continue
+            rel = name[len('backend/'):]
+            if (not rel or rel == 'settings_patch.py'
+                    or name.startswith(mig_prefix) or name.endswith('/')):
+                continue
+            content = zf.read(name)
+            if name.endswith('.py'):
+                content = content.replace(
+                    b'from ninja.files import File', b'from ninja import File',
+                )
+            dest = backend_root / rel
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_bytes(content)
+
+        # ── 6. Ownership fixes ──────────────────────────────────────────────
+        uid, gid = _volume_owner(backend_root)
+        if uid != 0:
+            _chown_tree(backend_root / module, uid, gid)
+            _chown_tree(patches_dir, uid, gid)
+            _chown_tree(backup_dir, uid, gid)
+            if frontend_ok:
+                _chown_tree(frontend_root / module, uid, gid)
+                registry = frontend_root / 'module_registry.js'
+                if registry.exists():
+                    try:
+                        os.chown(registry, uid, gid)
+                    except OSError:
+                        pass
+
+        _sync_framework_routers(backend_root)
+
+    return {
+        'success':              True,
+        'module':               module,
+        'from_version':         preview['installed_version'],
+        'to_version':           preview['target_version'],
+        'legacy':               preview['legacy'],
+        'migrate_ok':           True,
+        'migrate_output':       (migrate.stdout or migrate.stderr)[-2000:],
+        'frontend_ok':          frontend_ok,
+        'backup_path':          str(backup_dir.relative_to(backend_root)),
+        # Seeds are skipped on purpose; new translation keys arrive only when
+        # the user re-runs the module's seed command.
+        'seed_skipped':         True,
+        'translations_command': f'docker exec backend-base-api-1 python /backend/manage.py seed_{module}',
+        'restart_required':     not _backend_autoreloads(),
+    }
+
+
+@router.post('/upgrade/{app_id}/preview', auth=None)
+def installer_upgrade_preview(request, app_id: int):
+    s, url = _session(request)
+    if s is None:
+        return _session_expired_response()
+    zip_bytes, err = _download_package(request, s, url, app_id)
+    if err:
+        return err
+    try:
+        preview = _build_upgrade_preview(zip_bytes, Path(settings.BASE_DIR))
+    except ValueError as exc:
+        return JsonResponse({'detail': [{'upgrade': [str(exc)]}]}, status=400)
+    except Exception as exc:
+        return JsonResponse({'detail': [{'upgrade': [str(exc)]}]}, status=500)
+    return JsonResponse(preview)
+
+
+@router.post('/upgrade/{app_id}', auth=None)
+def installer_upgrade(request, app_id: int):
+    s, url = _session(request)
+    if s is None:
+        return _session_expired_response()
+    try:
+        body = json.loads(request.body) if request.body else {}
+    except Exception:
+        body = {}
+    zip_bytes, err = _download_package(request, s, url, app_id)
+    if err:
+        return err
+    try:
+        result = _apply_upgrade(zip_bytes, Path(settings.BASE_DIR),
+                                confirm=bool(body.get('confirm')))
+    except ValueError as exc:
+        return JsonResponse({'detail': [{'upgrade': [str(exc)]}]}, status=400)
+    except Exception as exc:
+        return JsonResponse({'detail': [{'upgrade': [str(exc)]}]}, status=500)
+    if result.get('needs_confirmation'):
+        return JsonResponse(result, status=409)
     return JsonResponse(result)
 
 

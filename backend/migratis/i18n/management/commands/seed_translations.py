@@ -751,6 +751,115 @@ TRANSLATIONS['installer'] = {
         'en': 'Webhook signing secret', 'fr': 'Secret de signature du webhook',
         'es': 'Secreto de firma del webhook', 'ro': 'Secret de semnare webhook',
     },
+    'upgrade-badge': {
+        'en': 'update v{{from}} → v{{to}}', 'fr': 'mise à jour v{{from}} → v{{to}}',
+        'es': 'actualización v{{from}} → v{{to}}', 'ro': 'actualizare v{{from}} → v{{to}}',
+    },
+    'upgrade-selected': {
+        'en': 'Upgrade selected', 'fr': 'Mettre à jour la sélection',
+        'es': 'Actualizar la selección', 'ro': 'Actualizează selecția',
+    },
+    'upgrade-title': {
+        'en': 'Upgrade {{app}}', 'fr': 'Mettre à jour {{app}}',
+        'es': 'Actualizar {{app}}', 'ro': 'Actualizează {{app}}',
+    },
+    'upgrade-versions': {
+        'en': 'From version {{from}} to version {{to}}. Your data is kept; the schema changes below will be applied.',
+        'fr': 'De la version {{from}} à la version {{to}}. Vos données sont conservées ; les changements de schéma ci-dessous seront appliqués.',
+        'es': 'De la versión {{from}} a la versión {{to}}. Sus datos se conservan; se aplicarán los cambios de esquema siguientes.',
+        'ro': 'De la versiunea {{from}} la versiunea {{to}}. Datele sunt păstrate; modificările de schemă de mai jos vor fi aplicate.',
+    },
+    'upgrade-legacy-warning': {
+        'en': 'This application was installed before upgrade support. The upgrade keeps your data only if the schema was not changed before the first versioned generation.',
+        'fr': "Cette application a été installée avant la prise en charge des mises à jour. La mise à jour conserve vos données uniquement si le schéma n'a pas été modifié avant la première génération versionnée.",
+        'es': 'Esta aplicación se instaló antes de la compatibilidad con actualizaciones. La actualización conserva sus datos solo si el esquema no se modificó antes de la primera generación versionada.',
+        'ro': 'Această aplicație a fost instalată înainte de suportul pentru actualizări. Actualizarea păstrează datele doar dacă schema nu a fost modificată înainte de prima generare versionată.',
+    },
+    'upgrade-no-schema-changes': {
+        'en': 'No schema changes — only the application code will be updated.',
+        'fr': "Aucun changement de schéma — seul le code de l'application sera mis à jour.",
+        'es': 'Sin cambios de esquema: solo se actualizará el código de la aplicación.',
+        'ro': 'Fără modificări de schemă — doar codul aplicației va fi actualizat.',
+    },
+    'upgrade-op-add_field': {
+        'en': 'new field', 'fr': 'nouveau champ', 'es': 'campo nuevo', 'ro': 'câmp nou',
+    },
+    'upgrade-op-remove_field': {
+        'en': 'field removed (data dropped)', 'fr': 'champ supprimé (données perdues)',
+        'es': 'campo eliminado (datos perdidos)', 'ro': 'câmp eliminat (date pierdute)',
+    },
+    'upgrade-op-rename_field': {
+        'en': 'field renamed', 'fr': 'champ renommé', 'es': 'campo renombrado', 'ro': 'câmp redenumit',
+    },
+    'upgrade-op-alter_field': {
+        'en': 'type changed', 'fr': 'type modifié', 'es': 'tipo modificado', 'ro': 'tip modificat',
+    },
+    'upgrade-op-create_model': {
+        'en': 'new entity', 'fr': 'nouvelle entité', 'es': 'entidad nueva', 'ro': 'entitate nouă',
+    },
+    'upgrade-op-delete_model': {
+        'en': 'entity removed (all its data dropped)', 'fr': 'entité supprimée (toutes ses données perdues)',
+        'es': 'entidad eliminada (todos sus datos perdidos)', 'ro': 'entitate eliminată (toate datele pierdute)',
+    },
+    'upgrade-op-rename_model': {
+        'en': 'entity renamed', 'fr': 'entité renommée', 'es': 'entidad renombrada', 'ro': 'entitate redenumită',
+    },
+    'upgrade-rows-affected': {
+        'en': '{{count}} rows affected', 'fr': '{{count}} lignes concernées',
+        'es': '{{count}} filas afectadas', 'ro': '{{count}} rânduri afectate',
+    },
+    'upgrade-destructive-warning': {
+        'en': 'Some changes above are destructive: the highlighted data will be permanently lost. A backup is taken first, but confirm only if you accept these losses.',
+        'fr': 'Certains changements ci-dessus sont destructifs : les données en surbrillance seront définitivement perdues. Une sauvegarde est effectuée au préalable, mais ne confirmez que si vous acceptez ces pertes.',
+        'es': 'Algunos cambios anteriores son destructivos: los datos resaltados se perderán de forma permanente. Primero se hace una copia de seguridad, pero confirme solo si acepta estas pérdidas.',
+        'ro': 'Unele modificări de mai sus sunt distructive: datele evidențiate vor fi pierdute definitiv. Se face mai întâi o copie de rezervă, dar confirmați doar dacă acceptați aceste pierderi.',
+    },
+    'upgrade-backup-notice': {
+        'en': 'A full data dump and a code snapshot are stored in backups/ before anything is changed; if the migration fails, the previous version is restored automatically.',
+        'fr': "Une sauvegarde complète des données et un instantané du code sont stockés dans backups/ avant toute modification ; si la migration échoue, la version précédente est restaurée automatiquement.",
+        'es': 'Antes de cualquier cambio se guarda un volcado completo de datos y una instantánea del código en backups/; si la migración falla, la versión anterior se restaura automáticamente.',
+        'ro': 'Înainte de orice modificare, o copie completă a datelor și un instantaneu al codului sunt stocate în backups/; dacă migrarea eșuează, versiunea anterioară este restaurată automat.',
+    },
+    'upgrade-confirm': {
+        'en': 'Confirm upgrade', 'fr': 'Confirmer la mise à jour',
+        'es': 'Confirmar la actualización', 'ro': 'Confirmă actualizarea',
+    },
+    'upgrade-success': {
+        'en': '{{module}} upgraded from v{{from}} to v{{to}}. Your data was kept.',
+        'fr': '{{module}} mis à jour de v{{from}} à v{{to}}. Vos données ont été conservées.',
+        'es': '{{module}} actualizado de v{{from}} a v{{to}}. Sus datos se conservaron.',
+        'ro': '{{module}} actualizat de la v{{from}} la v{{to}}. Datele au fost păstrate.',
+    },
+    'upgrade-failed-msg': {
+        'en': 'The upgrade migration failed.', 'fr': 'La migration de mise à jour a échoué.',
+        'es': 'La migración de actualización falló.', 'ro': 'Migrarea de actualizare a eșuat.',
+    },
+    'upgrade-rolled-back': {
+        'en': 'The previous version was restored automatically; your data is intact.',
+        'fr': 'La version précédente a été restaurée automatiquement ; vos données sont intactes.',
+        'es': 'La versión anterior se restauró automáticamente; sus datos están intactos.',
+        'ro': 'Versiunea anterioară a fost restaurată automat; datele sunt intacte.',
+    },
+    'upgrade-rollback-failed': {
+        'en': 'Automatic rollback could not complete — restore manually from the backup below.',
+        'fr': "La restauration automatique n'a pas pu aboutir — restaurez manuellement à partir de la sauvegarde ci-dessous.",
+        'es': 'La reversión automática no pudo completarse: restaure manualmente desde la copia de seguridad siguiente.',
+        'ro': 'Revenirea automată nu a putut fi finalizată — restaurați manual din copia de rezervă de mai jos.',
+    },
+    'upgrade-backup-at': {
+        'en': 'Backup stored at', 'fr': 'Sauvegarde stockée dans',
+        'es': 'Copia de seguridad guardada en', 'ro': 'Copie de rezervă stocată în',
+    },
+    'upgrade-translations-hint': {
+        'en': 'Seeded data was not touched. To load the translation keys added by this version, run:',
+        'fr': "Les données initiales n'ont pas été modifiées. Pour charger les clés de traduction ajoutées par cette version, exécutez :",
+        'es': 'Los datos iniciales no se modificaron. Para cargar las claves de traducción añadidas por esta versión, ejecute:',
+        'ro': 'Datele inițiale nu au fost modificate. Pentru a încărca cheile de traducere adăugate de această versiune, rulați:',
+    },
+    'upgrade-failed': {
+        'en': 'Upgrade failed', 'fr': 'Échec de la mise à jour',
+        'es': 'Error en la actualización', 'ro': 'Actualizarea a eșuat',
+    },
 }
 
 # ===========================================================================

@@ -3,7 +3,10 @@ import { useTranslation } from 'react-i18next';
 import InstallerService from '../services/installer.service';
 import { LoaderIndicator } from '../../common/components/LoaderIndicator';
 
-const STEPS = { CONNECT: 'connect', TFA: 'tfa', SELECT: 'select', CONFIG: 'config', INSTALL: 'install' };
+const STEPS = {
+  CONNECT: 'connect', TFA: 'tfa', SELECT: 'select', CONFIG: 'config', INSTALL: 'install',
+  UPGRADE_PREVIEW: 'upgrade-preview', UPGRADE_RESULT: 'upgrade-result',
+};
 
 const EMPTY_CONFIG = {
   admin:  { email: '', password: '' },
@@ -126,6 +129,10 @@ const InstallerPage = () => {
   const [uninstalling, setUninstalling]     = useState(null);
   const [uninstallResult, setUninstallResult] = useState(null);
 
+  // Upgrade flow (installed app with a newer remote generation)
+  const [upgradePreview, setUpgradePreview] = useState(null);
+  const [upgradeResult, setUpgradeResult]   = useState(null);
+
   const fetchInstalled = useCallback(() => {
     InstallerService.listInstalled()
       .then((data) => setInstalled(data.modules || []))
@@ -146,6 +153,9 @@ const InstallerPage = () => {
     if (pending) {
       if (pending.kind === 'uninstall') {
         setUninstallResult(pending.data);
+      } else if (pending.kind === 'upgrade') {
+        setUpgradeResult(pending.data);
+        setStep(STEPS.UPGRADE_RESULT);
       } else {
         setResult(pending.data);
         setStep(STEPS.INSTALL);
@@ -367,6 +377,67 @@ const InstallerPage = () => {
       .finally(() => setUninstalling(null));
   };
 
+  // Upgrade: fetch the dry-run preview (pending versions + destructive/lossy
+  // changes with live row counts) and show the confirmation screen.
+  const handleUpgradePreview = (app) => {
+    if (!app) return;
+    setSelectedApp(app);
+    setLoading(true);
+    setError('');
+    InstallerService.upgradePreview(app.id)
+      .then((data) => {
+        if (isDisconnected(data)) {
+          showLogin();
+          return;
+        }
+        if (data?.detail) {
+          setError(data.detail?.[0]?.upgrade?.[0] || data.detail?.[0]?.download?.[0] || 'upgrade-failed');
+          return;
+        }
+        setUpgradePreview(data);
+        setStep(STEPS.UPGRADE_PREVIEW);
+      })
+      .catch(() => setError('upgrade-failed'))
+      .finally(() => setLoading(false));
+  };
+
+  // Upgrade: the user confirmed the previewed changes — apply them.
+  const handleUpgrade = () => {
+    if (!selectedApp) return;
+    setLoading(true);
+    setError('');
+    InstallerService.upgrade(selectedApp.id, true)
+      .then((data) => {
+        if (isDisconnected(data)) {
+          showLogin();
+          return;
+        }
+        if (data?.detail) {
+          setError(data.detail?.[0]?.upgrade?.[0] || data.detail?.[0]?.download?.[0] || 'upgrade-failed');
+          return;
+        }
+        const showRes = () => {
+          setUpgradeResult(data);
+          setStep(STEPS.UPGRADE_RESULT);
+          fetchInstalled();
+        };
+        if (IS_DEV && data?.frontend_ok) {
+          // The rewritten module files trigger a dev-server rebuild — wait for
+          // it before revealing the result (mirrors install/uninstall).
+          persistPending({ kind: 'upgrade', data });
+          setRecompiling(true);
+          waitForRecompile(() => { setRecompiling(false); showRes(); });
+        } else {
+          showRes();
+        }
+      })
+      .catch((err) => {
+        const detail = err?.response?.data?.detail;
+        setError(detail?.[0]?.upgrade?.[0] || detail?.[0]?.download?.[0] || 'upgrade-failed');
+      })
+      .finally(() => setLoading(false));
+  };
+
   // Still checking the backend switch.
   if (enabled === null) return <LoaderIndicator />;
 
@@ -561,37 +632,55 @@ const InstallerPage = () => {
             <div className="list-group mb-3">
               {apps.map((app) => {
                 const alreadyInstalled = app.installed || installed.includes(app.module);
+                const upgradable = alreadyInstalled && app.upgrade_available;
                 return (
                   <button
                     key={app.id}
                     type="button"
-                    className={`list-group-item list-group-item-action${selectedApp?.id === app.id ? ' active' : ''}${alreadyInstalled ? ' list-group-item-success' : ''}`}
-                    onClick={() => !alreadyInstalled && setSelectedApp(app)}
-                    disabled={alreadyInstalled}
+                    className={`list-group-item list-group-item-action${selectedApp?.id === app.id ? ' active' : ''}${alreadyInstalled ? (upgradable ? ' list-group-item-warning' : ' list-group-item-success') : ''}`}
+                    onClick={() => (!alreadyInstalled || upgradable) && setSelectedApp(app)}
+                    disabled={alreadyInstalled && !upgradable}
                   >
                     <div className="d-flex justify-content-between align-items-center">
                       <div>
                         <strong>{app.name}</strong>
                       </div>
-                      {alreadyInstalled && (
-                        <>
-                          &nbsp;
+                      <div>
+                        {alreadyInstalled && (
                           <span className="badge bg-success">{t('installed-badge')}</span>
-                        </>
-                      )}
+                        )}
+                        {upgradable && (
+                          <span className="badge bg-warning text-dark ms-1">
+                            {t('upgrade-badge', {
+                              from: app.installed_schema_version || 1,
+                              to: app.generation,
+                            })}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </button>
                 );
               })}
             </div>
           )}
-          <button
-            className="btn btn-primary"
-            disabled={!selectedApp || selectedApp?.installed || installed.includes(selectedApp?.module)}
-            onClick={handleProceedToInstall}
-          >
-            {t('install-selected')}
-          </button>
+          <div className="d-flex gap-2">
+            <button
+              className="btn btn-primary"
+              disabled={!selectedApp || selectedApp?.installed || installed.includes(selectedApp?.module)}
+              onClick={handleProceedToInstall}
+            >
+              {t('install-selected')}
+            </button>
+            {selectedApp?.upgrade_available && (
+              <button
+                className="btn btn-warning"
+                onClick={() => handleUpgradePreview(selectedApp)}
+              >
+                {t('upgrade-selected')}
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -684,6 +773,141 @@ const InstallerPage = () => {
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* ── Upgrade: preview / confirmation ──────────────────────────────── */}
+      {!uninstallResult && step === STEPS.UPGRADE_PREVIEW && upgradePreview && (
+        <div className="card p-4">
+          <h5 className="mb-1">{t('upgrade-title', { app: selectedApp?.name })}</h5>
+          <p className="text-muted small mb-3">
+            {t('upgrade-versions', {
+              from: upgradePreview.installed_version,
+              to: upgradePreview.target_version,
+            })}
+          </p>
+          {error && <div className="alert alert-danger">{t(error)}</div>}
+          {upgradePreview.legacy && (
+            <div className="alert alert-warning">{t('upgrade-legacy-warning')}</div>
+          )}
+          {upgradePreview.changes.length === 0 ? (
+            <div className="alert alert-info">{t('upgrade-no-schema-changes')}</div>
+          ) : (
+            <ul className="list-group mb-3">
+              {upgradePreview.changes.map((c, i) => (
+                <li
+                  key={i}
+                  className={`list-group-item d-flex justify-content-between align-items-center${
+                    c.severity === 'destructive'
+                      ? ' list-group-item-danger'
+                      : c.severity === 'lossy' ? ' list-group-item-warning' : ''
+                  }`}
+                >
+                  <span>
+                    <code>{c.model}</code>
+                    {c.name && c.op !== 'rename_model' && <>.<code>{c.name}</code></>}
+                    {' — '}{t(`upgrade-op-${c.op}`)}
+                    {c.op === 'rename_field' && c.old_name && ` (${c.old_name} → ${c.name})`}
+                    {c.op === 'alter_field' && c.from && c.to && ` (${c.from} → ${c.to})`}
+                  </span>
+                  {c.rows != null && (
+                    <span className="badge bg-secondary">
+                      {t('upgrade-rows-affected', { count: c.rows })}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+          {upgradePreview.requires_confirmation && (
+            <div className="alert alert-danger">{t('upgrade-destructive-warning')}</div>
+          )}
+          <p className="small text-muted">{t('upgrade-backup-notice')}</p>
+          <div className="d-flex gap-2">
+            <button className="btn btn-warning" onClick={handleUpgrade}>
+              {t('upgrade-confirm')}
+            </button>
+            <button
+              className="btn btn-outline-secondary"
+              onClick={() => { setUpgradePreview(null); setError(''); setStep(STEPS.SELECT); }}
+            >
+              {t('back')}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Upgrade: result ──────────────────────────────────────────────── */}
+      {!uninstallResult && step === STEPS.UPGRADE_RESULT && upgradeResult && (
+        <div className="card p-4">
+          <div className={`alert ${upgradeResult.success ? 'alert-success' : 'alert-danger'} mb-3`}>
+            {upgradeResult.success
+              ? t('upgrade-success', {
+                  module: upgradeResult.module,
+                  from: upgradeResult.from_version,
+                  to: upgradeResult.to_version,
+                })
+              : <>
+                  {t('upgrade-failed-msg')}{' '}
+                  {upgradeResult.rolled_back
+                    ? t('upgrade-rolled-back')
+                    : t('upgrade-rollback-failed')}
+                </>}
+          </div>
+
+          {upgradeResult.migrate_output && (
+            <pre className="bg-light p-2 small" style={{ maxHeight: 150, overflow: 'auto' }}>
+              {upgradeResult.migrate_output}
+            </pre>
+          )}
+
+          {upgradeResult.backup_path && (
+            <p className="small text-muted">
+              {t('upgrade-backup-at')} <code>{upgradeResult.backup_path}</code>
+            </p>
+          )}
+
+          {/* Seeds are skipped on upgrade so user-edited data survives; new
+              translation keys arrive only when the seed command is re-run. */}
+          {upgradeResult.success && (
+            <div className="alert alert-info">
+              {t('upgrade-translations-hint')}
+              <pre className="mb-0 mt-2 small bg-white p-2 rounded">
+                {upgradeResult.translations_command}
+              </pre>
+            </div>
+          )}
+
+          {upgradeResult.success && (upgradeResult.restart_required || !IS_DEV) && (
+            <div className="alert alert-warning">
+              <strong>{t('almost-done')}</strong>
+              {upgradeResult.restart_required && (
+                <>
+                  {' '}{t('restart-to-load-module')}
+                  <pre className={`${IS_DEV ? 'mb-0' : 'mb-2'} mt-2 small bg-white p-2 rounded`}>docker restart backend-base-api-1</pre>
+                </>
+              )}
+              {!IS_DEV && (
+                <>
+                  {t('rebuild-static-assets')}
+                  <pre className="mb-0 mt-2 small bg-white p-2 rounded">npm run build</pre>
+                </>
+              )}
+            </div>
+          )}
+
+          <button
+            className="btn btn-secondary"
+            onClick={() => {
+              clearPending();
+              setUpgradeResult(null);
+              setUpgradePreview(null);
+              setSelectedApp(null);
+              fetchApps();
+            }}
+          >
+            {t('back')}
+          </button>
         </div>
       )}
 
