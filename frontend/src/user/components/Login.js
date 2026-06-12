@@ -4,6 +4,8 @@ import { useForm } from 'react-hook-form';
 import UserService from "../services/user.service";
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-toastify';
+import { SUBSCRIPTION } from "../../settings";
+import { moduleMenuItems } from "../../module_registry";
 
 const Login = (props) => {
   const navigate = useNavigate();
@@ -39,11 +41,16 @@ const Login = (props) => {
     props.setUser(response.user);
     if (props.setExpanded) props.setExpanded(false);
     if (location.pathname === "/home" || location.pathname === "/register") {
+      // Route by subscription status only when the subscription module is
+      // active — otherwise there is no /subscribe page to land on.
       var allowedStatuses = ["trialing", "infinite", "active"]
-      if (allowedStatuses.indexOf(response.user.subscription) !== -1) {
-        navigate("/account");
-      } else {
+      if (SUBSCRIPTION && allowedStatuses.indexOf(response.user.subscription) === -1) {
         navigate("/subscribe");
+      } else {
+        // Land on the installed application (first module menu entry).
+        // The base has no /account route — that path belongs to the full
+        // Migratis app this component was inherited from.
+        navigate(moduleMenuItems[0]?.path || "/");
       }
     } else {
       window.location.reload();

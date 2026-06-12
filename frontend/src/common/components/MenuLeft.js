@@ -14,8 +14,14 @@ import { toast } from 'react-toastify';
 import Login from "../../user/components/Login";
 import { BlockedModal as LoginModal } from "../modals/BlockedModal";
 import { SUPPORT } from '../../settings';
-import { moduleMenuItems } from '../../module_registry';
+// Namespace import: older generated registries don't export moduleRoles —
+// destructuring it directly would crash the bundle.
+import * as moduleRegistry from '../../module_registry';
+import { isMenuItemVisible } from '../tools/moduleRoles';
 import logo from '../../img/logo.png';
+
+const moduleMenuItems = moduleRegistry.moduleMenuItems || [];
+const moduleRoles     = moduleRegistry.moduleRoles || {};
 
 export const MenuLeft = (props) => {
   const { t } = useTranslation('layout');
@@ -127,12 +133,15 @@ export const MenuLeft = (props) => {
             </div>
           )}
 
-          {/* Pages contributed by installed modules (built into module_registry.js) */}
-          {moduleMenuItems.length > 0 && (
+          {/* Pages contributed by installed modules (built into module_registry.js).
+              Filtered by the viewer's role against each entry's min_list_role —
+              the same navigation rule the sandbox applies. `props.user` makes
+              the filter re-run on login/logout. */}
+          {moduleMenuItems.filter((item) => isMenuItemVisible(item, moduleRoles)).length > 0 && (
             <>
               <div className="sidebar-divider" />
               <div className="sidebar-section">
-                {moduleMenuItems.map((item) => (
+                {moduleMenuItems.filter((item) => isMenuItemVisible(item, moduleRoles)).map((item) => (
                   <NavLink
                     key={item.path}
                     to={item.path}

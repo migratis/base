@@ -158,6 +158,12 @@ def _rebuild_registry(backend_root: Path, frontend_root: Path):
     """
     Regenerate module_registry.js from all *_additions.json files
     in settings_patches/. Called after every install and uninstall.
+
+    Menu items keep their `min_list_role` and the per-module role ladder
+    (from the manifest) is exported as `moduleRoles`, so MenuLeft can hide
+    entries the viewer's role may not list — the same navigation rule the
+    sandbox applies. Dropping these here was why anonymous visitors saw
+    every entity tab.
     """
     registry_path = frontend_root / 'module_registry.js'
     if not registry_path.exists():
@@ -170,7 +176,8 @@ def _rebuild_registry(backend_root: Path, frontend_root: Path):
 
     all_imports = []   # [(component_name, import_path), ...]
     all_routes  = []   # [(url_path, component_name), ...]
-    all_menu    = []   # [{"label": ..., "path": ...}, ...]
+    all_menu    = []   # [{"label", "path", "min_list_role", "module"}, ...]
+    all_roles   = {}   # {module: {ranks, anonymous, default_auth, privileged}}
 
     patches_dir = _patches_dir(backend_root)
     for additions_file in sorted(patches_dir.glob('*_additions.json')):
@@ -187,7 +194,28 @@ def _rebuild_registry(backend_root: Path, frontend_root: Path):
             if m:
                 all_routes.append((m.group(1), m.group(2)))
 
-        all_menu.extend(additions.get('menu_items', []))
+        for item in additions.get('menu_items', []):
+            all_menu.append({
+                'label':         item.get('label', ''),
+                'path':          item.get('path', ''),
+                'min_list_role': item.get('min_list_role', ''),
+                'module':        module,
+            })
+
+        # Role ladder from the module's manifest — same derivation as the
+        # generated roles.py (anonymous tier, lowest non-anonymous default,
+        # highest rank privileged).
+        manifest = _read_installed_manifest(backend_root, module) or {}
+        roles    = manifest.get('roles') or []
+        if roles:
+            all_roles[module] = {
+                'ranks':        {r['name']: r['rank'] for r in roles},
+                'anonymous':    next((r['name'] for r in roles if r.get('is_anonymous')),
+                                     roles[0]['name']),
+                'default_auth': next((r['name'] for r in roles if not r.get('is_anonymous')),
+                                     roles[-1]['name']),
+                'privileged':   roles[-1]['name'],
+            }
 
     lines = []
     if all_imports:
@@ -210,9 +238,13 @@ def _rebuild_registry(backend_root: Path, frontend_root: Path):
     lines.append('')
 
     menu_js = ',\n  '.join(
-        f'{{ label: "{item["label"]}", path: "{item["path"]}" }}' for item in all_menu
+        f'{{ label: "{item["label"]}", path: "{item["path"]}", '
+        f'min_list_role: "{item["min_list_role"]}", module: "{item["module"]}" }}'
+        for item in all_menu
     ) if all_menu else ''
     lines.append(f"export const moduleMenuItems = [{f'{chr(10)}  {menu_js},{chr(10)}' if menu_js else ''}];")
+    lines.append('')
+    lines.append(f"export const moduleRoles = {json.dumps(all_roles, indent=2)};")
     lines.append('')
 
     registry_path.write_text('\n'.join(lines))
@@ -222,37 +254,75 @@ def _rebuild_registry(backend_root: Path, frontend_root: Path):
 # Auth endpoints
 # --------------------------------------------------------------------------- #
 
-def _store_tfa_cookie(request, url, session):
+# The trusted-device store lives in a file, NOT in the Django session: the
+# base session expires after SESSION_COOKIE_AGE (4h) and is flushed on base
+# logout, which silently re-prompted for a 2FA code on every connect even
+# though Migratis trusts the device for a week. The file decouples the trust
+# from the base app's login lifecycle. It holds only the `tfa_verified`
+# cookie value (not a session), keyed by instance URL + account email.
+
+def _trust_file() -> Path:
+    d = _patches_dir(Path(settings.BASE_DIR))
+    d.mkdir(exist_ok=True)
+    return d / '.installer_trust.json'
+
+
+def _load_trust_store() -> dict:
+    try:
+        return json.loads(_trust_file().read_text())
+    except (OSError, ValueError):
+        return {}
+
+
+def _save_trust_store(store: dict):
+    # Owner-only permissions from the moment of creation — the file holds the
+    # 2FA-skip token for the Migratis connection.
+    f  = _trust_file()
+    fd = os.open(str(f), os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, 'w') as fh:
+        fh.write(json.dumps(store, indent=2))
+    try:
+        os.chmod(f, 0o600)  # in case the file pre-existed with wider perms
+    except OSError:
+        pass
+    _chown_to_owner(f, Path(settings.BASE_DIR))
+
+
+def _trust_key(url, email):
+    return f"{(url or '').rstrip('/')}|{(email or '').strip().lower()}"
+
+
+def _store_tfa_cookie(url, email, session):
     """Persist the Migratis trusted-device cookie (`tfa_verified`) for this
-    instance so future logins skip 2FA for up to a week — the installer's
-    counterpart to the browser keeping the cookie. Keyed by instance URL with an
-    expiry mirroring Migratis' max-age, so it survives disconnects and stale
+    instance + account so future logins skip 2FA for up to a week — the
+    installer's counterpart to the browser keeping the cookie. The expiry
+    mirrors Migratis' max-age, so the trust survives disconnects and stale
     Migratis sessions but is not honoured forever."""
     value = session.cookies.get(MIGRATIS_TFA_COOKIE)
     if not value:
         return
-    trust = request.session.get('migratis_tfa') or {}
-    trust[url] = {
+    store = _load_trust_store()
+    store[_trust_key(url, email)] = {
         'value':   value,
         'expires': (datetime.now(dt_timezone.utc)
                     + timedelta(days=MIGRATIS_TFA_TRUST_DAYS)).isoformat(),
     }
-    request.session['migratis_tfa'] = trust
-    request.session.modified = True
+    _save_trust_store(store)
 
 
-def _trusted_tfa_cookie(request, url):
-    """Return the stored, non-expired trusted-device cookie value for `url`, or
-    None. Drops the entry once it has expired so 2FA is asked again after a week."""
-    trust = request.session.get('migratis_tfa') or {}
-    entry = trust.get(url)
+def _trusted_tfa_cookie(url, email):
+    """Return the stored, non-expired trusted-device cookie value for this
+    instance + account, or None. Drops the entry once it has expired so 2FA
+    is asked again after a week."""
+    store = _load_trust_store()
+    key   = _trust_key(url, email)
+    entry = store.get(key)
     if not entry:
         return None
     try:
         if datetime.fromisoformat(entry['expires']) <= datetime.now(dt_timezone.utc):
-            trust.pop(url, None)
-            request.session['migratis_tfa'] = trust
-            request.session.modified = True
+            store.pop(key, None)
+            _save_trust_store(store)
             return None
     except (ValueError, KeyError, TypeError):
         return None
@@ -275,7 +345,7 @@ def installer_connect(request):
 
     # Replay the stored trusted-device cookie so a remembered device skips 2FA
     # (the Migratis login logs in directly when `tfa_verified` is present).
-    trusted = _trusted_tfa_cookie(request, url)
+    trusted = _trusted_tfa_cookie(url, email)
     login_cookies = {MIGRATIS_TFA_COOKIE: trusted} if trusted else None
 
     try:
@@ -368,7 +438,7 @@ def installer_tfa(request):
     request.session.modified            = True
 
     # Remember this device so the next connect skips 2FA for a week.
-    _store_tfa_cookie(request, url, s)
+    _store_tfa_cookie(url, email, s)
 
     return JsonResponse({'user': payload.get('user', {})})
 

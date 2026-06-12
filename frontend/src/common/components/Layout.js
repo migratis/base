@@ -99,8 +99,12 @@ export const Layout = (props) => {
       { location.pathname !== "/cookies" &&
         <SPCookieConsent/>
       }
+      {/* The installer is a public, config-gated route with its own login
+          (to the remote Migratis instance) — never wall it behind the base
+          login modal. Layout mounts before the lazy InstallerPage can clear
+          a stale session_expired flag, so the exemption must live here. */}
       <BlockedModal
-        show={sessionExpiredShow}
+        show={sessionExpiredShow && location.pathname !== "/installer"}
         onHide={() => setSessionExpiredShow(false)}
         title={t('session-expired')}
         showCloseButton={false}

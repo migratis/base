@@ -26,6 +26,9 @@ media/
 # Upgrade backups written by the installer (data dumps + code snapshots)
 backend/backups/
 
+# Installer trusted-device store (2FA skip token for the Migratis connection)
+backend/settings_patches/.installer_trust.json
+
 # Node
 node_modules/
 npm-debug.log*

@@ -251,7 +251,10 @@ def activate(request, uidb64: Form[str], token: Form[str]):
     return JsonResponse({"detail": formatErrors({"user": ["user-not-exists"]})}, status=422)
 
 def _user_session_payload(user):
-    """Build the authenticated /login response body (trial + subscription state)."""
+    """Build the authenticated /login response body (trial + subscription state).
+    `groups` + `is_superuser` let installed-module frontends resolve the
+    viewer's role ladder tier (their roles.py maps auth Groups to roles)
+    without an extra round-trip."""
     user.trial = billing.has_trial(user)
     sub = billing.active_subscription(user)
     user.subscription = sub.status if sub else None
@@ -261,6 +264,8 @@ def _user_session_payload(user):
             "trial": user.trial,
             "subscription": user.subscription,
             'country': user.country_code,
+            "groups": list(user.groups.values_list('name', flat=True)),
+            "is_superuser": bool(user.is_superuser),
         }
     }
 
