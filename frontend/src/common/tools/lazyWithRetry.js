@@ -25,7 +25,12 @@ export const lazyWithRetry = (componentImport) =>
           'page-has-been-force-refreshed',
           'true'
         );
-        return window.location.reload();
+        window.location.reload();
+        // Stay suspended until the reload navigates away. Returning
+        // reload()'s value would resolve the lazy import to `undefined`,
+        // which React rejects with "Element type is invalid… Received a
+        // promise that resolves to: undefined".
+        return new Promise(() => {});
       }
 
       // The page has already been reloaded
