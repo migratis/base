@@ -74,7 +74,16 @@ class UserSchemaOut(ModelSchema):
     zipcode: str | None = None
     subscription: SubscriptionField = None
     trial: bool = True
-    
+    # `groups` (by name) + `is_superuser` let installed-module frontends resolve
+    # the viewer's role-ladder tier. Must mirror the /login payload shape
+    # (`_user_session_payload`) so the Layout profile-refresh that overwrites
+    # localStorage.user does not strip role identity.
+    groups: list[str] = []
+
+    @staticmethod
+    def resolve_groups(obj):
+        return list(obj.groups.values_list('name', flat=True))
+
     class Meta:
         model = models.User
-        fields = ['id', 'email', 'first_name', 'last_name', 'language', 'birthdate', 'address', 'zipcode', 'city', 'company', 'taxnumber']
+        fields = ['id', 'email', 'first_name', 'last_name', 'language', 'birthdate', 'address', 'zipcode', 'city', 'company', 'taxnumber', 'is_superuser']

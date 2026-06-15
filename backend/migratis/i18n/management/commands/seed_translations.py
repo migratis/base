@@ -860,6 +860,12 @@ TRANSLATIONS['installer'] = {
         'en': 'Upgrade failed', 'fr': 'Échec de la mise à jour',
         'es': 'Error en la actualización', 'ro': 'Actualizarea a eșuat',
     },
+    'upgrade-drift-repaired': {
+        'en': '{{count}} missing column(s) from a pre-versioning install were added automatically (additive repair, no data touched):',
+        'fr': "{{count}} colonne(s) manquante(s) d'une installation antérieure au versionnage ont été ajoutées automatiquement (réparation additive, aucune donnée modifiée) :",
+        'es': 'Se añadieron automáticamente {{count}} columna(s) que faltaban de una instalación previa al versionado (reparación aditiva, sin tocar los datos):',
+        'ro': '{{count}} coloană/coloane lipsă dintr-o instalare anterioară versionării au fost adăugate automat (reparație aditivă, fără a atinge datele):',
+    },
 }
 
 # ===========================================================================

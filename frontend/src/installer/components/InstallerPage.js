@@ -867,6 +867,17 @@ const InstallerPage = () => {
             </p>
           )}
 
+          {/* Legacy drift repair: columns models.py declared but no migration
+              ever created (pre-versioning installs) were added before backup. */}
+          {upgradeResult.repaired_columns?.length > 0 && (
+            <div className="alert alert-secondary small">
+              {t('upgrade-drift-repaired', { count: upgradeResult.repaired_columns.length })}
+              <pre className="mb-0 mt-2 small bg-white p-2 rounded" style={{ maxHeight: 100, overflow: 'auto' }}>
+                {upgradeResult.repaired_columns.join('\n')}
+              </pre>
+            </div>
+          )}
+
           {/* Seeds are skipped on upgrade so user-edited data survives; new
               translation keys arrive only when the seed command is re-run. */}
           {upgradeResult.success && (

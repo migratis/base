@@ -132,6 +132,48 @@ def _chown_tree(path: Path, uid: int, gid: int):
         pass
 
 
+def _fix_backend_py(content: bytes, module: str, name: str = '') -> bytes:
+    """
+    Normalise known AI slip-ups in generated backend Python before it lands
+    on disk:
+      - `backend.<module>` dotted paths (`backend/` is the working directory,
+        not a package) — in apps.py this crashes the whole app registry at
+        the next reload. Targeted to the module name so legitimate strings
+        are never touched; migration files keep the broader historical fix.
+      - `from ninja.files import File` → `from ninja import File`.
+    """
+    if '/migrations/' in name:
+        content = content.replace(b'backend.', b'')
+    else:
+        content = content.replace(
+            f'backend.{module}'.encode(), module.encode(),
+        )
+    return content.replace(
+        b'from ninja.files import File',
+        b'from ninja import File',
+    )
+
+
+def _validate_package_python(zf, module: str) -> list:
+    """
+    Pre-flight: compile-check every backend .py in the package (after the
+    same _fix_backend_py transforms that would land on disk). Returns a list
+    of '<path>: line N: <msg>' strings — non-empty means the package must NOT
+    be applied: writing a syntactically broken views.py/models.py crashes the
+    running app at the next autoreload (app-8 v6 shipped an annotated lambda).
+    """
+    errors = []
+    for name in zf.namelist():
+        if not (name.startswith('backend/') and name.endswith('.py')):
+            continue
+        content = _fix_backend_py(zf.read(name), module, name)
+        try:
+            compile(content.decode('utf-8', errors='replace'), name, 'exec')
+        except SyntaxError as exc:
+            errors.append(f'{name}: line {exc.lineno}: {exc.msg}')
+    return errors
+
+
 def _get_installed_modules(backend_root: Path) -> list:
     """Return modules that correspond to an actually-installed app — i.e. a
     settings_patches/<module>.py paired with a <module>_manifest.json. Managed
@@ -776,6 +818,79 @@ def _last_applied_migration(module: str):
     return row[0] if row else None
 
 
+def _reconcile_schema_drift(module: str) -> list:
+    """
+    Add columns the installed models declare but the tables lack.
+
+    Apps installed before schema versioning froze their AI-written
+    0001_initial; any spec change made between that install and the first
+    versioned generation has no migration, so models.py can reference
+    columns that were never created. That drift breaks every ORM read —
+    including the dumpdata backup that gates an upgrade.
+
+    Strictly additive: missing columns are added (NOT NULL ones get a
+    type-appropriate backfill default), nothing is altered or dropped, and
+    missing TABLES are left to the migration chain. Returns the list of
+    columns added ('table.column').
+    """
+    import datetime as _dt
+    from django.apps import apps as django_apps
+    from django.db import connection
+    from django.utils import timezone as _tz
+
+    _BACKFILL = {
+        'CharField': '', 'TextField': '', 'EmailField': '', 'URLField': '',
+        'SlugField': '',
+        'IntegerField': 0, 'BigIntegerField': 0, 'SmallIntegerField': 0,
+        'PositiveIntegerField': 0, 'PositiveSmallIntegerField': 0,
+        'DecimalField': 0, 'FloatField': 0.0, 'BooleanField': False,
+        'DateTimeField': _tz.now, 'DateField': _dt.date.today,
+        'JSONField': dict,
+    }
+
+    try:
+        app_config = django_apps.get_app_config(module)
+    except LookupError:
+        return []
+
+    def _columns(table):
+        with connection.cursor() as cur:
+            return {c.name for c in connection.introspection.get_table_description(cur, table)}
+
+    added = []
+    existing_tables = set(connection.introspection.table_names())
+    for model in app_config.get_models():
+        table = model._meta.db_table
+        if table not in existing_tables:
+            continue
+        # Add one field at a time and RECOMPUTE what's missing after each:
+        # on SQLite a NOT NULL add goes through a full table remake built
+        # from the model, which heals every missing column of that table in
+        # one shot — blindly looping over the original list would then try
+        # to re-add columns that already exist.
+        while True:
+            cols = _columns(table)
+            missing = [f for f in model._meta.local_fields if f.column not in cols]
+            if not missing:
+                break
+            field = missing[0]
+            new_field = field.clone()
+            # clone() returns an unbound field — rebind so the schema
+            # editor sees column/attname/concrete.
+            new_field.set_attributes_from_name(field.name)
+            new_field.model = model
+            if not new_field.null and not new_field.has_default():
+                internal = new_field.get_internal_type()
+                if internal in _BACKFILL:
+                    new_field.default = _BACKFILL[internal]
+                else:
+                    new_field.null = True
+            with connection.schema_editor() as editor:
+                editor.add_field(model, new_field)
+            added += sorted(f'{table}.{c}' for c in (_columns(table) - cols))
+    return added
+
+
 def _apply_upgrade(zip_bytes: bytes, backend_root: Path, confirm: bool) -> dict:
     frontend_root = Path(getattr(settings, 'FRONTEND_SRC_DIR', '/frontend/src'))
     patches_dir   = _patches_dir(backend_root)
@@ -790,6 +905,17 @@ def _apply_upgrade(zip_bytes: bytes, backend_root: Path, confirm: bool) -> dict:
     with zipfile.ZipFile(io.BytesIO(zip_bytes), 'r') as zf:
         names    = zf.namelist()
         manifest = json.loads(zf.read('manifest.json'))
+
+        # ── Pre-flight: never apply a package whose Python doesn't compile ──
+        invalid = _validate_package_python(zf, module)
+        if invalid:
+            raise RuntimeError('package-invalid: ' + '; '.join(invalid))
+
+        # ── 0. Repair legacy schema drift (additive only) ──────────────────
+        # Pre-versioning installs may have columns declared in models.py that
+        # no migration ever created; the ORM-based dumpdata below would fail
+        # on them. Add what's missing so the backup (and the app) work.
+        repaired_columns = _reconcile_schema_drift(module)
 
         # ── 1. Backup: data dump + code snapshot ───────────────────────────
         ts = datetime.now(dt_timezone.utc).strftime('%Y%m%d_%H%M%S')
@@ -825,7 +951,7 @@ def _apply_upgrade(zip_bytes: bytes, backend_root: Path, confirm: bool) -> dict:
                 continue
             content = zf.read(name)
             if name.endswith('.py'):
-                content = content.replace(b'backend.', b'')
+                content = _fix_backend_py(content, module, name)
             dest = backend_root / name[len('backend/'):]
             if dest.exists() and dest.read_bytes() == content:
                 continue
@@ -863,6 +989,7 @@ def _apply_upgrade(zip_bytes: bytes, backend_root: Path, confirm: bool) -> dict:
                 'module':         module,
                 'from_version':   preview['installed_version'],
                 'to_version':     preview['target_version'],
+                'repaired_columns': repaired_columns,
                 'migrate_ok':     False,
                 'migrate_output': (migrate.stdout or migrate.stderr)[-2000:],
                 'rolled_back':    rolled_back,
@@ -924,9 +1051,7 @@ def _apply_upgrade(zip_bytes: bytes, backend_root: Path, confirm: bool) -> dict:
                 continue
             content = zf.read(name)
             if name.endswith('.py'):
-                content = content.replace(
-                    b'from ninja.files import File', b'from ninja import File',
-                )
+                content = _fix_backend_py(content, module, name)
             dest = backend_root / rel
             dest.parent.mkdir(parents=True, exist_ok=True)
             dest.write_bytes(content)
@@ -954,6 +1079,7 @@ def _apply_upgrade(zip_bytes: bytes, backend_root: Path, confirm: bool) -> dict:
         'from_version':         preview['installed_version'],
         'to_version':           preview['target_version'],
         'legacy':               preview['legacy'],
+        'repaired_columns':     repaired_columns,
         'migrate_ok':           True,
         'migrate_output':       (migrate.stdout or migrate.stderr)[-2000:],
         'frontend_ok':          frontend_ok,
@@ -1040,6 +1166,11 @@ def _apply_package(zip_bytes: bytes, config: dict = None) -> dict:
         manifest = json.loads(zf.read('manifest.json'))
         module   = manifest['module']
 
+        # ── Pre-flight: never apply a package whose Python doesn't compile ──
+        invalid = _validate_package_python(zf, module)
+        if invalid:
+            raise RuntimeError('package-invalid: ' + '; '.join(invalid))
+
         # ── 1. Backend source files ────────────────────────────────────────
         for name in names:
             if not name.startswith('backend/'):
@@ -1054,14 +1185,7 @@ def _apply_package(zip_bytes: bytes, config: dict = None) -> dict:
             dest.parent.mkdir(parents=True, exist_ok=True)
             content = zf.read(name)
             if name.endswith('.py'):
-                # Fix `import backend.<module>.*` in migration files
-                if '/migrations/' in name:
-                    content = content.replace(b'backend.', b'')
-                # Fix `from ninja.files import File` → `from ninja import File`
-                content = content.replace(
-                    b'from ninja.files import File',
-                    b'from ninja import File',
-                )
+                content = _fix_backend_py(content, module, name)
             dest.write_bytes(content)
             installed_files.append(f'backend/{rel}')
 

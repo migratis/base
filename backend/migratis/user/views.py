@@ -210,7 +210,21 @@ def invitation(request, user: Form[schemas.UserSchemaInvitation]):
         return JsonResponse({"detail": formatErrors(e.message_dict)}, status=422)
 
 @router.post('/register', auth=None)
-def register(request, user: Form[schemas.UserSchemaIn]):    
+def _assign_default_registration_groups(user):
+    """Add a freshly-confirmed account to the installed module's default role
+    group(s). Base stays role-agnostic: the group names come from the
+    DEFAULT_REGISTRATION_GROUPS setting, which the installed app's
+    settings_patch declares (mirrors roles.DEFAULT_AUTH_ROLE). Superusers
+    outrank any ladder, so they are skipped. Idempotent."""
+    if getattr(user, 'is_superuser', False):
+        return
+    from django.contrib.auth.models import Group
+    for gname in getattr(settings, 'DEFAULT_REGISTRATION_GROUPS', []):
+        group, _ = Group.objects.get_or_create(name=gname)
+        user.groups.add(group)
+
+
+def register(request, user: Form[schemas.UserSchemaIn]):
     user = models.User(**user.dict())
     try:
         user.is_active = False
@@ -245,6 +259,7 @@ def activate(request, uidb64: Form[str], token: Form[str]):
             else:
                 user.old_passwords = [make_password(user.password)]
             user.save()
+            _assign_default_registration_groups(user)
             return JsonResponse({"detail": [{"success": ["registration-confirmed"]}]})
         else:
             return JsonResponse({"detail": formatErrors({"token": ["registration-confirmation-failed"]})}, status=422)
