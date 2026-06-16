@@ -211,12 +211,18 @@ def _rebuild_registry(backend_root: Path, frontend_root: Path):
     if not registry_path.exists():
         return  # frontend volume not mounted
 
+    # Match the leading `const X = lazyWithRetry(() => import('path')` prefix
+    # only — newer generator output appends a `.then(m => ({ default: ... }))`
+    # named→default coercion (AI containers use named exports), so anchoring the
+    # whole line with `$` silently dropped every import. We capture name + path
+    # for the module separator / routes and keep the original statement verbatim
+    # so the coercion survives.
     import_re = re.compile(
-        r"^const (\w+) = lazyWithRetry\(\(\) => import\('([^']+)'\)\);?$"
+        r"^const (\w+) = lazyWithRetry\(\(\) => import\('([^']+)'\)"
     )
     route_re = re.compile(r'path="([^"]+)"[^>]*element=\{<(\w+)\s*/?>}')
 
-    all_imports = []   # [(component_name, import_path), ...]
+    all_imports = []   # [(component_name, import_path, statement), ...]
     all_routes  = []   # [(url_path, component_name), ...]
     all_menu    = []   # [{"label", "path", "min_list_role", "module"}, ...]
     all_roles   = {}   # {module: {ranks, anonymous, default_auth, privileged}}
@@ -227,9 +233,10 @@ def _rebuild_registry(backend_root: Path, frontend_root: Path):
         module    = additions.get('module', additions_file.stem.replace('_additions', ''))
 
         for imp in additions.get('imports', []):
-            m = import_re.match(imp.strip())
+            stmt = imp.strip()
+            m = import_re.match(stmt)
             if m:
-                all_imports.append((m.group(1), m.group(2)))
+                all_imports.append((m.group(1), m.group(2), stmt))
 
         for route in additions.get('routes', []):
             m = route_re.search(route)
@@ -264,13 +271,14 @@ def _rebuild_registry(backend_root: Path, frontend_root: Path):
         lines.append("import { lazyWithRetry } from './common/tools/lazyWithRetry';")
         lines.append('')
         prev_module = None
-        for name, imp_path in all_imports:
+        for name, imp_path, stmt in all_imports:
             # Add a comment separator when the module changes
             module_guess = imp_path.split('/')[1] if imp_path.startswith('./') else ''
             if module_guess != prev_module:
                 lines.append(f"// ── {module_guess} ──")
                 prev_module = module_guess
-            lines.append(f"const {name} = lazyWithRetry(() => import('{imp_path}'));")
+            # Emit verbatim so the named→default coercion (.then(...)) survives.
+            lines.append(stmt if stmt.endswith(';') else stmt + ';')
         lines.append('')
 
     routes_js = ',\n  '.join(
