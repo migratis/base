@@ -11,6 +11,9 @@ Endpoints (all under /backend/api/installer/):
     GET    /session              — check whether a session is stored
     GET    /apps                 — list generated apps from Migratis
     POST   /install/{id}         — download ZIP + apply backend files + migrate
+    POST   /install-package      — apply a caller-held ZIP directly (agent lane,
+                                   no Migratis round-trip — Model B)
+    POST   /upgrade-package      — in-place upgrade from a caller-held ZIP
     GET    /frontend-zip/{id}    — stream frontend-only ZIP for manual extraction
     GET    /installed            — list modules currently installed in this project
     POST   /uninstall/{module}   — remove a previously installed module
@@ -24,6 +27,7 @@ MenuLeft.js. Instead it:
   - Rewrites frontend/src/module_registry.js   → consumed by App.js + MenuLeft.js
 """
 
+import base64
 import io
 import json
 import os
@@ -589,6 +593,125 @@ def installer_install(request, app_id: int):
     except Exception as exc:
         return JsonResponse({'detail': [{'install': [str(exc)]}]}, status=500)
 
+    return JsonResponse(result)
+
+
+# --------------------------------------------------------------------------- #
+# Model B — apply a caller-held package directly (agent lane)
+#
+# An agent that drove the generator with its own PAT already holds the generated
+# ZIP (generate → download), so the base needs no Migratis round-trip, cookies,
+# or 2FA to install it — only a Migratis-agnostic apply endpoint. Both endpoints
+# below terminate in the same _apply_package / _apply_upgrade as the human path,
+# so pre-flight compile validation, deferred migrate+seed, and the
+# destructive-op confirmation gate apply identically. See
+# SCOPE_agent_base_installer.md (Model B) in the migratis repo.
+# --------------------------------------------------------------------------- #
+
+def _read_package_body(request):
+    """Extract (zip_bytes, config) from a Migratis-agnostic install request.
+
+    Accepts the generated package in whichever shape the caller finds easiest,
+    so an agent can POST the artifact it already holds:
+      - multipart/form-data: file field ``package`` (+ optional ``config`` field,
+        a JSON string);
+      - application/json: ``{"package_b64": "<base64>", "config": {...}}``;
+      - raw ZIP body (application/zip / application/octet-stream / unset
+        Content-Type), with ``config`` supplied as a JSON-encoded query param.
+
+    Returns ``(zip_bytes, config_dict)``. Raises ``ValueError`` on a malformed
+    body (the caller maps that to a 400).
+    """
+    ctype = (request.content_type or '').lower()
+
+    if ctype.startswith('multipart/form-data'):
+        upload = request.FILES.get('package')
+        if upload is None:
+            raise ValueError('missing-package')
+        raw_cfg = request.POST.get('config')
+        try:
+            config = json.loads(raw_cfg) if raw_cfg else {}
+        except Exception:
+            raise ValueError('invalid-config')
+        return upload.read(), config
+
+    if ctype.startswith('application/json'):
+        try:
+            payload = json.loads(request.body) if request.body else {}
+        except Exception:
+            raise ValueError('invalid-json')
+        b64 = payload.get('package_b64') or payload.get('package')
+        if not b64:
+            raise ValueError('missing-package')
+        try:
+            zip_bytes = base64.b64decode(b64)
+        except Exception:
+            raise ValueError('invalid-base64')
+        config = payload.get('config') or {}
+        return zip_bytes, config
+
+    # Raw ZIP bytes as the body (config, if any, rides on the query string).
+    if not request.body:
+        raise ValueError('missing-package')
+    raw_cfg = request.GET.get('config')
+    try:
+        config = json.loads(raw_cfg) if raw_cfg else {}
+    except Exception:
+        raise ValueError('invalid-config')
+    return request.body, config
+
+
+@router.post('/install-package', auth=None)
+def installer_install_package(request):
+    """Apply a generated package the caller already holds — no Migratis fetch.
+
+    The install is asynchronous exactly like /install/{id}: _apply_package
+    defers migrate+seed to the autoreload (dev) or a restart (prod). The caller
+    should treat ``migrate_deferred``/``restart_required`` in the response as
+    "not live yet" and re-check /installed (or a route) after the restart.
+    """
+    try:
+        zip_bytes, config = _read_package_body(request)
+    except ValueError as exc:
+        return JsonResponse({'detail': [{'package': [str(exc)]}]}, status=400)
+
+    try:
+        result = _apply_package(zip_bytes, config=config)
+    except RuntimeError as exc:
+        # Pre-flight Python compile validation rejected the package.
+        return JsonResponse({'detail': [{'package': [str(exc)]}]}, status=422)
+    except Exception as exc:
+        return JsonResponse({'detail': [{'install': [str(exc)]}]}, status=500)
+
+    return JsonResponse(result)
+
+
+@router.post('/upgrade-package', auth=None)
+def installer_upgrade_package(request):
+    """In-place upgrade from a caller-held ZIP — Model B counterpart of
+    /upgrade/{id}. Destructive changes need explicit consent: without
+    ``confirm`` the response is 409 with ``needs_confirmation`` + the row-count
+    ``preview`` for the caller to surface to its principal. Set ``confirm`` in
+    the JSON/multipart ``config`` (or ``?confirm=1`` for a raw-body POST) to
+    apply data-loss changes.
+    """
+    try:
+        zip_bytes, config = _read_package_body(request)
+    except ValueError as exc:
+        return JsonResponse({'detail': [{'package': [str(exc)]}]}, status=400)
+
+    confirm = (bool(config.get('confirm'))
+               or request.GET.get('confirm') in ('1', 'true', 'True'))
+    try:
+        result = _apply_upgrade(zip_bytes, Path(settings.BASE_DIR), confirm=confirm)
+    except ValueError as exc:
+        return JsonResponse({'detail': [{'upgrade': [str(exc)]}]}, status=400)
+    except RuntimeError as exc:
+        return JsonResponse({'detail': [{'package': [str(exc)]}]}, status=422)
+    except Exception as exc:
+        return JsonResponse({'detail': [{'upgrade': [str(exc)]}]}, status=500)
+    if result.get('needs_confirmation'):
+        return JsonResponse(result, status=409)
     return JsonResponse(result)
 
 

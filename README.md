@@ -42,6 +42,35 @@ The installer will:
 - Register API routers in `api/views.py`
 - Run `migrate` and seed translations automatically
 
+#### Installing from an AI agent (no migratis.ai login)
+
+The same install machinery is reachable by an **autonomous AI agent**. An agent
+that generated an application with its own [migratis.ai](https://migratis.ai)
+personal access token already holds the generated ZIP, so it can apply it
+directly — no human login, cookies or 2FA on the base side:
+
+```
+POST /backend/api/installer/install-package
+```
+
+The body carries the raw generated ZIP plus the same optional install `config`
+(`{admin, email, stripe}`), in any of three shapes — multipart (`package` file +
+`config` field), JSON (`{package_b64, config}`), or a raw ZIP body. It runs the
+identical pipeline as the UI install: pre-flight Python compile validation (a bad
+package is rejected with `422`), then the **deferred** `migrate` + seed.
+
+Install is **asynchronous**: a `200` with `migrate_deferred: true` /
+`restart_required` means the migrate runs on the next autoreload (dev) or restart
+(prod) — re-check `GET /installer/installed` afterwards rather than assuming the
+app is live on the `200`. In-place upgrades use the sibling
+`POST /installer/upgrade-package`, which returns `409 needs_confirmation` with a
+row-count preview for destructive changes until the caller resends with
+`confirm`.
+
+> Requires `INSTALLER=True`. Since these endpoints apply code into the running
+> project, only expose them on a trusted, single-operator base (localhost-bound
+> or behind your own gate) — and set `INSTALLER=False` once installation is done.
+
 ### 4. Apply the frontend
 
 Download the **frontend ZIP** from the installer result screen, extract it into `frontend/src/`, then follow the included `INSTALL.md` to add the new routes to `App.js`.
