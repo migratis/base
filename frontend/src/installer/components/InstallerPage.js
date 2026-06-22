@@ -581,6 +581,13 @@ const InstallerPage = () => {
               {t('connect')}
             </button>
           </form>
+
+          <hr className="my-4" />
+          <div className="small text-muted">
+            <strong>{t('agent-install-title')}</strong>
+            <p className="mb-1 mt-2">{t('agent-install-desc')}</p>
+            <p className="mb-0">{t('agent-install-security')}</p>
+          </div>
         </div>
       )}
 

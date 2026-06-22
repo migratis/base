@@ -435,6 +435,24 @@ TRANSLATIONS['installer'] = {
         'en': 'Connect to Migratis', 'fr': 'Se connecter à Migratis',
         'es': 'Conectarse a Migratis', 'ro': 'Conectează-te la Migratis',
     },
+    'agent-install-title': {
+        'en': 'Installing from an AI agent',
+        'fr': 'Installation depuis un agent IA',
+        'es': 'Instalación desde un agente IA',
+        'ro': 'Instalare dintr-un agent IA',
+    },
+    'agent-install-desc': {
+        'en': 'This wizard is for a human operator. An autonomous AI agent does not need to log in here: if it generated an application with its own Migratis access token it already holds the package, so it can install it directly by POSTing the package to the installer\'s install-package endpoint — no second login, and in-place upgrades use upgrade-package the same way.',
+        'fr': 'Cet assistant est destiné à un opérateur humain. Un agent IA autonome n\'a pas besoin de se connecter ici : s\'il a généré une application avec son propre jeton d\'accès Migratis, il détient déjà le paquet et peut donc l\'installer directement en envoyant (POST) le paquet au point d\'accès install-package de l\'installateur — sans seconde connexion, et les mises à niveau sur place utilisent upgrade-package de la même manière.',
+        'es': 'Este asistente es para un operador humano. Un agente IA autónomo no necesita iniciar sesión aquí: si generó una aplicación con su propio token de acceso de Migratis, ya posee el paquete, por lo que puede instalarlo directamente enviando (POST) el paquete al endpoint install-package del instalador, sin un segundo inicio de sesión, y las actualizaciones in situ usan upgrade-package del mismo modo.',
+        'ro': 'Acest asistent este pentru un operator uman. Un agent IA autonom nu trebuie să se autentifice aici: dacă a generat o aplicație cu propriul token de acces Migratis, deține deja pachetul, așa că îl poate instala direct trimițând (POST) pachetul către endpointul install-package al instalatorului — fără a doua autentificare, iar actualizările pe loc folosesc upgrade-package în același mod.',
+    },
+    'agent-install-security': {
+        'en': 'Because these endpoints apply code into the running project, they are loopback-only by default; to allow a remote agent, set INSTALLER_AGENT_TOKEN in the backend environment and have the agent send it as an X-Installer-Token header. Disable the installer (INSTALLER=False) once installation is finished.',
+        'fr': 'Comme ces points d\'accès appliquent du code dans le projet en cours d\'exécution, ils sont par défaut limités au bouclage local ; pour autoriser un agent distant, définissez INSTALLER_AGENT_TOKEN dans l\'environnement du backend et faites envoyer ce jeton par l\'agent dans un en-tête X-Installer-Token. Désactivez l\'installateur (INSTALLER=False) une fois l\'installation terminée.',
+        'es': 'Como estos endpoints aplican código en el proyecto en ejecución, por defecto solo son accesibles desde localhost; para permitir un agente remoto, defina INSTALLER_AGENT_TOKEN en el entorno del backend y haga que el agente lo envíe como una cabecera X-Installer-Token. Desactive el instalador (INSTALLER=False) una vez finalizada la instalación.',
+        'ro': 'Deoarece aceste endpointuri aplică cod în proiectul care rulează, sunt implicit accesibile doar prin loopback; pentru a permite un agent la distanță, setați INSTALLER_AGENT_TOKEN în mediul backendului și faceți ca agentul să îl trimită ca antet X-Installer-Token. Dezactivați instalatorul (INSTALLER=False) după finalizarea instalării.',
+    },
     'email': {
         'en': 'Email', 'fr': 'Courriel', 'es': 'Correo electrónico', 'ro': 'Email',
     },
