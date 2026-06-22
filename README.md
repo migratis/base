@@ -67,9 +67,13 @@ app is live on the `200`. In-place upgrades use the sibling
 row-count preview for destructive changes until the caller resends with
 `confirm`.
 
-> Requires `INSTALLER=True`. Since these endpoints apply code into the running
-> project, only expose them on a trusted, single-operator base (localhost-bound
-> or behind your own gate) — and set `INSTALLER=False` once installation is done.
+> Requires `INSTALLER=True`. Since these endpoints apply caller-supplied code
+> into the running project, they are gated separately from the UI flow: by
+> default they are **loopback-only** (only an agent/operator on the same host can
+> reach them). To let a remote agent install, set `INSTALLER_AGENT_TOKEN` in the
+> backend `.env` and have the agent send it as an `X-Installer-Token` header;
+> without that header (or from a non-loopback address) the endpoints return
+> `403`. Set `INSTALLER=False` once installation is done.
 
 ### 4. Apply the frontend
 

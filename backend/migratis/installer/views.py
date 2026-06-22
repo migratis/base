@@ -28,6 +28,7 @@ MenuLeft.js. Instead it:
 """
 
 import base64
+import hmac
 import io
 import json
 import os
@@ -608,6 +609,32 @@ def installer_install(request, app_id: int):
 # SCOPE_agent_base_installer.md (Model B) in the migratis repo.
 # --------------------------------------------------------------------------- #
 
+def _agent_endpoint_allowed(request) -> bool:
+    """Gate for the Model B agent endpoints.
+
+    Unlike /install/{id} — which is implicitly gated by a stored Migratis
+    session (``_session()`` returns None without one) — these endpoints accept an
+    arbitrary caller-supplied package and hand it to ``_apply_package`` /
+    ``_apply_upgrade``, which write code into the running project. With no
+    session to lean on they need their own gate, or anyone who can reach the port
+    could execute code in this base.
+
+    Policy (closes the trust boundary deferred in SCOPE_agent_base_installer §5):
+      - If ``settings.INSTALLER_AGENT_TOKEN`` is set, require a matching
+        ``X-Installer-Token`` header (constant-time compare). This is how an
+        off-box / remote agent authenticates.
+      - Otherwise the endpoint is **loopback-only**: only on-box callers
+        (an agent or operator running on the same host) are accepted, so it is
+        never reachable across the network without an explicitly configured
+        token.
+    """
+    token = (getattr(settings, 'INSTALLER_AGENT_TOKEN', '') or '').strip()
+    if token:
+        presented = request.headers.get('X-Installer-Token', '')
+        return bool(presented) and hmac.compare_digest(presented, token)
+    return request.META.get('REMOTE_ADDR', '') in ('127.0.0.1', '::1', 'localhost')
+
+
 def _read_package_body(request):
     """Extract (zip_bytes, config) from a Migratis-agnostic install request.
 
@@ -670,6 +697,9 @@ def installer_install_package(request):
     should treat ``migrate_deferred``/``restart_required`` in the response as
     "not live yet" and re-check /installed (or a route) after the restart.
     """
+    if not _agent_endpoint_allowed(request):
+        return JsonResponse({'detail': [{'auth': ['forbidden']}]}, status=403)
+
     try:
         zip_bytes, config = _read_package_body(request)
     except ValueError as exc:
@@ -695,6 +725,9 @@ def installer_upgrade_package(request):
     the JSON/multipart ``config`` (or ``?confirm=1`` for a raw-body POST) to
     apply data-loss changes.
     """
+    if not _agent_endpoint_allowed(request):
+        return JsonResponse({'detail': [{'auth': ['forbidden']}]}, status=403)
+
     try:
         zip_bytes, config = _read_package_body(request)
     except ValueError as exc:
