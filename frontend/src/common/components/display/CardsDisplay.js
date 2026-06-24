@@ -14,6 +14,7 @@ import {
   IoImageOutline as ImagePlaceholderIcon,
 } from 'react-icons/io5';
 import InteractionRowActions from '../InteractionRowActions';
+import EmbeddedChildren from './EmbeddedChildren';
 
 const CardsDisplay = ({
   entity,
@@ -26,6 +27,8 @@ const CardsDisplay = ({
   viewAs,
   getRoleRank,
   t,
+  embeddedChildren = [],
+  embeddedRecords = {},
 }) => {
   const [expandedRecord, setExpandedRecord] = useState(null);
 
@@ -257,6 +260,12 @@ const CardsDisplay = ({
                   </div>
                 );
               })}
+              <EmbeddedChildren
+                record={record}
+                embeddedChildren={embeddedChildren}
+                embeddedRecords={embeddedRecords}
+                t={t}
+              />
               <InteractionRowActions
                 interactions={config?.interactions}
                 recordData={record?.data}

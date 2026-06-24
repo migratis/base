@@ -4,6 +4,7 @@ import {
   IoTrashOutline as TrashIcon,
 } from 'react-icons/io5';
 import InteractionRowActions from '../InteractionRowActions';
+import EmbeddedChildren from './EmbeddedChildren';
 
 const MasonryDisplay = ({
   entity,
@@ -16,6 +17,8 @@ const MasonryDisplay = ({
   viewAs,
   getRoleRank,
   t,
+  embeddedChildren = [],
+  embeddedRecords = {},
 }) => {
   if (!records || records.length === 0) {
     return null;
@@ -182,6 +185,12 @@ const MasonryDisplay = ({
               getRoleRank={getRoleRank}
               onInteraction={onInteraction}
               className="d-flex flex-wrap gap-1 mt-2"
+            />
+            <EmbeddedChildren
+              record={record}
+              embeddedChildren={embeddedChildren}
+              embeddedRecords={embeddedRecords}
+              t={t}
             />
           </div>
           <div className="d-flex justify-content-end gap-2 p-2" style={{ position: 'absolute', bottom: 0, right: 0 }}>

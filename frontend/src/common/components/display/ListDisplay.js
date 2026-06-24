@@ -3,6 +3,7 @@ import {
   IoTrashOutline as TrashIcon,
 } from 'react-icons/io5';
 import InteractionRowActions from '../InteractionRowActions';
+import EmbeddedChildren from './EmbeddedChildren';
 
 const ListDisplay = ({
   entity,
@@ -15,6 +16,8 @@ const ListDisplay = ({
   viewAs,
   getRoleRank,
   t,
+  embeddedChildren = [],
+  embeddedRecords = {},
 }) => {
   if (!records || records.length === 0) {
     return null;
@@ -86,11 +89,8 @@ const ListDisplay = ({
   return (
     <div className="list-display">
       {records.map((record) => (
-        <div
-          key={record.id}
-          className="d-flex align-items-center border-bottom py-2 px-1"
-          style={{ minHeight: '48px' }}
-        >
+        <div key={record.id} className="border-bottom py-2 px-1">
+          <div className="d-flex align-items-center" style={{ minHeight: '48px' }}>
           <div className="flex-grow-1 me-3" style={{ overflow: 'hidden' }}>
             <div style={{ fontWeight: '500', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {primaryField ? renderValue(primaryField, record.data[primaryField.name]) : tval('unnamed-record', 'Unnamed')}
@@ -123,6 +123,13 @@ const ListDisplay = ({
               <TrashIcon />
             </span>
           </div>
+          </div>
+          <EmbeddedChildren
+            record={record}
+            embeddedChildren={embeddedChildren}
+            embeddedRecords={embeddedRecords}
+            t={t}
+          />
         </div>
       ))}
     </div>

@@ -5,6 +5,7 @@ import {
   IoTrashOutline as TrashIcon,
 } from 'react-icons/io5';
 import InteractionRowActions from '../InteractionRowActions';
+import EmbeddedChildren, { getEmbeddedSections } from './EmbeddedChildren';
 
 const TableDisplay = ({
   entity,
@@ -74,48 +75,19 @@ const TableDisplay = ({
   // entity, filtered to the current parent record via its FK. Returns null
   // when the parent has no child rows at all (no empty grey band).
   const renderEmbeddedRows = (record, totalCols) => {
-    const sections = embeddedChildren
-      .map((child) => ({
-        child,
-        rows: (embeddedRecords[child.entity] || []).filter(
-          (row) => String((row.data || {})[child.fk_field]) === String(record.id)
-        ),
-      }))
-      .filter((s) => s.rows.length > 0);
-    if (sections.length === 0) return null;
+    // Suppress the grey band entirely when this parent has no child rows.
+    if (getEmbeddedSections(record, embeddedChildren, embeddedRecords).length === 0) {
+      return null;
+    }
     return (
       <tr>
         <td colSpan={totalCols} className="bg-light p-2">
-          {sections.map(({ child, rows }) => (
-            <div key={child.entity} className="mb-2">
-              <div className="small fw-bold text-muted mb-1">
-                {tval(child.entity, child.entity)} ({rows.length})
-              </div>
-              <Table size="sm" bordered className="mb-0 bg-white">
-                <thead>
-                  <tr>
-                    {child.fields.map((f) => (
-                      <th key={f.name} className="small">{tval(f.label, f.label)}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((row) => (
-                    <tr key={row.id}>
-                      {child.fields.map((f) => {
-                        const v = (row.data || {})[f.name];
-                        return (
-                          <td key={f.name} className="small">
-                            {v === null || v === undefined || v === '' ? '—' : String(v)}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </Table>
-            </div>
-          ))}
+          <EmbeddedChildren
+            record={record}
+            embeddedChildren={embeddedChildren}
+            embeddedRecords={embeddedRecords}
+            t={t}
+          />
         </td>
       </tr>
     );
