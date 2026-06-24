@@ -11,6 +11,8 @@ Endpoints (all under /backend/api/installer/):
     GET    /session              — check whether a session is stored
     GET    /apps                 — list generated apps from Migratis
     POST   /install/{id}         — download ZIP + apply backend files + migrate
+    GET    /agent-guide          — self-describing install procedure for agents
+                                   (machine JSON; also in OpenAPI info.description)
     POST   /install-package      — apply a caller-held ZIP directly (agent lane,
                                    no Migratis round-trip — Model B)
     POST   /upgrade-package      — in-place upgrade from a caller-held ZIP
@@ -44,7 +46,19 @@ from django.conf import settings
 from django.http import HttpResponse, JsonResponse
 from ninja import Router
 
+from .agent_guide import build_installer_guide
+
 router = Router()
+
+
+@router.get('/agent-guide', auth=None)
+def installer_agent_guide(request):
+    """Self-describing install procedure for an autonomous agent that already
+    holds a generated package. Public (no auth, like /status) so the agent can
+    discover HOW to install before it does anything. The same content rides in
+    the base OpenAPI info.description; both render from installer/agent_guide.py
+    so they never drift. /install-package and /upgrade-package implement it."""
+    return JsonResponse(build_installer_guide())
 
 MIGRATIS_BACKEND_URL = getattr(settings, 'MIGRATIS_BACKEND_URL', 'http://host.docker.internal:8000')
 

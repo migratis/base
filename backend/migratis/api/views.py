@@ -43,7 +43,18 @@ class CustomRenderer(BaseRenderer):
         return json.dumps(data, cls=CustomEncoder)
 
 
-api = NinjaAPI(auth=django_auth, renderer=CustomRenderer())
+from migratis.installer.agent_guide import render_installer_guide_markdown
+
+api = NinjaAPI(
+    title="Migratis base",
+    version="1.0.0",
+    # The installer agent lane (how to install a generated package) rides in the
+    # public OpenAPI info.description, so an agent reading the schema discovers
+    # the procedure for free. Same source as GET /installer/agent-guide.
+    description=render_installer_guide_markdown(),
+    auth=django_auth,
+    renderer=CustomRenderer(),
+)
 
 # ── Activated by generated app settings_patch.py ──────────────────────────
 # api.add_router("/user/", user_router)
@@ -74,8 +85,13 @@ for _app in django_settings.INSTALLED_APPS:
 @api.get("/installer/status", auth=None)
 def installer_status(request):
     """Always-available flag (even when the installer router is unmounted) so the
-    frontend can show how to reactivate the installer when it is disabled."""
-    return JsonResponse({'enabled': django_settings.INSTALLER})
+    frontend can show how to reactivate the installer when it is disabled. When
+    enabled, points agents at the self-describing install guide so discovery can
+    start from the one always-on endpoint."""
+    body = {'enabled': django_settings.INSTALLER}
+    if django_settings.INSTALLER:
+        body['agent_guide'] = '/backend/api/installer/agent-guide'
+    return JsonResponse(body)
 
 
 @api.get("/csrftoken")
