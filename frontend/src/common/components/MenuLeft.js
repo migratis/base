@@ -6,6 +6,7 @@ import {
   IoLogOutOutline as LogOutOutline,
   IoHelpBuoyOutline as HelpOutline,
   IoGlobeOutline as GlobeOutline,
+  IoGridOutline as GridOutline,
 } from 'react-icons/io5';
 import LangSelector from './LangSelector';
 import UserService from "../../user/services/user.service";
@@ -13,7 +14,14 @@ import { toast } from 'react-toastify';
 import Login from "../../user/components/Login";
 import { BlockedModal as LoginModal } from "../modals/BlockedModal";
 import { SUPPORT } from '../../settings';
+// Namespace import: older generated registries don't export moduleRoles —
+// destructuring it directly would crash the bundle.
+import * as moduleRegistry from '../../module_registry';
+import { isMenuItemVisible } from '../tools/moduleRoles';
 import logo from '../../img/logo.png';
+
+const moduleMenuItems = moduleRegistry.moduleMenuItems || [];
+const moduleRoles     = moduleRegistry.moduleRoles || {};
 
 export const MenuLeft = (props) => {
   const { t } = useTranslation('layout');
@@ -123,6 +131,29 @@ export const MenuLeft = (props) => {
                 <span className="sidebar-label">{t('contact')}</span>
               </a>
             </div>
+          )}
+
+          {/* Pages contributed by installed modules (built into module_registry.js).
+              Filtered by the viewer's role against each entry's min_list_role —
+              the same navigation rule the sandbox applies. `props.user` makes
+              the filter re-run on login/logout. */}
+          {moduleMenuItems.filter((item) => isMenuItemVisible(item, moduleRoles)).length > 0 && (
+            <>
+              <div className="sidebar-divider" />
+              <div className="sidebar-section">
+                {moduleMenuItems.filter((item) => isMenuItemVisible(item, moduleRoles)).map((item) => (
+                  <NavLink
+                    key={item.path}
+                    to={item.path}
+                    className={({isActive}) => `sidebar-item ${isActive ? 'active' : ''}`}
+                    onClick={props.onMobileClose}
+                  >
+                    <GridOutline />
+                    <span className="sidebar-label">{t(item.label, item.label)}</span>
+                  </NavLink>
+                ))}
+              </div>
+            </>
           )}
         </div>
       </div>
