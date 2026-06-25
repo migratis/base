@@ -133,6 +133,6 @@ class User(SaveMixin, AbstractUser):
     
     @property
     def country_code(self):
-        return self.country.code
+        return self.country.code if self.country else None
 
         
