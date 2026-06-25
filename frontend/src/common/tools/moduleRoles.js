@@ -8,6 +8,12 @@
 //   - user.is_superuser            → the privileged (top) tier
 //   - else highest ladder role among the user's auth groups,
 //     defaulting to the lowest non-anonymous tier when none match.
+//
+// Auth Groups are namespaced "{module}:{role}" (installed apps are independent
+// applications sharing only the login, so two apps that both define e.g. `admin`
+// must not collapse onto one global Group). The viewer's groups therefore carry
+// namespaced strings — resolution matches `${module}:${name}`, so the caller
+// must pass the module the ladder belongs to.
 
 const readUser = () => {
   try {
@@ -18,7 +24,7 @@ const readUser = () => {
   }
 };
 
-export const resolveViewerRole = (ladder) => {
+export const resolveViewerRole = (ladder, module) => {
   if (!ladder || !ladder.ranks) return null;
   const user = readUser();
   if (!user) return ladder.anonymous;
@@ -26,7 +32,7 @@ export const resolveViewerRole = (ladder) => {
   const groups = new Set(user.groups || []);
   let best = ladder.default_auth;
   Object.entries(ladder.ranks).forEach(([name, rank]) => {
-    if (groups.has(name) && rank > (ladder.ranks[best] ?? 0)) best = name;
+    if (groups.has(`${module}:${name}`) && rank > (ladder.ranks[best] ?? 0)) best = name;
   });
   return best;
 };
@@ -39,7 +45,7 @@ export const isMenuItemVisible = (item, ladders) => {
   if (!floor) return true;
   const ladder = (ladders || {})[item.module];
   if (!ladder || !ladder.ranks) return true;
-  const viewer = resolveViewerRole(ladder);
+  const viewer = resolveViewerRole(ladder, item.module);
   const viewerRank = ladder.ranks[viewer];
   const floorRank = ladder.ranks[floor];
   if (viewerRank === undefined || floorRank === undefined) return true;
