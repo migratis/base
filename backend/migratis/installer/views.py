@@ -251,16 +251,27 @@ def _rebuild_registry(backend_root: Path, frontend_root: Path):
         additions = json.loads(additions_file.read_text())
         module    = additions.get('module', additions_file.stem.replace('_additions', ''))
 
+        # Namespace every component identifier with its module. Two installed
+        # apps that share an entity name (e.g. both define "Category") would
+        # otherwise emit two top-level `const Category` declarations into the
+        # same module — a hard JS SyntaxError that breaks the whole bundle.
+        # `rename` maps the bundle's local name → module-qualified name so the
+        # routes below reference the same renamed binding.
+        rename = {}
         for imp in additions.get('imports', []):
             stmt = imp.strip()
             m = import_re.match(stmt)
             if m:
-                all_imports.append((m.group(1), m.group(2), stmt))
+                orig, imp_path = m.group(1), m.group(2)
+                qual = f"{module}_{orig}"
+                rename[orig] = qual
+                stmt = stmt.replace(f"const {orig} ", f"const {qual} ", 1)
+                all_imports.append((qual, imp_path, stmt))
 
         for route in additions.get('routes', []):
             m = route_re.search(route)
             if m:
-                all_routes.append((m.group(1), m.group(2)))
+                all_routes.append((m.group(1), rename.get(m.group(2), m.group(2))))
 
         for item in additions.get('menu_items', []):
             all_menu.append({
