@@ -45,7 +45,7 @@ i18n
     },
     fallbackLng: 'en',
     debug: true,
-    supportedLngs: ['bg', 'cs', 'da', 'de', 'el', 'en', 'es', 'et', 'fi', 'fr', 'ga', 'hr', 'hu', 'it', 'lb', 'lt', 'lv', 'nl', 'no', 'pl', 'pt', 'ro', 'sk', 'sl', 'sv'],
+    supportedLngs: ['en'],
     ns: ['layout'],
     defaultNS: 'layout',
     interpolation: {

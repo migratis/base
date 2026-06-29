@@ -12,6 +12,7 @@ export default function PaginatedEntitySelectField ({
   entity,
   noAddInvite = false,
   status = null,
+  extraParams = {},
   valueField = "id",
   labelField = "name",
   name,
@@ -36,9 +37,12 @@ export default function PaginatedEntitySelectField ({
   const [currentPage, setCurrentPage] = useState(1);
   const [currentTerm, setCurrentTerm] = useState("");
   
+  // Serialise extraParams so the effect dependency comparison is stable.
+  const extraKey = JSON.stringify(extraParams);
+
   const fetchEntities = async (page, search) => {
     setLoading(true);
-    const data = await CommonService.getEntities(app, entity, status, search, page);
+    const data = await CommonService.getEntities(app, entity, status, search, page, extraParams);
     const list = data?.items ?? [];
     const count = data?.count ?? 0;
     const newOptions = list.map((item) => ({
@@ -86,9 +90,12 @@ export default function PaginatedEntitySelectField ({
     fetchEntities(currentPage + 1, currentTerm);  
   }; 
 
-  useEffect(() => { 
-    fetchEntities(1, ""); 
-  }, []);// eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    setCurrentPage(1);
+    setCurrentTerm("");
+    setOptions([]);
+    fetchEntities(1, "");
+  }, [extraKey]);// eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <>
