@@ -278,6 +278,9 @@ def _rebuild_registry(backend_root: Path, frontend_root: Path):
                 'label':         item.get('label', ''),
                 'path':          item.get('path', ''),
                 'min_list_role': item.get('min_list_role', ''),
+                # Per-entity menu icon (name from generator MENU_ICONS); MenuLeft
+                # maps it to a react-icon, falling back to grid when absent.
+                'icon':          item.get('icon', ''),
                 'module':        module,
             })
 
@@ -319,7 +322,8 @@ def _rebuild_registry(backend_root: Path, frontend_root: Path):
 
     menu_js = ',\n  '.join(
         f'{{ label: "{item["label"]}", path: "{item["path"]}", '
-        f'min_list_role: "{item["min_list_role"]}", module: "{item["module"]}" }}'
+        f'min_list_role: "{item["min_list_role"]}", icon: "{item["icon"]}", '
+        f'module: "{item["module"]}" }}'
         for item in all_menu
     ) if all_menu else ''
     lines.append(f"export const moduleMenuItems = [{f'{chr(10)}  {menu_js},{chr(10)}' if menu_js else ''}];")

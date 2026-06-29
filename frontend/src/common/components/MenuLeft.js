@@ -7,7 +7,65 @@ import {
   IoHelpBuoyOutline as HelpOutline,
   IoGlobeOutline as GlobeOutline,
   IoGridOutline as GridOutline,
+  IoDocumentTextOutline,
+  IoCartOutline,
+  IoBasketOutline,
+  IoPricetagOutline,
+  IoRestaurantOutline,
+  IoBookOutline,
+  IoCalendarOutline,
+  IoPeopleOutline,
+  IoStarOutline,
+  IoChatbubbleOutline,
+  IoImageOutline,
+  IoCubeOutline,
+  IoCardOutline,
+  IoCashOutline,
+  IoLocationOutline,
+  IoHomeOutline,
+  IoClipboardOutline,
+  IoFolderOutline,
+  IoTimeOutline,
+  IoSettingsOutline,
+  IoMailOutline,
+  IoMusicalNotesOutline,
+  IoCarOutline,
+  IoMedkitOutline,
+  IoSchoolOutline,
 } from 'react-icons/io5';
+
+// Menu-icon name → component. Mirrors generator MENU_ICONS
+// (backend migratis/generator/icons.py); an unknown/blank name falls back to
+// the grid icon. Each generated menu item carries its own `icon` name.
+const MENU_ICONS = {
+  grid: GridOutline,
+  document: IoDocumentTextOutline,
+  cart: IoCartOutline,
+  basket: IoBasketOutline,
+  pricetag: IoPricetagOutline,
+  restaurant: IoRestaurantOutline,
+  book: IoBookOutline,
+  calendar: IoCalendarOutline,
+  person: PersonOutline,
+  people: IoPeopleOutline,
+  star: IoStarOutline,
+  chatbubble: IoChatbubbleOutline,
+  image: IoImageOutline,
+  cube: IoCubeOutline,
+  card: IoCardOutline,
+  cash: IoCashOutline,
+  location: IoLocationOutline,
+  home: IoHomeOutline,
+  clipboard: IoClipboardOutline,
+  folder: IoFolderOutline,
+  time: IoTimeOutline,
+  settings: IoSettingsOutline,
+  mail: IoMailOutline,
+  'musical-notes': IoMusicalNotesOutline,
+  car: IoCarOutline,
+  medkit: IoMedkitOutline,
+  school: IoSchoolOutline,
+};
 import LangSelector from './LangSelector';
 import UserService from "../../user/services/user.service";
 import { toast } from 'react-toastify';
@@ -141,17 +199,20 @@ export const MenuLeft = (props) => {
             <>
               <div className="sidebar-divider" />
               <div className="sidebar-section">
-                {moduleMenuItems.filter((item) => isMenuItemVisible(item, moduleRoles)).map((item) => (
-                  <NavLink
-                    key={item.path}
-                    to={item.path}
-                    className={({isActive}) => `sidebar-item ${isActive ? 'active' : ''}`}
-                    onClick={props.onMobileClose}
-                  >
-                    <GridOutline />
-                    <span className="sidebar-label">{t(item.label, item.label)}</span>
-                  </NavLink>
-                ))}
+                {moduleMenuItems.filter((item) => isMenuItemVisible(item, moduleRoles)).map((item) => {
+                  const Icon = MENU_ICONS[item.icon] || GridOutline;
+                  return (
+                    <NavLink
+                      key={item.path}
+                      to={item.path}
+                      className={({isActive}) => `sidebar-item ${isActive ? 'active' : ''}`}
+                      onClick={props.onMobileClose}
+                    >
+                      <Icon />
+                      <span className="sidebar-label">{t(item.label, item.label)}</span>
+                    </NavLink>
+                  );
+                })}
               </div>
             </>
           )}
