@@ -634,8 +634,9 @@ def installer_install(request, app_id: int):
 # or 2FA to install it — only a Migratis-agnostic apply endpoint. Both endpoints
 # below terminate in the same _apply_package / _apply_upgrade as the human path,
 # so pre-flight compile validation, deferred migrate+seed, and the
-# destructive-op confirmation gate apply identically. See
-# SCOPE_agent_base_installer.md (Model B) in the migratis repo.
+# destructive-op confirmation gate apply identically. The Model B design
+# (agent-held package → base installer) is recorded in the migratis repo's
+# git history.
 # --------------------------------------------------------------------------- #
 
 def _agent_endpoint_allowed(request) -> bool:
@@ -648,7 +649,8 @@ def _agent_endpoint_allowed(request) -> bool:
     session to lean on they need their own gate, or anyone who can reach the port
     could execute code in this base.
 
-    Policy (closes the trust boundary deferred in SCOPE_agent_base_installer §5):
+    Policy (closes the trust boundary deferred in the Model B design, §5 —
+    see the migratis repo's git history):
       - If ``settings.INSTALLER_AGENT_TOKEN`` is set, require a matching
         ``X-Installer-Token`` header (constant-time compare). This is how an
         off-box / remote agent authenticates.
