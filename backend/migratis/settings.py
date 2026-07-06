@@ -222,9 +222,7 @@ CRONJOBS = []
 
 PATHS_TO_EXCLUDE = [
     '/backend/admin/',
-    '/backend/swagger/', 
-    '/backend/query-analyzer/', 
-    '/backend/admin/django_query_analyzer/queryanalyzer/'
+    '/backend/swagger/',
     '/backend/admin/jsi18n/',
     '/backend/api/i18n/'
 ]
