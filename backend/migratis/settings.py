@@ -220,13 +220,6 @@ STRIPE_WEBHOOK_SECRET_KEY = env('STRIPE_WEBHOOK_SECRET_KEY')
  
 CRONJOBS = []
 
-PATHS_TO_EXCLUDE = [
-    '/backend/admin/',
-    '/backend/swagger/',
-    '/backend/admin/jsi18n/',
-    '/backend/api/i18n/'
-]
-
 # Subscription gate — False means check_access() enforces subscription
 NO_SUBSCRIPTION = env.bool('NO_SUBSCRIPTION', default=False)
 
