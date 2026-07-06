@@ -12,6 +12,19 @@ class CustomDisplayErrorBoundary extends React.Component {
     return { hasError: true, error };
   }
 
+  componentDidCatch(error) {
+    // Lift the crash out of the boundary (GAP_ANALYSIS_agent_lane_poc6.md #1c/#2):
+    // the parent un-suppresses the deterministic embedded child list so children
+    // still have a home, and reports the failure so it is more than a console.warn.
+    // Guarded to fire once per mounted error.
+    if (!this._reported) {
+      this._reported = true;
+      if (typeof this.props.onError === 'function') {
+        try { this.props.onError(error); } catch (_e) { /* telemetry must not throw */ }
+      }
+    }
+  }
+
   render() {
     if (this.state.hasError) {
       const { fallback: Fallback, fallbackProps } = this.props;
@@ -57,6 +70,7 @@ const CustomDisplay = ({
   viewAs,
   sandboxConfig,
   FallbackDisplay,
+  onRenderFailed,
   ...rest
 }) => {
   const customDisplayDef = entityConfig?.display_mode_options?.custom_display || {};
@@ -87,7 +101,13 @@ const CustomDisplay = ({
   }
 
   return (
-    <CustomDisplayErrorBoundary fallback={FallbackDisplay || (() => null)} fallbackProps={fallbackProps}>
+    <CustomDisplayErrorBoundary
+      fallback={FallbackDisplay || (() => null)}
+      fallbackProps={fallbackProps}
+      onError={(error) => {
+        if (typeof onRenderFailed === 'function') onRenderFailed(componentName, error);
+      }}
+    >
       <CompiledComponent
         records={records}
         entityConfig={entityConfig}
