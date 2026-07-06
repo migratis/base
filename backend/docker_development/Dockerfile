@@ -7,7 +7,6 @@ RUN apt-get update && apt-get install -y cron inetutils-syslogd bzip2
 RUN python3 -m pip install --upgrade pip setuptools wheel
 RUN pip install gunicorn
 RUN pip install -r requirements.txt
-RUN pip install "git+https://github.com/saurav-codes/django-cryptography"
 COPY . /backend
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh

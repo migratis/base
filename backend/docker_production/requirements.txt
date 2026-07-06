@@ -1,13 +1,11 @@
-csv-reader>=1.2.0
 django>=5.0.3
-django-ai-assistant>=0.0.4
+django-clearcache>=1.2.1
 # Pinned to the major API the generator targets (modern django-ninja 1.x +
 # pydantic 2.x: Meta/fields, check_fields=False). Floats to latest stable
 # WITHIN the major; the <N caps stop a future major from silently breaking
 # generated apps. See memory: project-generator-ninja-version-skew.
 django-ninja>=1.1.0,<2
 pydantic>=2.0,<3
-django-clearcache>=1.2.1
 psycopg2>=2.9.3
 django-countries>=7.3.2
 django-colorfield>=0.8.0
@@ -15,24 +13,15 @@ django-cors-headers>=3.11.0
 django-crontab>=0.7.1
 django-extensions>=3.1.5
 django-import-export>=2.8.0
-django-cryptography>=1.1
 django-environ>=0.8.1
-django-mathfilters>=1.0.0
-django-query-analyzer>=0.0.16
+# Required by pydantic EmailStr (user/schemas.py).
 email_validator>=2.1.1
-fuzzywuzzy>=0.18.0
-Levenshtein>=0.26.1
-python-levenshtein>=0.26.1
-rapidfuzz>=3.12.1
-lxml>=4.9.1
-openai>=1.61.0
+# Not imported directly: runtime plugin of django-import-export/tablib for the
+# admin's xlsx import/export format.
 openpyxl>=3.0.10
-pandas>=1.5.1
+# Generated app code emits `from PIL import Image` (image-field seed data).
 pillow>=10.0.0
-pyexcel-ods>=0.6.0
 python-dateutil>=2.8.2
-simplejson>=3.19.3
+requests>=2.31.0
 six>=1.16.0
 stripe>=5.0.0
-xlrd>=2.0.1
-PyGithub>=2.3.0
