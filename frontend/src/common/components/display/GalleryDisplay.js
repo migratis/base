@@ -190,14 +190,20 @@ const GalleryDisplay = ({
                   onInteraction={onInteraction}
                   className="d-flex flex-wrap gap-1 mt-2"
                 />
-                <div className="d-flex justify-content-end gap-2 mt-2">
-                  <span className="link action" onClick={() => onEdit(record)}>
-                    <EditIcon />
-                  </span>
-                  <span className="link action" onClick={() => onDelete(record.id)}>
-                    <TrashIcon />
-                  </span>
-                </div>
+                {(onEdit || onDelete) && (
+                  <div className="d-flex justify-content-end gap-2 mt-2">
+                    {onEdit && (
+                      <span className="link action" onClick={() => onEdit(record)}>
+                        <EditIcon />
+                      </span>
+                    )}
+                    {onDelete && (
+                      <span className="link action" onClick={() => onDelete(record.id)}>
+                        <TrashIcon />
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           );

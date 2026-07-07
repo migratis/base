@@ -116,12 +116,16 @@ const ListDisplay = ({
               getRoleRank={getRoleRank}
               onInteraction={onInteraction}
             />
-            <span className="link action" onClick={() => onEdit(record)}>
-              <EditIcon />
-            </span>
-            <span className="link action" onClick={() => onDelete(record.id)}>
-              <TrashIcon />
-            </span>
+            {onEdit && (
+              <span className="link action" onClick={() => onEdit(record)}>
+                <EditIcon />
+              </span>
+            )}
+            {onDelete && (
+              <span className="link action" onClick={() => onDelete(record.id)}>
+                <TrashIcon />
+              </span>
+            )}
           </div>
           </div>
           <EmbeddedChildren
