@@ -18,6 +18,9 @@ const ListDisplay = ({
   t,
   embeddedChildren = [],
   embeddedRecords = {},
+  // Interactive embeds — see CardsDisplay. A per-record renderer mounts each
+  // embed child's own scoped CRUD container in place of the read-only table.
+  renderEmbedded,
 }) => {
   if (!records || records.length === 0) {
     return null;
@@ -128,12 +131,14 @@ const ListDisplay = ({
             )}
           </div>
           </div>
-          <EmbeddedChildren
-            record={record}
-            embeddedChildren={embeddedChildren}
-            embeddedRecords={embeddedRecords}
-            t={t}
-          />
+          {renderEmbedded ? renderEmbedded(record) : (
+            <EmbeddedChildren
+              record={record}
+              embeddedChildren={embeddedChildren}
+              embeddedRecords={embeddedRecords}
+              t={t}
+            />
+          )}
         </div>
       ))}
     </div>

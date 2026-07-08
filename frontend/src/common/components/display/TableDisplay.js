@@ -27,6 +27,9 @@ const TableDisplay = ({
   // ({Child: [{id, data}]}) so line items render under each parent record.
   embeddedChildren = [],
   embeddedRecords = {},
+  // Interactive embeds: a per-record renderer that mounts each embed child's
+  // own scoped CRUD container. When present it replaces the read-only rows.
+  renderEmbedded,
 }) => {
   if (!records || records.length === 0) {
     return null;
@@ -69,12 +72,23 @@ const TableDisplay = ({
   const hasInteractions =
     Array.isArray(config?.interactions) && config.interactions.length > 0 && !!onInteraction;
 
-  const hasEmbedded = Array.isArray(embeddedChildren) && embeddedChildren.length > 0;
+  const hasEmbedded = !!renderEmbedded
+    || (Array.isArray(embeddedChildren) && embeddedChildren.length > 0);
 
   // Inline rows for embedded children — one compact sub-table per child
   // entity, filtered to the current parent record via its FK. Returns null
   // when the parent has no child rows at all (no empty grey band).
   const renderEmbeddedRows = (record, totalCols) => {
+    // Interactive embeds own their layout + empty state — always render.
+    if (renderEmbedded) {
+      return (
+        <tr>
+          <td colSpan={totalCols} className="bg-light p-2">
+            {renderEmbedded(record)}
+          </td>
+        </tr>
+      );
+    }
     // Suppress the grey band entirely when this parent has no child rows.
     if (getEmbeddedSections(record, embeddedChildren, embeddedRecords).length === 0) {
       return null;

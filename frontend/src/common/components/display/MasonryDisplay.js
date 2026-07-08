@@ -19,6 +19,8 @@ const MasonryDisplay = ({
   t,
   embeddedChildren = [],
   embeddedRecords = {},
+  // Interactive embeds — see CardsDisplay.
+  renderEmbedded,
 }) => {
   if (!records || records.length === 0) {
     return null;
@@ -186,12 +188,14 @@ const MasonryDisplay = ({
               onInteraction={onInteraction}
               className="d-flex flex-wrap gap-1 mt-2"
             />
-            <EmbeddedChildren
-              record={record}
-              embeddedChildren={embeddedChildren}
-              embeddedRecords={embeddedRecords}
-              t={t}
-            />
+            {renderEmbedded ? renderEmbedded(record) : (
+              <EmbeddedChildren
+                record={record}
+                embeddedChildren={embeddedChildren}
+                embeddedRecords={embeddedRecords}
+                t={t}
+              />
+            )}
           </div>
           <div className="d-flex justify-content-end gap-2 p-2" style={{ position: 'absolute', bottom: 0, right: 0 }}>
             {onEdit && (

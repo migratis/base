@@ -29,6 +29,10 @@ const CardsDisplay = ({
   t,
   embeddedChildren = [],
   embeddedRecords = {},
+  // Interactive embeds: generated apps pass a per-record renderer that mounts
+  // each embed child's own CRUD container, scoped to the row. When present it
+  // replaces the read-only EmbeddedChildren sub-table.
+  renderEmbedded,
 }) => {
   const [expandedRecord, setExpandedRecord] = useState(null);
 
@@ -260,12 +264,14 @@ const CardsDisplay = ({
                   </div>
                 );
               })}
-              <EmbeddedChildren
-                record={record}
-                embeddedChildren={embeddedChildren}
-                embeddedRecords={embeddedRecords}
-                t={t}
-              />
+              {renderEmbedded ? renderEmbedded(record) : (
+                <EmbeddedChildren
+                  record={record}
+                  embeddedChildren={embeddedChildren}
+                  embeddedRecords={embeddedRecords}
+                  t={t}
+                />
+              )}
               <InteractionRowActions
                 interactions={config?.interactions}
                 recordData={record?.data}
