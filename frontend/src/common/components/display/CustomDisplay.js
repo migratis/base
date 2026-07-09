@@ -93,6 +93,25 @@ const CustomDisplay = ({
     [viewAs, rest?.getRoleRank],
   );
 
+  // canCreate(entityName): may the current viewer write (create) records of that
+  // entity? Lets a custom display gate a create affordance it composes for ANOTHER
+  // entity (e.g. a "Write a Review" button on the Recipe display) by the target's
+  // min_write_role — app-28 showed that button to `public`, whom the backend then
+  // blocked (GAP_ANALYSIS_agent_lane_poc9.md #6). Ranks come from the same
+  // per-app getRoleRank the interaction gates use; when a rank is unknown we
+  // degrade to "allow" (best-effort, mirroring the interaction Stage-A gate).
+  const canCreate = useMemo(() => {
+    const getRoleRank = rest?.getRoleRank;
+    return (entityName) => {
+      const minWrite = sandboxConfig?.entities?.[entityName]?.min_write_role || 'user';
+      if (typeof getRoleRank !== 'function') return true;
+      const viewerRank = getRoleRank((viewAs || '').trim());
+      const floorRank  = getRoleRank(minWrite);
+      if (viewerRank == null || floorRank == null) return true;
+      return viewerRank >= floorRank;
+    };
+  }, [sandboxConfig, viewAs, rest?.getRoleRank]);
+
   const fallbackProps = { records, entityConfig, relOptions, onEdit, onDelete, t, ...rest };
 
   if (!code || !CompiledComponent) {
@@ -116,6 +135,8 @@ const CustomDisplay = ({
         onDelete={onDelete}
         t={t}
         getVisibleInteractions={boundGetVisibleInteractions}
+        canCreate={canCreate}
+        viewAs={viewAs}
         {...propsSchema}
         {...rest}
       />
