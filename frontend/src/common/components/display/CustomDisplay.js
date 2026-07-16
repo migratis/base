@@ -41,8 +41,12 @@ function compileDisplay(componentName, code) {
     const src = code.replace(/\\n/g, '\n').replace(/\\t/g, '\t').replace(/\\r/g, '');
     // `sanitizeHtml` is injected into scope so AI code may safely render
     // sanitized rich text via dangerouslySetInnerHTML without an import.
+    // "use strict" (§7a) makes an implicit-global assignment inside the component
+    // (e.g. `img = r.data.image`) throw here — the same class ESLint no-undef
+    // rejects at CRA build time — instead of silently creating a global, closing
+    // the sandbox-vs-installed-app fidelity gap.
     // eslint-disable-next-line no-new-func
-    const factory = new Function('React', 'sanitizeHtml', `${src}; return ${componentName};`);
+    const factory = new Function('React', 'sanitizeHtml', `"use strict";\n${src}; return ${componentName};`);
     return factory(React, sanitizeHtml);
   } catch (err) {
     console.warn(`[CustomDisplay] Failed to compile ${componentName}:`, err);
