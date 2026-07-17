@@ -80,13 +80,21 @@ RESPONSES = {
     "422": "The package failed pre-flight Python compile validation. Fix the "
            "generation; do not retry the same bytes.",
     "409": "(upgrade-package) destructive changes pending — resend with confirm.",
-    "403": "Endpoint gate failed: not a loopback caller and no/!bad "
-           "X-Installer-Token. See auth.",
+    "403": "Endpoint gate failed: not a loopback caller and no/bad "
+           "X-Installer-Token (the body's `reason` spells out the fix). This is "
+           "NOT a missing-credential error you can solve with a token you "
+           "already have — your Migratis bearer/PAT is never accepted here. "
+           "Call from the base host (127.0.0.1) or configure "
+           "INSTALLER_AGENT_TOKEN. See auth.",
     "400": "Malformed body — missing/!undecodable package or invalid config JSON.",
 }
 
 RULES = [
     "You already hold the ZIP; do not re-fetch it from Migratis — POST it here.",
+    "A 403 from these endpoints means the loopback/token gate refused the "
+    "CALLER, not that credentials are missing: never present your Migratis "
+    "bearer/PAT to the installer. Retry from the base host (127.0.0.1) or have "
+    "the operator set INSTALLER_AGENT_TOKEN.",
     "Treat install as asynchronous: re-check /installer/installed after the "
     "reload/restart instead of trusting the 200.",
     "On 422, the generated package does not compile — report it and regenerate; "

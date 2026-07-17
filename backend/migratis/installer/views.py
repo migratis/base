@@ -666,6 +666,33 @@ def _agent_endpoint_allowed(request) -> bool:
     return request.META.get('REMOTE_ADDR', '') in ('127.0.0.1', '::1', 'localhost')
 
 
+def _agent_forbidden_response():
+    """Self-describing 403 for the package endpoints. An agent facing a bare
+    `auth: forbidden` pattern-matches to "I need credentials" and reaches for
+    the only token it holds — its Migratis PAT (observed installing app 47).
+    Spell out the actual gate and explicitly rule the Migratis token out."""
+    token_configured = bool(
+        (getattr(settings, 'INSTALLER_AGENT_TOKEN', '') or '').strip())
+    if token_configured:
+        how = ("INSTALLER_AGENT_TOKEN is configured on this server — send the "
+               "matching 'X-Installer-Token' header.")
+    else:
+        how = ("Call it from the machine running this base backend "
+               "(loopback, e.g. http://127.0.0.1:<port>/backend/api/installer/...). "
+               "To allow an off-box caller instead, set INSTALLER_AGENT_TOKEN in "
+               "the server settings and send it as 'X-Installer-Token'.")
+    return JsonResponse({
+        'detail': [{'auth': ['forbidden']}],
+        'code':   'installer_forbidden',
+        'reason': (
+            "The installer package gate refused this caller. " + how +
+            " Your Migratis bearer/PAT is NEVER accepted here — it authenticates "
+            "the generator, not this installer; do not send it, and no Migratis "
+            "round-trip is needed to install a package you already hold."
+        ),
+    }, status=403)
+
+
 def _read_package_body(request):
     """Extract (zip_bytes, config) from a Migratis-agnostic install request.
 
@@ -729,7 +756,7 @@ def installer_install_package(request):
     "not live yet" and re-check /installed (or a route) after the restart.
     """
     if not _agent_endpoint_allowed(request):
-        return JsonResponse({'detail': [{'auth': ['forbidden']}]}, status=403)
+        return _agent_forbidden_response()
 
     try:
         zip_bytes, config = _read_package_body(request)
@@ -757,7 +784,7 @@ def installer_upgrade_package(request):
     apply data-loss changes.
     """
     if not _agent_endpoint_allowed(request):
-        return JsonResponse({'detail': [{'auth': ['forbidden']}]}, status=403)
+        return _agent_forbidden_response()
 
     try:
         zip_bytes, config = _read_package_body(request)
