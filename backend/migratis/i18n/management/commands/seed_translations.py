@@ -3630,6 +3630,10 @@ TRANSLATIONS['userform'] = {
     "taxnumber": {'en': "VAT number", 'fr': "Numéro de TVA", 'es': "Número de IVA", 'ro': "Cod TVA"},
     "validate": {'en': "Validate", 'fr': "Valider", 'es': "Validar", 'ro': "Validează"},
     "zipcode": {'en': "Postal code", 'fr': "Code postal", 'es': "Código postal", 'ro': "Cod poștal"},
+    # Stripe-side failure keys (PoC #20 continuation item 3 — mirror of the
+    # migratis seed): a payment-service outage must read as such, not crash.
+    "payment-service-unavailable": {'en': "The payment service is temporarily unavailable — please try again later.", 'fr': "Le service de paiement est temporairement indisponible — veuillez réessayer plus tard.", 'es': "El servicio de pago no está disponible temporalmente. Inténtalo de nuevo más tarde.", 'ro': "Serviciul de plată este temporar indisponibil — încercați din nou mai târziu."},
+    "taxnumber-invalid": {'en': "The tax number was refused by the payment service.", 'fr': "Le numéro de TVA a été refusé par le service de paiement.", 'es': "El número fiscal fue rechazado por el servicio de pago.", 'ro': "Codul fiscal a fost respins de serviciul de plată."},
 }
 
 TRANSLATIONS['upload'] = {

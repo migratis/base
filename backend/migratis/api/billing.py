@@ -42,6 +42,15 @@ def save_customer(user):
     return saveCustomer(user)
 
 
+def stripe_error_dict(error):
+    """formatErrors() dict for a failed save_customer — safe when billing is
+    off (that path never produces an error to map)."""
+    if _disabled():
+        return {"stripe": ["payment-service-unavailable"]}
+    from migratis.subscription.views import stripeErrorDict
+    return stripeErrorDict(error)
+
+
 def active_subscription(user):
     """The user's active Subscription instance, or None (always None when off)."""
     if _disabled():

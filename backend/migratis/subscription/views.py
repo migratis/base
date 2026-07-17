@@ -99,10 +99,23 @@ def saveCustomer(user):
             new_customer.user = user
             new_customer.stripe_id = customerId
             new_customer.save()
-    except stripe._error.InvalidRequestError as e:
-        error = e
+    except stripe._error.StripeError as e:
+        # Any Stripe failure — invalid tax data, expired/revoked API key,
+        # network outage — must surface as a clean (False, error) so callers
+        # answer 422 instead of letting the exception 500 the endpoint
+        # (PoC #20 continuation: an expired key crashed /user/register).
         return False, e
     return True, None
+
+
+def stripeErrorDict(error):
+    """Map a saveCustomer Stripe error to the formatErrors() dict the user
+    endpoints answer with. InvalidRequestError is the caller's data (the tax
+    number is the only free-form field forwarded); anything else is the
+    payment service itself failing — say so instead of blaming the form."""
+    if isinstance(error, stripe._error.InvalidRequestError):
+        return {"taxnumber": ["taxnumber-invalid"]}
+    return {"stripe": ["payment-service-unavailable"]}
 
 @router.get('/payment/{plan_id}')
 def createPayment(request, plan_id: int):

@@ -55,7 +55,14 @@ export const UserForm = (props) => {
 	    }
 	    data.language = language;
       data.subscription = props.subscription;
-      UserService.updateProfile(data).then((response) => { 
+      UserService.updateProfile(data).then((response) => {
+        // A 500 / non-JSON reply has no `detail` — fail with a toast instead
+        // of crashing on response.detail[0] (PoC #20 continuation item 3).
+        if (!Array.isArray(response?.detail)) {
+          toast.error(t('error-occured'));
+          setDisableSubmit(false);
+          return;
+        }
         if (response.detail[0].success) {
             props.setRefresh(!props.refresh);
 			      toast.success(t(response.detail[0].success[0]));			
@@ -83,6 +90,13 @@ export const UserForm = (props) => {
         let language = localStorage.getItem('i18nextLng');
         data.language = language.slice(0, 2);
         UserService.register(data).then((response) => {
+          // Same guard as updateProfile above — a 500 / non-JSON reply has no
+          // `detail`; toast rather than crash.
+          if (!Array.isArray(response?.detail)) {
+            toast.error(t('error-occured'));
+            setDisableSubmit(false);
+            return;
+          }
           if (response.detail[0].success) {
             if (props.invitation) {
               toast.success(t(response.detail[0].success[0]));

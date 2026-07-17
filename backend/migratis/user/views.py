@@ -168,7 +168,7 @@ def update(request, profile: Form[schemas.UserSchemaUpdateIn]):
         if savedCustomer:
             user.save()
         else:
-           return JsonResponse({"detail": formatErrors(error)}, status=422) 
+           return JsonResponse({"detail": formatErrors(billing.stripe_error_dict(error))}, status=422)
         return JsonResponse({"detail": [{"success": ["update-successful"]}]})
     except ValidationError as e:
         return JsonResponse({"detail": formatErrors(e.message_dict)}, status=422)
@@ -199,17 +199,17 @@ def invitation(request, user: Form[schemas.UserSchemaInvitation]):
         delattr(user, 'email')
         for attr, value in user.dict().items():
             setattr(token_user, attr, value)
-        if billing.save_customer(token_user):
+        savedCustomer, error = billing.save_customer(token_user)
+        if savedCustomer:
             token_user.is_active = True
             token_user.save()
         else:
-           return JsonResponse({"detail": formatErrors({"taxnumber": ["taxnumber-invalid"]})}, status=422) 
+           return JsonResponse({"detail": formatErrors(billing.stripe_error_dict(error))}, status=422)
         return JsonResponse({"detail": [{"success": ["invitation-successfull"]}]})
     except ValidationError as e:
         if (user.id is not None): user.delete()
         return JsonResponse({"detail": formatErrors(e.message_dict)}, status=422)
 
-@router.post('/register', auth=None)
 def _assign_default_registration_groups(user):
     """Add a freshly-confirmed account to the installed module's default role
     group(s). Base stays role-agnostic: the group names come from the
@@ -224,14 +224,23 @@ def _assign_default_registration_groups(user):
         user.groups.add(group)
 
 
+@router.post('/register', auth=None)
 def register(request, user: Form[schemas.UserSchemaIn]):
+    # NOTE (PoC #20 continuation): this decorator MUST sit directly on
+    # register — it was previously attached to the helper above (inserted
+    # between decorator and function), which registered the helper as the
+    # /register endpoint and broke registration with a bogus
+    # `query.user Field required` 422.
     user = models.User(**user.dict())
     try:
         user.is_active = False
         user.save()
-        if not billing.save_customer(user):
+        # billing.save_customer returns a (saved, error) TUPLE — truth-testing
+        # the tuple itself can never fail: unpack it.
+        savedCustomer, error = billing.save_customer(user)
+        if not savedCustomer:
             user.delete()
-            return JsonResponse({"detail": formatErrors({"taxnumber": ["taxnumber-invalid"]})}, status=422) 
+            return JsonResponse({"detail": formatErrors(billing.stripe_error_dict(error))}, status=422)
         if not sendActivation(user):
             return JsonResponse({"detail": formatErrors({"email": ["email-refused"]})}, status=422)
         return JsonResponse({"detail": [{"success": ["confirm-link-in-email"]}]})
