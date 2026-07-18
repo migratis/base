@@ -46,6 +46,13 @@ def doUnsubscribe(userId):
     return response
 
 def saveCustomer(user):
+    # Subscription module deactivated (NO_SUBSCRIPTION — the same flag
+    # check_access honors): no Stripe customer exists or is wanted, so
+    # registration/profile writes proceed without any Stripe round-trip.
+    # Mirrors api/billing.save_customer's facade bypass for callers that
+    # import this function directly. Same (saved, error) contract.
+    if settings.NO_SUBSCRIPTION:
+        return True, None
     try:
         try:
             customer = models.Customer.objects.select_related('user').get(user=user)
