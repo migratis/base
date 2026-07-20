@@ -61,7 +61,16 @@ const getTax = (id) => {
       if (response.data) return response.data;
       else return response;
     }
-  );
+  ).catch( (error) => {
+    // A Stripe failure while materialising the customer (e.g. a refused tax
+    // number) comes back as a 422 { detail: [{ msg }] }. Surface the specific
+    // key so the payment form toasts the real reason instead of a generic one.
+    if (error.response && error.response.status === 422) {
+      const detail = error.response.data && error.response.data.detail;
+      return { error: detail && detail[0] ? detail[0].msg : "no-customer" };
+    }
+    return { error: "no-customer" };
+  });
 };
 
 const changePlan = (id) => {
