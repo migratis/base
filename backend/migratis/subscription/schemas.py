@@ -16,7 +16,6 @@ class SubscriptionSchema(ModelSchema):
         fields = ['plan', 'access', 'status', 'end', 'cancelled']
 
 class InvoiceSchema(ModelSchema):
-    plan: PlanSchema | None = None
     class Meta:
         model = models.Invoice
-        fields = ['id', 'subscription', 'plan', 'purpose', 'cdate', 'mdate', 'status', 'amount']
+        fields = ['id', 'purpose', 'reference', 'label_key', 'cdate', 'mdate', 'status', 'amount']

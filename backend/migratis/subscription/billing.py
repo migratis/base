@@ -150,14 +150,18 @@ def on_invoice_created(event):
         sub_id = data_object['parent']['subscription_details']['subscription']
     except (KeyError, TypeError):
         return
-    subscription = models.Subscription.objects.filter(stripe_id=sub_id).first()
+    subscription = models.Subscription.objects.filter(stripe_id=sub_id).select_related('plan', 'plan__label').first()
     if not subscription:
         return
+    label_key = ''
+    if subscription.plan and subscription.plan.label:
+        label_key = subscription.plan.label.key
     invoice = models.Invoice(
         user=customer.user,
-        subscription=subscription,
         customer=customer,
-        plan=subscription.plan,
+        purpose='subscription',
+        reference=subscription.stripe_id or '',
+        label_key=label_key,
         status=data_object['status'],
         stripe_id=data_object['id'],
         amount=data_object['amount_due'],

@@ -11,6 +11,7 @@ from migratis.i18n.views import router as i18n_router
 from migratis.cookie.views import router as cookie_router
 # from migratis.support.views import router as support_router
 # from migratis.subscription.views import router as subscription_router
+# from migratis.stripe_payment.views import router as stripe_payment_router
 # from migratis.generator.views import router as generator_router
 from migratis.installer.views import router as installer_router
 import datetime
@@ -62,6 +63,7 @@ api.add_router("/i18n/",    i18n_router)
 api.add_router("/cookie/",  cookie_router)
 # api.add_router("/support/", support_router)
 # api.add_router("/subscription/", subscription_router)
+# api.add_router("/billing/", stripe_payment_router)
 # api.add_router("/generator/", generator_router)
 # The installer is mounted only when enabled (INSTALLER setting), so its
 # endpoints are not reachable on deployments that ship without it.

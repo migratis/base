@@ -69,28 +69,32 @@ class ProcessedStripeEvent(models.Model):
 
 
 class Invoice(models.Model):
-    """A Stripe invoice for any paying purpose.
+    """A Stripe invoice for any paying purpose — standalone.
 
-    Generalized (Phase 5) so one-off AI-credit purchases produce invoices too,
-    not just subscriptions: ``subscription``/``plan`` are now nullable and
-    ``purpose`` distinguishes the kind. Subscription/Plan are referenced by
-    string so this module keeps a one-way dependency on the subscription domain
-    only through the app registry (no import cycle). Table name preserved
-    (``subscription_invoice``) so no data moves.
+    Deliberately has **no** FK into the subscription domain, so the
+    stripe_payment app can be installed on its own (payments without the
+    subscription module). ``purpose`` distinguishes the kind; subscription
+    linkage is kept as denormalized soft fields:
+
+    * ``reference`` — the Stripe subscription id (or other external ref);
+    * ``label_key`` — an i18n key for display (plan label for subscriptions,
+      ``ai-credits`` for credit buys).
+
+    Table name preserved (``subscription_invoice``) so no data moves.
     """
-    user         = models.ForeignKey(User, on_delete=models.CASCADE)
-    customer     = models.ForeignKey('stripe_payment.Customer', on_delete=models.DO_NOTHING, null=True)
-    subscription = models.ForeignKey('subscription.Subscription', on_delete=models.CASCADE, null=True)
-    plan         = models.ForeignKey('subscription.Plan', on_delete=models.DO_NOTHING, null=True)
-    payment      = models.ForeignKey('stripe_payment.StripePayment', on_delete=models.SET_NULL, null=True, blank=True)
-    purpose      = models.CharField(max_length=32, default='subscription')
-    status       = models.CharField(max_length=20, default='draft')
-    file         = models.FileField(upload_to='migratis/subscription/invoices', blank=True, null=True)
-    stripe_id    = models.CharField(max_length=50)
-    amount       = models.DecimalField(default=0, max_digits=99, decimal_places=2)
-    tax          = models.DecimalField(default=0, max_digits=99, decimal_places=2)
-    cdate        = models.DateTimeField(auto_now_add=True)
-    mdate        = models.DateTimeField(auto_now=True)
+    user       = models.ForeignKey(User, on_delete=models.CASCADE)
+    customer   = models.ForeignKey('stripe_payment.Customer', on_delete=models.DO_NOTHING, null=True)
+    payment    = models.ForeignKey('stripe_payment.StripePayment', on_delete=models.SET_NULL, null=True, blank=True)
+    purpose    = models.CharField(max_length=32, default='subscription')
+    reference  = models.CharField(max_length=64, blank=True, default='')
+    label_key  = models.CharField(max_length=255, blank=True, default='')
+    status     = models.CharField(max_length=20, default='draft')
+    file       = models.FileField(upload_to='migratis/subscription/invoices', blank=True, null=True)
+    stripe_id  = models.CharField(max_length=50)
+    amount     = models.DecimalField(default=0, max_digits=99, decimal_places=2)
+    tax        = models.DecimalField(default=0, max_digits=99, decimal_places=2)
+    cdate      = models.DateTimeField(auto_now_add=True)
+    mdate      = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = 'subscription_invoice'

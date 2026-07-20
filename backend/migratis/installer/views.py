@@ -72,7 +72,7 @@ MIGRATIS_TFA_COOKIE     = 'tfa_verified'
 MIGRATIS_TFA_TRUST_DAYS = 7
 
 _FRAMEWORK_MODULES = frozenset([
-    'user', 'i18n', 'cookie', 'support', 'subscription', 'generator', 'installer',
+    'user', 'i18n', 'cookie', 'support', 'subscription', 'stripe_payment', 'generator', 'installer',
 ])
 
 # Framework routers that modules may activate in api/views.py. Each tuple is
@@ -84,6 +84,7 @@ _FRAMEWORK_ROUTERS = [
     ('cookie',       'cookie_router',       'migratis.cookie.views',       '/cookie/'),
     ('support',      'support_router',      'migratis.support.views',      '/support/'),
     ('subscription', 'subscription_router', 'migratis.subscription.views', '/subscription/'),
+    ('stripe_payment', 'stripe_payment_router', 'migratis.stripe_payment.views', '/billing/'),
 ]
 
 

@@ -105,7 +105,6 @@ def invoices(request):
     invoices = models.Invoice.objects.select_related(
         'user',
         'customer',
-        'subscription'    
     ).filter(user=userId).order_by('-mdate')
     return invoices
 
@@ -116,7 +115,6 @@ def download(request, id: int):
         invoice = models.Invoice.objects.select_related(
             'user',
             'customer',
-            'subscription'    
         ).get(pk=id, user=userId)
     except models.Invoice.DoesNotExist:
         return JsonResponse({"detail": formatErrors({"invoice": ["invoice-not-exists"]})}, status=422)

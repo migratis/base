@@ -179,7 +179,7 @@ export const Subscription = (props) => {
               <div className="invoices">  
               { invoices.map(item => 
                 <p key={item.id}>
-                  {item.plan ? t(item.plan.label.key) : t('ai-credits', { ns: 'billing' })}&nbsp;
+                  {item.label_key ? t(item.label_key, { ns: item.purpose === 'ai_credits' ? 'billing' : 'subscription' }) : ''}&nbsp;
                   { item.amount === 0 &&
                     <span>
                       ({t("trial-period")})&nbsp;
