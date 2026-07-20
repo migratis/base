@@ -1,20 +1,16 @@
 from django.http import JsonResponse, FileResponse
 from django.core.exceptions import ValidationError
-from django.core.files.base import ContentFile
-from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 from ninja import Router, Form
 from . import models, schemas
-from datetime import datetime
-from dateutil.relativedelta import relativedelta
 from migratis.api.functions import formatErrors
 from typing import List
-from pprint import pprint
 import stripe
-import uuid
-import requests
-from migratis.i18n.models import TranslationKey
 from migratis.subscription.decorators import check_access
+from migratis.stripe_payment.services import (
+    ensure_customer as _ensure_customer,
+    stripe_error_dict as _stripe_error_dict,
+)
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
@@ -22,8 +18,8 @@ router = Router()
 
 def hasTrial(user):
     # Trial is optional (settings.SUBSCRIPTION_TRIAL, default True). When off,
-    # nobody is trial-eligible — flows to createPayment (no Stripe trial period)
-    # and to user.trial everywhere.
+    # nobody is trial-eligible — the subscription checkout builder omits the
+    # Checkout trial period, and user.trial is False everywhere.
     if not getattr(settings, 'SUBSCRIPTION_TRIAL', True):
         return False
     return False if models.Subscription.objects.select_related('user').filter(
@@ -50,185 +46,18 @@ def doUnsubscribe(userId):
     subscription.save()
     return response
 
+# saveCustomer / stripeErrorDict now live in the shared stripe_payment engine
+# (services.ensure_customer / services.stripe_error_dict). These thin aliases keep
+# the existing callers in user/views.py (register/update/invitation) and getTax
+# working unchanged, with a single implementation of the customer round-trip.
 def saveCustomer(user):
-    # Subscription module deactivated (NO_SUBSCRIPTION — the same flag
-    # check_access honors): no Stripe customer exists or is wanted, so
-    # registration/profile writes proceed without any Stripe round-trip.
-    # Same (saved, error) contract as the live path.
-    if settings.NO_SUBSCRIPTION:
-        return True, None
-    try:
-        try:
-            customer = models.Customer.objects.select_related('user').get(user=user)
-            stripe.Customer.modify(
-                customer.stripe_id,
-                email=user.email,
-                address={
-                    "city": user.city,
-                    "country": (user.country.code).upper(),
-                    "line1": user.address,
-                    "postal_code": user.zipcode
-                },
-                name=user.company if user.company else user.first_name + " " + user.last_name,
-                preferred_locales=[user.language],
-                invoice_settings={
-                    "custom_fields": [{
-                        "name": "taxnumber",
-                        "value": user.taxnumber
-                    }]
-                } if user.taxnumber else {},
-                expand=["tax"],
-                idempotency_key=str(uuid.uuid4()),
-                #test_clock="clock_1P4KXWAXmadDuP9DaUdW6fZ2"
-            )      
-        except models.Customer.DoesNotExist:
-            customer = stripe.Customer.create(
-                address={
-                    "city": user.city,
-                    "country": user.country.code,
-                    "line1": user.address,
-                    "postal_code": user.zipcode
-                },
-                email=user.email,
-                name=user.company if user.company else user.first_name + " " + user.last_name,
-                preferred_locales=[user.language],
-                invoice_settings={
-                    "custom_fields": [{
-                        "name": "taxnumber",
-                        "value": user.taxnumber
-                    }]
-                } if user.taxnumber else {},
-                tax_id_data=[
-                    {"type": models.TAX_ID_TYPE[(user.country.code).upper()], "value": user.taxnumber}
-                ] if user.taxnumber else [],
-                expand=["tax"],
-                idempotency_key=str(uuid.uuid4()),            
-                #test_clock="clock_1P4KXWAXmadDuP9DaUdW6fZ2"
-            ) 
-            customerId = customer.id
-            new_customer = models.Customer()
-            new_customer.user = user
-            new_customer.stripe_id = customerId
-            new_customer.save()
-    except stripe._error.StripeError as e:
-        # Any Stripe failure — invalid tax data, expired/revoked API key,
-        # network outage — must surface as a clean (False, error) so callers
-        # answer 422 instead of letting the exception 500 the endpoint
-        # (PoC #20 continuation: an expired key crashed /user/register).
-        return False, e
-    return True, None
+    return _ensure_customer(user)
 
 
 def stripeErrorDict(error):
-    """Map a saveCustomer Stripe error to the formatErrors() dict the user
-    endpoints answer with. InvalidRequestError is the caller's data (the tax
-    number is the only free-form field forwarded); anything else is the
-    payment service itself failing — say so instead of blaming the form."""
-    if isinstance(error, stripe._error.InvalidRequestError):
-        return {"taxnumber": ["taxnumber-invalid"]}
-    return {"stripe": ["payment-service-unavailable"]}
+    return _stripe_error_dict(error)
 
-@router.get('/payment/{plan_id}')
-def createPayment(request, plan_id: int):
-    intent = False
-    userId = request.user.id        
-    try:
-        user = models.User.objects.get(pk=userId)
-        trial = hasTrial(user)
-    except models.User.DoesNotExist as e:
-        return JsonResponse({"detail": formatErrors(e.message_dict)}, status=422)
-    try:
-        plan = models.Plan.objects.get(pk=plan_id)
-    except models.Plan.DoesNotExist as e:
-        return JsonResponse({"detail": formatErrors(e.message_dict)}, status=422) 
-    try:
-        customer = models.Customer.objects.select_related('user').get(user=userId)
-        customerId = customer.stripe_id
-    except models.Customer.DoesNotExist:
-        # Create-when-missing only. A user who registered while the subscription
-        # module was off has no customer yet; materialise it here, just before
-        # paying, through the single shared helper. We do NOT refresh an
-        # existing customer on every payment attempt — customer info is pushed
-        # to Stripe by saveCustomer in the profile-update flow (user/views.py)
-        # whenever the user edits their details.
-        saved, error = saveCustomer(user)
-        if not saved:
-            return JsonResponse({"detail": formatErrors(stripeErrorDict(error))}, status=422)
-        try:
-            customer = models.Customer.objects.select_related('user').get(user=userId)
-            customerId = customer.stripe_id
-        except models.Customer.DoesNotExist:
-            return JsonResponse({"detail": formatErrors({"customer": ["no-customer"]})}, status=422)
-    subscription = models.Subscription.objects.select_related(
-        'user', 
-        'customer'
-    ).filter(
-        user=userId, 
-        status__in=['incomplete', 'past_due']
-    ).order_by("-cdate").first()
-    if not subscription:
-        if trial:
-            trialEndDate = datetime.now() + relativedelta(months=1)
-            stripe_subscription = stripe.Subscription.create(
-                customer=customerId,
-                payment_behavior="default_incomplete",            
-                items=[
-                    {"price": plan.stripe_id},
-                ],
-                metadata = {"life": plan.life},
-                expand=['pending_setup_intent'],
-                trial_end=int(str(trialEndDate.timestamp())[0:10]),
-                automatic_tax={"enabled": True},
-                idempotency_key=str(uuid.uuid4()),
-            )
-            pprint(stripe_subscription)
-            secret = stripe_subscription.pending_setup_intent.client_secret
-        else:
-            stripe_subscription = stripe.Subscription.create(
-                customer=customerId,
-                payment_behavior="default_incomplete",            
-                items=[
-                    {"price": plan.stripe_id},
-                ],
-                metadata = {"life": plan.life},              
-                expand=['latest_invoice.confirmation_secret'],
-                automatic_tax={"enabled": True},
-                idempotency_key=str(uuid.uuid4()),
-            )
-            secret = stripe_subscription.latest_invoice.confirmation_secret.client_secret
-        subscriptionId = stripe_subscription.id 
-        new_subscription = models.Subscription()
-        new_subscription.user = user
-        new_subscription.customer = customer
-        new_subscription.plan = plan
-        new_subscription.stripe_id = subscriptionId
-        try:
-            new_subscription.save()
-        except ValidationError as e:
-            if (new_subscription.id is not None): 
-                new_subscription.delete()
-            return JsonResponse({"detail": formatErrors(e.message_dict)}, status=422)
-        return JsonResponse({'clientSecret': secret})
-    else:
-        if trial:
-            stripe_subscription = stripe.Subscription.retrieve(
-                subscription.stripe_id,
-                expand=['pending_setup_intent']
-            )
-            secret = stripe_subscription.pending_setup_intent.client_secret
-        else:
-            stripe_subscription = stripe.Subscription.retrieve(
-                subscription.stripe_id,
-                expand=['latest_invoice.confirmation_secret']
-            )
-            secret = stripe_subscription.latest_invoice.confirmation_secret.client_secret
-        if not secret and stripe_subscription.status in ["trialing", "active"]:
-            subscription.access = True
-            subscription.save()
-            return JsonResponse({'paid': True})
-        else:                  
-            return JsonResponse({'clientSecret': secret})
-        
+
 @router.get('/plans', response=List[schemas.PlanSchema], auth=None)
 def getPlanList(request):
     try:
@@ -238,219 +67,6 @@ def getPlanList(request):
     if plans is not None:
         return plans
     return JsonResponse({"detail": formatErrors({"plan": ["plan-not-exists"]})}, status=422)
-
-@router.post('/webhook', auth=None)
-@csrf_exempt
-def stripeWebhook(request):
-    webhook_secret = settings.STRIPE_WEBHOOK_SECRET_KEY
-    signature = request.headers['Stripe-Signature']
-    try:
-        event = stripe.Webhook.construct_event(
-            payload=request.body, sig_header=signature, secret=webhook_secret
-        )
-        data = event.data
-    except Exception as e:
-        return JsonResponse({'status': 'error', 'msg': e.message})
-    
-    event_type = event.type
-    data_object = data.object 
-    if event_type == 'invoice.created':        
-        try:
-            invoice_exists = models.Invoice.objects.select_related(
-                'user',
-                'customer',
-                'subscription'    
-            ).get(stripe_id=data_object.id)
-            if invoice_exists:
-                return JsonResponse({'Invoice already exists': data_object.id}, status=422)   
-        except models.Invoice.DoesNotExist:
-            pass
-        try:  
-            customer = models.Customer.objects.select_related('user').get(stripe_id=data_object.customer)
-        except models.Customer.DoesNotExist:
-            return JsonResponse({'no such customer': data_object.customer}, status=422)
-        try: 
-            subscription = models.Subscription.objects.select_related(
-                'user',
-                'customer'
-            ).get(stripe_id=data_object.parent.subscription_details.subscription)
-        except models.Subscription.DoesNotExist:
-            return JsonResponse({'no such subscription': data_object.parent.subscription_details.subscription}, status=422)    
-        invoice = models.Invoice()
-        invoice.user = customer.user
-        invoice.subscription = subscription
-        invoice.customer = customer
-        invoice.plan = subscription.plan
-        invoice.status = data_object.status
-        invoice.stripe_id = data_object.id
-        invoice.amount = data_object.amount_due
-        detailed_invoice = stripe.Invoice.retrieve(data_object.id, expand=['total_tax_amounts.tax_rate'])
-        if detailed_invoice.get('total_tax_amounts'):            
-            invoice.tax = detailed_invoice.total_tax_amounts[0].tax_rate.percentage
-        invoice.save()
-    elif event_type == 'invoice.payment_failed':
-        try:
-            invoice = models.Invoice.objects.select_related(
-                'user',
-                'customer',
-                'subscription'    
-            ).get(stripe_id=data_object.id)
-            invoice.status = data_object.status 
-            invoice.save()
-        except models.Invoice.DoesNotExist:
-            return JsonResponse({'no such invoice': data_object.id}, status=422)
-    elif event_type == 'invoice.payment_succeeded':
-        try:
-            invoice = models.Invoice.objects.select_related(
-                'user',
-                'customer',
-                'subscription'    
-            ).get(stripe_id=data_object.id)
-            invoice.status = data_object.status            
-            invoice.save()
-            stripe_subscription = stripe.Subscription.retrieve(
-                data_object.parent.subscription_details.subscription,
-                expand=['pending_setup_intent.payment_method']
-            )
-            stripe_invoice = stripe.Invoice.retrieve(
-                data_object.id,
-                expand=['payment_intent']
-            )
-            
-            if stripe_invoice.get('payment_intent'):
-                intent = stripe_invoice.payment_intent
-            else :
-                intent = stripe_subscription.pending_setup_intent
-                
-            if intent:
-                if not intent.payment_method.customer:
-                    stripe.PaymentMethod.attach(
-                        intent.payment_method.id,
-                        customer=data_object.customer,
-                    )
-                if not stripe_subscription.default_payment_method:
-                    stripe.Subscription.modify (
-                        data_object.parent.subscription_details.subscription,
-                        default_payment_method=intent.payment_method.id,
-                        payment_settings={
-                            'payment_method_types': ['card']                    
-                        }
-                    )
-
-                    customer = stripe.Customer.retrieve(data_object.customer)
-
-                if not customer.invoice_settings.default_payment_method:
-                    stripe.Customer.modify(
-                        data_object.customer,
-                        invoice_settings={
-                            'default_payment_method': intent.payment_method.id
-                        }
-                    )
-            
-            try:
-                subscription = models.Subscription.objects.select_related(
-                    'user',
-                    'customer'   
-                ).get(stripe_id = data_object.parent.subscription_details.subscription)
-                item = stripe.SubscriptionItem.list(
-                    limit=1,
-                    subscription=subscription.stripe_id
-                )
-                if subscription.plan.stripe_id != item.data[0].price.id:
-                    try:
-                        plan = models.Plan.objects.get(stripe_id=item.data[0].price.id)
-                        subscription.plan = plan
-                        subscription.save()
-                    except models.Plan.DoesNotExist:
-                        return JsonResponse({'no such plan price': item.data[0].price.id}, status=422)              
-                if subscription.plan.life and data_object.amount_paid == data_object.amount_due and data_object.amount_due > 0:
-                    stripe.Subscription.modify(
-                        subscription.stripe_id,
-                        cancel_at_period_end=True
-                    )
-            except models.Subscription.DoesNotExist:
-                return JsonResponse({'no such subscription': data_object.parent.subscription_details.subscription}, status=422)
-        except models.Invoice.DoesNotExist:
-            return JsonResponse({'no such invoice': data_object.id}, status=422)
-        
-    elif event_type == 'invoice.finalized':
-        response = requests.get(data_object.invoice_pdf)
-        try:            
-            invoice = models.Invoice.objects.select_related(
-                'user',
-                'customer',
-                'subscription'    
-            ).get(stripe_id=data_object.id)
-            invoice.status = data_object.status
-            invoice.file.save(data_object.id + ".pdf", ContentFile(response.content))
-            invoice.save()            
-        except models.Invoice.DoesNotExist:
-            return JsonResponse({'no such invoice': data_object.id}, status=422)
-        
-    elif event_type == 'customer.subscription.updated':
-        stripe_subscription = stripe.Subscription.retrieve(data_object.id)
-        try:
-            subscription = models.Subscription.objects.select_related(
-                'user',
-                'customer'    
-            ).get(stripe_id=data_object.id)          
-            if subscription.plan.life and data_object.cancel_at:
-                subscription.access = True
-                subscription.status = "infinite"
-            else:
-                subscription.status = data_object.status
-                subscription.access = True if data_object.status in ['active', 'trialing'] else False                  
-                subscription.end = datetime.fromtimestamp(data_object['items']['data'][0].current_period_end)
-            subscription.save()
-        except models.Subscription.DoesNotExist:
-            return JsonResponse({'no such subscription': data_object.id}, status=422)
-        
-    elif event_type == 'customer.subscription.deleted':
-        try:
-            subscription = models.Subscription.objects.select_related(
-                'user',
-                'customer'
-            ).get(stripe_id=data_object.id)
-            subscription.access = False
-            subscription.status = "deleted"
-            subscription.save()
-        except models.Subscription.DoesNotExist:
-            return JsonResponse({'no such subscription': data_object.id}, status=422)
-    elif event_type == 'customer.subscription.trial_will_end':
-        # to warn the client about the end of the trial period
-        pass
-    elif event_type == 'customer.deleted':
-        try:
-            customer = models.Customer.objects.select_related('user').get(stripe_id=data_object.id)
-            subscriptions = models.Subscription.objects.filter(user=customer.user)
-            customer.delete()
-            for subscription in subscriptions:
-                subscription.delete()             
-        except models.Customer.DoesNotExist:
-            return JsonResponse({'no such customer': data_object.id}, status=422)
-    elif event_type == 'product.updated':
-        try:
-            plan = models.Plan.objects.get(product=data_object.id)
-            if plan.label.key == "subscription-life":
-                plan.life = True
-            if not data_object.active:
-                plan.active = False
-                plan.save()
-            else:
-                plan.active = True              
-        except models.Plan.DoesNotExist:
-            new_plan = models.Plan()
-            label = TranslationKey.objects.get(key=data_object.name)
-            new_plan.label = label
-            if label.key == "subscription-life":
-                new_plan.life = True
-            new_plan.product = data_object.id
-            price = stripe.Price.retrieve(data_object.default_price)
-            new_plan.price = price.unit_amount/100
-            new_plan.stripe_id = data_object.default_price
-            new_plan.active = True
-            new_plan.save()
-    return JsonResponse({'result': 'success'})
 
 @router.get('/unsubscribe')
 @check_access()  
@@ -524,11 +140,9 @@ def getTax(request, id: str):
         customer = models.Customer.objects.select_related('user').get(user=user)
     except models.Customer.DoesNotExist:
         # A user who registered while the subscription module was off has no
-        # Stripe customer yet (saveCustomer short-circuited under
-        # NO_SUBSCRIPTION). getTax is the first backend call of the payment
-        # flow, so materialise the customer here — just before paying —
-        # instead of dead-ending on "no-customer". createPayment relies on the
-        # same row existing afterwards.
+        # Stripe customer yet (ensure_customer short-circuits under
+        # NO_SUBSCRIPTION). Materialise it here so the tax preview can be
+        # computed instead of dead-ending on "no-customer".
         saved, error = saveCustomer(user)
         if not saved:
             return JsonResponse({"detail": formatErrors(stripeErrorDict(error))}, status=422)

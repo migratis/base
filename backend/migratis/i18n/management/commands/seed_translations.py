@@ -3732,3 +3732,17 @@ TRANSLATIONS['support'] = {
 }
 
 TRANSLATIONS['email']['tfa-email-subject'] = {'en': "Your security code", 'fr': "Votre code de sécurité", 'es': "Tu código de seguridad", 'ro': "Codul tău de securitate"}
+
+# billing — shared payment engine (stripe_payment app). Error/label keys the
+# unified /billing/* endpoints and the subscribe flow answer with.
+TRANSLATIONS['billing'] = {
+    "payment-service-unavailable": {'en': "The payment service is temporarily unavailable — please try again later.", 'fr': "Le service de paiement est temporairement indisponible — veuillez réessayer plus tard.", 'es': "El servicio de pago no está disponible temporalmente. Inténtalo de nuevo más tarde.", 'ro': "Serviciul de plată este temporar indisponibil — încercați din nou mai târziu."},
+    "taxnumber-invalid": {'en': "The tax number was refused by the payment service.", 'fr': "Le numéro de TVA a été refusé par le service de paiement.", 'es': "El número fiscal fue rechazado por el servicio de pago.", 'ro': "Codul fiscal a fost respins de serviciul de plată."},
+    "payment-failed": {'en': "Payment could not be started. Please try again.", 'fr': "Le paiement n'a pas pu démarrer. Veuillez réessayer.", 'es': "No se pudo iniciar el pago. Inténtalo de nuevo.", 'ro': "Plata nu a putut fi inițiată. Încercați din nou."},
+    "invalid-purpose": {'en': "Unknown payment type.", 'fr': "Type de paiement inconnu.", 'es': "Tipo de pago desconocido.", 'ro': "Tip de plată necunoscut."},
+    "invalid-tier": {'en': "Invalid package selected.", 'fr': "Forfait sélectionné invalide.", 'es': "Paquete seleccionado no válido.", 'ro': "Pachet selectat invalid."},
+    "minimum-quantity": {'en': "The minimum quantity is {{min}}.", 'fr': "La quantité minimale est {{min}}.", 'es': "La cantidad mínima es {{min}}.", 'ro': "Cantitatea minimă este {{min}}."},
+    "payment-cancelled": {'en': "Payment cancelled.", 'fr': "Paiement annulé.", 'es': "Pago cancelado.", 'ro': "Plată anulată."},
+    "payment-success": {'en': "Payment successful.", 'fr': "Paiement réussi.", 'es': "Pago realizado con éxito.", 'ro': "Plată efectuată cu succes."},
+    "ai-credits": {'en': "AI credits", 'fr': "Crédits IA", 'es': "Créditos de IA", 'ro': "Credite AI"},
+}

@@ -1,6 +1,11 @@
 from django.db import models
 from migratis.user.models import User
 from migratis.i18n.models import TranslationKey
+# Customer and Invoice were relocated to the shared stripe_payment app (Phase 5).
+# Re-exported here so existing `models.Customer` / `models.Invoice` references
+# across the subscription app keep resolving. stripe_payment references
+# Subscription/Plan by string, so this import is one-way (no cycle).
+from migratis.stripe_payment.models import Customer, Invoice  # noqa: F401
 
 TAX_ID_TYPE = {
     "ZA": "za_vat",
@@ -97,21 +102,9 @@ class Plan(models.Model):
     def __str__(self):
         return self.label.key + " (" + ("active" if self.active else "inactive") + ")"
 
-class Customer(models.Model):
-    user  = models.ForeignKey(User, on_delete=models.CASCADE, unique=False,)
-    cdate = models.DateTimeField(auto_now_add=True)
-    mdate = models.DateTimeField(auto_now=True) 
-    stripe_id = models.CharField(max_length=50, null=False)
-
-    class Meta:
-        verbose_name_plural = "Customers"
-
-    def __str__(self):
-        return self.user.email + " " + self.stripe_id + " " + str(self.cdate) + " " + str(self.mdate)  
-
 class Subscription(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, unique=False,)
-    customer = models.ForeignKey(Customer, on_delete=models.DO_NOTHING, unique=False, null=True,)
+    customer = models.ForeignKey('stripe_payment.Customer', on_delete=models.DO_NOTHING, unique=False, null=True,)
     plan = models.ForeignKey(Plan, on_delete=models.DO_NOTHING, unique=False,)
     cdate = models.DateTimeField(auto_now_add=True)
     mdate = models.DateTimeField(auto_now=True) 
@@ -125,23 +118,4 @@ class Subscription(models.Model):
         verbose_name_plural = "Subscriptions"
 
     def __str__(self):
-        return str(self.mdate) + " " + self.user.email + " " + self.stripe_id + " " + str(self.access)  
-  
-class Invoice(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, unique=False,)
-    customer = models.ForeignKey(Customer, on_delete=models.DO_NOTHING, unique=False, null=True,)    
-    subscription = models.ForeignKey(Subscription, on_delete=models.CASCADE, unique=False,)
-    plan = models.ForeignKey(Plan, on_delete=models.DO_NOTHING, unique=False,)
-    cdate = models.DateTimeField(auto_now_add=True)
-    mdate = models.DateTimeField(auto_now=True) 
-    status = models.CharField(max_length=20, default="draft")
-    file = models.FileField(upload_to='migratis/subscription/invoices', blank=True, null=True,)
-    stripe_id = models.CharField(max_length=50, null=False)
-    amount = models.DecimalField(default=0, max_digits=99, decimal_places=2)
-    tax = models.DecimalField(default=0, max_digits=99, decimal_places=2)
-    
-    class Meta:
-        verbose_name_plural = "Invoices"
-
-    def __str__(self):
-        return str(self.mdate) + " " + self.user.email + " " + self.status + " " + self.stripe_id
+        return str(self.mdate) + " " + self.user.email + " " + self.stripe_id + " " + str(self.access)

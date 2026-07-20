@@ -1,27 +1,24 @@
 import { useState, useEffect } from "react";
 import SelectField from '../../common/fields/SelectField';
-import { 
+import {
   CommonModal as ConfirmationModal,
-  CommonModal as ChangeModal,
-  CommonModal as PaymentModal
+  CommonModal as ChangeModal
 } from "../../common/modals/CommonModal";
 import SubscriptionService from '../services/subscription.service';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-toastify';
 import moment from 'moment';
-import { 
-  IoCardOutline as CardOutline, 
-  IoDownloadOutline as DownloadOutline, 
-  IoLockClosedOutline as LockClosedOutline 
+import {
+  IoCardOutline as CardOutline,
+  IoDownloadOutline as DownloadOutline
 } from 'react-icons/io5';
 import { useNavigate } from 'react-router-dom';
 import Badge from 'react-bootstrap/Badge';
 import download from 'downloadjs';
-import StripePaymentForm from "./StripePaymentForm";
 import { COLOR_LINK } from "../../settings";
 
 export const Subscription = (props) => {
-  const { t } = useTranslation('subscription');
+  const { t } = useTranslation(['subscription', 'billing']);
   const navigate = useNavigate();
   const [ confirmationModalShow, setConfirmationModalShow ] = useState(false);
   const [ changeModalShow, setChangeModalShow ] = useState(false);  
@@ -31,9 +28,6 @@ export const Subscription = (props) => {
   const [ selectablePlans, setSelectablePlans ] = useState([]);
   const [ planSelected, setPlanSelected ] = useState(null);
   const [ wait, setWait ] = useState(true);
-  const [ paymentModalShow, setPaymentModalShow ] = useState(false);
-  const [ plans, setPlans ] = useState([]);
-  const [ planId, setPlanId ] = useState(null);
   //const subscriptionChangeable = ["active", "pause"]
 
   useEffect(() => {
@@ -46,7 +40,6 @@ export const Subscription = (props) => {
       setWait(true);
       SubscriptionService.getPlans().then(
         (response) => {
-          setPlans(response);
           let filterPlans = response.filter(
             (item) => {     
               return (item.id !== subscription.plan.id);
@@ -64,23 +57,19 @@ export const Subscription = (props) => {
     }
   }, []);// eslint-disable-line react-hooks/exhaustive-deps
 
-  const closePaymentModal = () => {
-    setPaymentModalShow(false);
-  }  
-
   const handleChangePlan= (id) => {
     setDisableSubmit(true);
-    setPlanId(id);
     SubscriptionService.changePlan(id).then(
       (response) => {
         if (response.details[0].success) {
           toast.success(t(response.details[0].success[0]));
           setChangeModalShow(false);
           subscription.changed = true;
-          props.setSubscription(subscription)          
-          setSubscription(subscription);            
+          props.setSubscription(subscription)
+          setSubscription(subscription);
           setDisableSubmit(false);
-          if (response.details[0].needPayment) setPaymentModalShow(true);
+          // Proration on an upgrade is auto-charged by Stripe to the payment
+          // method saved at checkout — no in-app card re-entry needed.
         } else {
           setDisableSubmit(false);
           toast.error(t(response.detail[0].msg));
@@ -190,7 +179,7 @@ export const Subscription = (props) => {
               <div className="invoices">  
               { invoices.map(item => 
                 <p key={item.id}>
-                  {t(item.plan.label.key)}&nbsp;
+                  {item.plan ? t(item.plan.label.key) : t('ai-credits', { ns: 'billing' })}&nbsp;
                   { item.amount === 0 &&
                     <span>
                       ({t("trial-period")})&nbsp;
@@ -255,21 +244,8 @@ export const Subscription = (props) => {
             </div>        
           </ChangeModal>
           }
-          <PaymentModal
-            show={paymentModalShow}
-            onHide={() => setPaymentModalShow(false)}
-            icon={<LockClosedOutline color={'#ffffff'} title={t('secure-zone')} />}
-            title={t('secure-payment')}
-            nocontainer="true"
-          >
-            <StripePaymentForm 
-              plan={plans.find((item) => { return item.id === planId })}
-              trial={false}
-              closePaymentModal={closePaymentModal}
-            />
-          </PaymentModal>
         </>
-      } 
+      }
     </div>
-  );  
+  );
 }

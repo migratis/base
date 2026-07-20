@@ -10,13 +10,31 @@ const getPlans = () => {
   );
 };
 
-const createPayment = (data) => {
-  return api.get("/subscription/payment/" + data.id, {})
+// Unified payment engine: subscribing starts a hosted Checkout Session and
+// redirects; the return page confirms via verifyCheckout.
+const startCheckout = (planId) => {
+  const params = new URLSearchParams({ purpose: 'subscription', plan_id: planId });
+  return api.post(`/billing/checkout?${params.toString()}`)
     .then( (response) => {
       if (response.data) return response.data;
       else return response;
-    } 
-  )
+    })
+    .catch( (error) => {
+      if (error.response && error.response.status === 422) {
+        const detail = error.response.data && error.response.data.detail;
+        return { error: detail && detail[0] ? detail[0].msg : 'payment-failed' };
+      }
+      return { error: 'payment-failed' };
+    });
+};
+
+const verifyCheckout = (sessionId) => {
+  const params = sessionId ? `?session_id=${encodeURIComponent(sessionId)}` : '';
+  return api.get(`/billing/checkout/verify${params}`)
+    .then( (response) => {
+      if (response.data) return response.data;
+      else return response;
+    });
 };
   
 const getInvoices = () => {
@@ -55,24 +73,6 @@ const resubscribe = () => {
   )
 };
 
-const getTax = (id) => {
-  return api.get("/subscription/tax/" + id, {})
-    .then( (response) => {
-      if (response.data) return response.data;
-      else return response;
-    }
-  ).catch( (error) => {
-    // A Stripe failure while materialising the customer (e.g. a refused tax
-    // number) comes back as a 422 { detail: [{ msg }] }. Surface the specific
-    // key so the payment form toasts the real reason instead of a generic one.
-    if (error.response && error.response.status === 422) {
-      const detail = error.response.data && error.response.data.detail;
-      return { error: detail && detail[0] ? detail[0].msg : "no-customer" };
-    }
-    return { error: "no-customer" };
-  });
-};
-
 const changePlan = (id) => {
   return api.post("/subscription/change", qs.stringify(
     { 
@@ -95,12 +95,12 @@ const changePlan = (id) => {
 
 const SubscriptionService = {
   getPlans,
-  createPayment,
+  startCheckout,
+  verifyCheckout,
   getInvoices,
   download,
   unsubscribe,
   resubscribe,
-  getTax,
   changePlan
 }
   

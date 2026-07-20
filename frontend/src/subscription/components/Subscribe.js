@@ -2,77 +2,85 @@ import { useEffect, useState } from "react";
 import { useTranslation } from 'react-i18next';
 import SubscriptionService from '../services/subscription.service';
 import Table from 'react-bootstrap/Table';
-import { 
-  IoCardOutline as CardOutline,
-  IoLockClosedOutline as LockClosedOutline 
-} from 'react-icons/io5';
+import { IoCardOutline as CardOutline } from 'react-icons/io5';
 import { toast } from 'react-toastify';
-import { CommonModal } from '../../common/modals/CommonModal';
 import { LoaderIndicator } from '../../common/components/LoaderIndicator';
 import DOMPurify from 'dompurify';
-import StripePaymentForm from "./StripePaymentForm";
 import UserService from "../../user/services/user.service";
-import { useOutletContext } from "react-router-dom";
-import { useNavigate } from "react-router-dom";
+import { useOutletContext, useNavigate, useSearchParams } from "react-router-dom";
+import { TRIAL } from "../../settings";
 
 const Subscribe = () => {
-  const { t } = useTranslation('subscription');
+  const { t } = useTranslation(['subscription', 'billing']);
   // eslint-disable-next-line
-  const { user, setUser } = useOutletContext(); 
+  const { user, setUser } = useOutletContext();
   const [ plans, setPlans ] = useState([]);
-  const [ planId, setPlanId ] = useState(null);
-  const [ paymentModalShow, setPaymentModalShow ] = useState(false);
-  const [ subscription, setSubscription ] = useState(null);
+  const [ processing, setProcessing ] = useState(false);
   const navigate = useNavigate();
+  const [ searchParams, setSearchParams ] = useSearchParams();
+  // Trial is offered only when the frontend TRIAL flag is on AND the backend
+  // marks the user trial-eligible (user.trial, gated by SUBSCRIPTION_TRIAL).
+  const showTrial = TRIAL && !!(user && user.trial);
+
+  // After returning from Checkout, poll the profile until the webhook has
+  // activated access, then land the user on their account.
+  const refreshUser = (attempt) => {
+    if (attempt > 5) {
+      toast.error(t('subscription-error'));
+      setProcessing(false);
+      return;
+    }
+    UserService.refreshUser().then((response) => {
+      if (response.user && response.user.subscription && response.user.subscription.access) {
+        const storedUser = {
+          id: response.user.id,
+          trial: response.user.trial,
+          subscription: response.user.subscription.status,
+        };
+        localStorage.setItem("user", JSON.stringify(storedUser));
+        setUser(storedUser);
+        navigate("/account");
+      } else {
+        setTimeout(() => refreshUser(attempt + 1), 1000);
+      }
+    });
+  };
 
   useEffect(() => {
-
-    if ((user && ["trialing", "infinite", "active"].indexOf(user.subscription) !== -1) || (subscription && subscription.access)) {
+    if (user && ["trialing", "infinite", "active"].indexOf(user.subscription) !== -1) {
       navigate("/account");
+      return;
     }
 
-    SubscriptionService.getPlans().then(
-        (response) => {
-          setPlans(response);
-        }
-    );
+    const payment = searchParams.get('payment');
+    if (payment === 'success') {
+      const sessionId = searchParams.get('session_id');
+      setProcessing(true);
+      SubscriptionService.verifyCheckout(sessionId).then(() => {
+        setSearchParams({}, { replace: true });
+        refreshUser(1);
+      });
+    } else if (payment === 'cancelled') {
+      toast.info(t('payment-cancelled', { ns: 'billing' }));
+      setSearchParams({}, { replace: true });
+    }
+
+    SubscriptionService.getPlans().then((response) => setPlans(response));
   }, []);// eslint-disable-line react-hooks/exhaustive-deps
-  
+
   const handlePayment = (id) => {
-    if (id) {
-        setPlanId(id);
-        setPaymentModalShow(true);
-    }
+    if (!id) return;
+    setProcessing(true);
+    SubscriptionService.startCheckout(id).then((response) => {
+      if (response && response.checkout_url) {
+        // Hand off to Stripe-hosted Checkout.
+        window.location.href = response.checkout_url;
+      } else {
+        toast.error(t(response?.error || 'payment-failed', { ns: 'billing' }));
+        setProcessing(false);
+      }
+    });
   };
-
-  const refreshUser = (attempt) => {
-    if (attempt < 5) {
-      UserService.refreshUser().then(
-        (response) => {
-          if (response.user && response.user.subscription && response.user.subscription.access) { 
-            const storedUser = {
-              id: response.user.id,
-              trial: response.user.trial,
-              subscription: response.user.subscription.status
-            };
-            localStorage.setItem("user", JSON.stringify(storedUser));
-            setUser(storedUser);
-            setSubscription(response.user.subscription);
-            setPaymentModalShow(false);
-            navigate("/account");
-          } else {
-            setTimeout(refreshUser(1), 1000);
-          }
-        }
-      );
-    } else {
-      toast.error(t('subscription-error'));
-    }
-  };
-
-  const closePaymentModal = () => {
-    setTimeout(refreshUser(1), 1000); 
-  }  
 
   return (
     <>
@@ -82,18 +90,18 @@ const Subscribe = () => {
             <h2>{t('plans')}</h2>
           </div>
         </div>
-      </header>       
+      </header>
       <p>
         <strong>
-          <span dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(user && user.trial ? t('trial-subscription') : t('normal-subscription')) }} />
+          <span dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(showTrial ? t('trial-subscription') : t('normal-subscription')) }} />
         </strong>
       </p>
-      { user && user.trial &&
+      { showTrial &&
         <p className="card card-success">
           {t("trial-explanation")}
         </p>
       }
-      <LoaderIndicator />
+      { processing && <LoaderIndicator /> }
       <Table striped responsive bordered hover>
         <thead>
           <tr>
@@ -104,44 +112,31 @@ const Subscribe = () => {
         </thead>
         <tbody>
           { plans && plans.length>0 ? plans.map(
-            item => 
+            item =>
             <tr key={item.id}>
-              <td>{t(item.label.key)}&nbsp;{user && user.trial?t('with-trial'):''}</td>
+              <td>{t(item.label.key)}&nbsp;{showTrial?t('with-trial'):''}</td>
               <td>{item.price}&nbsp;€</td>
-              <td> 
+              <td>
                 <span className="link action" onClick={ () => handlePayment(item.id)}>
-                  <button className="btn btn-primary">
+                  <button className="btn btn-primary" disabled={processing}>
                     <CardOutline color={null} title={t('proceed-to-payment')} />
-                    &nbsp; {user && user.trial ? t('try') : t('pay')}
+                    &nbsp; {showTrial ? t('try') : t('pay')}
                   </button>
-                </span>           
+                </span>
               </td>
-            </tr> 
+            </tr>
           )
           :
             <tr>
               <td colSpan="3" className="text-center">
-                {t('no-plans-for-the-moment')}           
+                {t('no-plans-for-the-moment')}
               </td>
             </tr>
           }
         </tbody>
       </Table>
-      <CommonModal
-        show={paymentModalShow}
-        onHide={() => setPaymentModalShow(false)}
-        icon={<LockClosedOutline color={'#ffffff'} title={t('secure-zone')} />}
-        title={t('secure-payment')}
-        nocontainer="true"
-      >
-        <StripePaymentForm 
-          plan={plans.find((item) => { return item.id === planId })}
-          trial={user.trial}
-          closePaymentModal={closePaymentModal}
-        />
-      </CommonModal>
     </>
   );
-}; 
+};
 
 export default Subscribe;

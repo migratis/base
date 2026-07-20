@@ -19,4 +19,4 @@ class InvoiceSchema(ModelSchema):
     plan: PlanSchema | None = None
     class Meta:
         model = models.Invoice
-        fields = ['id', 'subscription', 'cdate', 'mdate', 'status', 'amount']        
+        fields = ['id', 'subscription', 'plan', 'purpose', 'cdate', 'mdate', 'status', 'amount']
