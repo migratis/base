@@ -20,7 +20,7 @@ from django.conf import settings
 from django.core.files.base import ContentFile
 
 from migratis.i18n.models import TranslationKey
-from migratis.stripe_payment import registry
+from migratis.stripe_payment.plugins import BillingPlugin, register_plugin
 from . import models
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
@@ -274,13 +274,20 @@ def on_product_updated(event):
 
 
 def register():
-    registry.register_checkout_builder('subscription', build_subscription_checkout)
-    registry.register_purpose('subscription', grant_subscription)
-    registry.register_event('customer.subscription.updated', on_subscription_updated)
-    registry.register_event('customer.subscription.deleted', on_subscription_deleted)
-    registry.register_event('invoice.created', on_invoice_created)
-    registry.register_event('invoice.payment_failed', on_invoice_payment_failed)
-    registry.register_event('invoice.payment_succeeded', on_invoice_payment_succeeded)
-    registry.register_event('invoice.finalized', on_invoice_finalized)
-    registry.register_event('customer.deleted', on_customer_deleted)
-    registry.register_event('product.updated', on_product_updated)
+    register_plugin(BillingPlugin(
+        purpose='subscription',
+        checkout_builder=build_subscription_checkout,
+        grant_handler=grant_subscription,
+        events={
+            'customer.subscription.updated': on_subscription_updated,
+            'customer.subscription.deleted': on_subscription_deleted,
+            'invoice.created': on_invoice_created,
+            'invoice.payment_failed': on_invoice_payment_failed,
+            'invoice.payment_succeeded': on_invoice_payment_succeeded,
+            'invoice.finalized': on_invoice_finalized,
+            'customer.deleted': on_customer_deleted,
+            'product.updated': on_product_updated,
+        },
+        label_key='subscription',
+        module='subscription',
+    ))

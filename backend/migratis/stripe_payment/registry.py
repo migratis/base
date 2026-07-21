@@ -8,7 +8,7 @@ points feature → stripe_payment. Registration happens in each feature app's
 Two kinds of handler:
 
 * **purpose handler** — keyed on the ``purpose`` metadata we stamp on every
-  Checkout Session (e.g. ``ai_credits``, ``subscription``). Invoked once, from
+  Checkout Session (e.g. ``credits``, ``subscription``). Invoked once, from
   inside the idempotent grant (``services.grant_for_session``), when a
   ``checkout.session.completed`` event / redirect-return first applies a paid
   session. Signature: ``handler(user, session, payment) -> None``.
@@ -16,6 +16,11 @@ Two kinds of handler:
 * **event handler** — keyed on a raw Stripe event type (e.g.
   ``customer.subscription.updated``). Invoked for lifecycle events that are not
   one-off grants. Signature: ``handler(event) -> None``. Multiple allowed.
+
+These are the low-level primitives. Features register through the declarative
+``plugins.register_plugin(BillingPlugin(...))`` wrapper (``plugins.py``), which
+wires all of the above in one call and records the plugin so the platform can
+enumerate what is installed.
 """
 
 _PURPOSE_HANDLERS = {}

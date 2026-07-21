@@ -3744,5 +3744,26 @@ TRANSLATIONS['billing'] = {
     "minimum-quantity": {'en': "The minimum quantity is {{min}}.", 'fr': "La quantité minimale est {{min}}.", 'es': "La cantidad mínima es {{min}}.", 'ro': "Cantitatea minimă este {{min}}."},
     "payment-cancelled": {'en': "Payment cancelled.", 'fr': "Paiement annulé.", 'es': "Pago cancelado.", 'ro': "Plată anulată."},
     "payment-success": {'en': "Payment successful.", 'fr': "Paiement réussi.", 'es': "Pago realizado con éxito.", 'ro': "Plată efectuată cu succes."},
-    "ai-credits": {'en': "AI credits", 'fr': "Crédits IA", 'es': "Créditos de IA", 'ro': "Credite AI"},
+    "credits": {'en': "Credits", 'fr': "Crédits", 'es': "Créditos", 'ro': "Credite"},
+}
+
+# ── credits (migratis.credits) ─────────────────────────────────────────────
+# De-AI'd credit widget / purchase-modal copy. The credits FE module resolves
+# from `credits` + `billing` only.
+TRANSLATIONS['credits'] = {
+    "credits": {'en': "Credits available: {{remaining}}", 'fr': "Crédits disponibles : {{remaining}}", 'es': "Créditos disponibles: {{remaining}}", 'ro': "Credite disponibile: {{remaining}}"},
+    "credits-remaining": {'en': "{{credits}} credit(s) remaining", 'fr': "{{credits}} crédit(s) restant(s)", 'es': "{{credits}} crédito(s) restante(s)", 'ro': "{{credits}} credit(e) rămase"},
+    "credits-cost": {'en': "This will use {{credits}} credit(s)", 'fr': "Cela utilisera {{credits}} crédit(s)", 'es': "Esto usará {{credits}} crédito(s)", 'ro': "Aceasta va folosi {{credits}} credit(e)"},
+    "click-to-buy": {'en': "Click to buy more credits", 'fr': "Cliquez pour acheter plus de crédits", 'es': "Haga clic para comprar más créditos", 'ro': "Faceți clic pentru a cumpăra mai multe credite"},
+    "extra-credits": {'en': "extra credits", 'fr': "crédits supplémentaires", 'es': "créditos adicionales", 'ro': "credite suplimentare"},
+    "credits-label": {'en': "Credits", 'fr': "Crédits", 'es': "Créditos", 'ro': "Credite"},
+    "purchase-extra-credits": {'en': "Purchase extra credits", 'fr': "Acheter des crédits supplémentaires", 'es': "Comprar créditos adicionales", 'ro': "Cumpărați credite suplimentare"},
+    "subscribe-for-unlimited": {'en': "Or subscribe for unlimited access — a subscription removes the credit limit entirely.", 'fr': "Ou abonnez-vous pour un accès illimité — un abonnement supprime totalement la limite de crédits.", 'es': "O suscríbete para acceso ilimitado — una suscripción elimina por completo el límite de créditos.", 'ro': "Sau abonează-te pentru acces nelimitat — un abonament elimină complet limita de credite."},
+    "subscribe": {'en': "Subscribe", 'fr': "S'abonner", 'es': "Suscribirse", 'ro': "Abonează-te"},
+    "limit-reached-description": {'en': "You have used all your credits. Purchase more to continue.", 'fr': "Vous avez utilisé tous vos crédits. Achetez-en plus pour continuer.", 'es': "Has utilizado todos tus créditos. Compra más para continuar.", 'ro': "Ați utilizat toate creditele. Cumpărați mai multe pentru a continua."},
+    "price-per-credit": {'en': "€{{price}} per credit", 'fr': "{{price}}€ par crédit", 'es': "€{{price}} por crédito", 'ro': "€{{price}} per credit"},
+    "minimum-quantity": {'en': "Minimum quantity is {{min}} extra credits", 'fr': "La quantité minimum est de {{min}} crédits supplémentaires", 'es': "La cantidad mínima es de {{min}} créditos adicionales", 'ro': "Cantitatea minimă este de {{min}} credite suplimentare"},
+    "cancel": {'en': "Cancel", 'fr': "Annuler", 'es': "Cancelar", 'ro': "Anulează"},
+    "buy-now": {'en': "Buy now", 'fr': "Acheter maintenant", 'es': "Comprar ahora", 'ro': "Cumpără acum"},
+    "loading": {'en': "Loading...", 'fr': "Chargement...", 'es': "Cargando...", 'ro': "Se încarcă..."},
 }

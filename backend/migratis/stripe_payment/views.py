@@ -30,7 +30,7 @@ router = Router()
 @router.post('/checkout')
 def checkout(request, purpose: str):
     """Unified Checkout entry point. `purpose` selects the registered builder
-    (e.g. 'ai_credits', 'subscription'), which assembles the line items; the
+    (e.g. 'credits', 'subscription'), which assembles the line items; the
     shared service attaches the Customer and stamps routing metadata."""
     builder = registry.get_checkout_builder(purpose)
     if builder is None:

@@ -5,87 +5,32 @@ import {
   IoPersonOutline as PersonOutline,
   IoLogOutOutline as LogOutOutline,
   IoHelpBuoyOutline as HelpOutline,
+  IoAtOutline as AtOutline,
+  IoAtCircleOutline as AtCircleOutline,
   IoGlobeOutline as GlobeOutline,
+  IoChevronDown as ChevronDown,
+  IoChevronUp as ChevronUp,
   IoGridOutline as GridOutline,
-  IoDocumentTextOutline,
-  IoCartOutline,
-  IoBasketOutline,
-  IoPricetagOutline,
-  IoRestaurantOutline,
-  IoBookOutline,
-  IoCalendarOutline,
-  IoPeopleOutline,
-  IoStarOutline,
-  IoChatbubbleOutline,
-  IoImageOutline,
-  IoCubeOutline,
-  IoCardOutline,
-  IoCashOutline,
-  IoLocationOutline,
-  IoHomeOutline,
-  IoClipboardOutline,
-  IoFolderOutline,
-  IoTimeOutline,
-  IoSettingsOutline,
-  IoMailOutline,
-  IoMusicalNotesOutline,
-  IoCarOutline,
-  IoMedkitOutline,
-  IoSchoolOutline,
 } from 'react-icons/io5';
-
-// Menu-icon name → component. Mirrors generator MENU_ICONS
-// (backend migratis/generator/icons.py); an unknown/blank name falls back to
-// the grid icon. Each generated menu item carries its own `icon` name.
-const MENU_ICONS = {
-  grid: GridOutline,
-  document: IoDocumentTextOutline,
-  cart: IoCartOutline,
-  basket: IoBasketOutline,
-  pricetag: IoPricetagOutline,
-  restaurant: IoRestaurantOutline,
-  book: IoBookOutline,
-  calendar: IoCalendarOutline,
-  person: PersonOutline,
-  people: IoPeopleOutline,
-  star: IoStarOutline,
-  chatbubble: IoChatbubbleOutline,
-  image: IoImageOutline,
-  cube: IoCubeOutline,
-  card: IoCardOutline,
-  cash: IoCashOutline,
-  location: IoLocationOutline,
-  home: IoHomeOutline,
-  clipboard: IoClipboardOutline,
-  folder: IoFolderOutline,
-  time: IoTimeOutline,
-  settings: IoSettingsOutline,
-  mail: IoMailOutline,
-  'musical-notes': IoMusicalNotesOutline,
-  car: IoCarOutline,
-  medkit: IoMedkitOutline,
-  school: IoSchoolOutline,
-};
 import LangSelector from './LangSelector';
 import UserService from "../../user/services/user.service";
 import { toast } from 'react-toastify';
+import CreditsIndicator from '../../credits/components/CreditsIndicator';
 import Login from "../../user/components/Login";
 import { BlockedModal as LoginModal } from "../modals/BlockedModal";
-import { SUPPORT } from '../../settings';
-// Namespace import: older generated registries don't export moduleRoles —
-// destructuring it directly would crash the bundle.
-import * as moduleRegistry from '../../module_registry';
-import { isMenuItemVisible } from '../tools/moduleRoles';
+import { MIGRATIS, CREDITS, SUPPORT } from '../../settings';
+// The generator module (and its left menu) is not shipped in base.
 import logo from '../../img/logo.png';
-
-const moduleMenuItems = moduleRegistry.moduleMenuItems || [];
-const moduleRoles     = moduleRegistry.moduleRoles || {};
 
 export const MenuLeft = (props) => {
   const { t } = useTranslation('layout');
   const navigate = useNavigate();
   const [ expanded, setExpanded ] = useState(false);
   const [ loginModalShow, setLoginModalShow ] = useState(false);
+  const [ openSections, setOpenSections ] = useState({
+    migratis: true,
+    generator: true,
+  });
 
   useEffect(() => {
     const handleResize = () => {
@@ -96,6 +41,13 @@ export const MenuLeft = (props) => {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  const toggleSection = (section) => {
+    setOpenSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
 
   useEffect(() => {
     if (props.mobileOpen) {
@@ -133,7 +85,48 @@ export const MenuLeft = (props) => {
         <div className="sidebar-content">
           {props.user ? (
             <>
-              <div className="sidebar-divider" />
+              {CREDITS && (
+                <div className="sidebar-section">
+                  <CreditsIndicator compact />
+                </div>
+              )}
+
+              {MIGRATIS && (
+                <div className="sidebar-section">
+                  <div
+                    className="sidebar-section-header"
+                    onClick={() => toggleSection('migratis')}
+                  >
+                    <GridOutline />
+                    <span className="sidebar-section-title">{t('migratis')}</span>
+                    <span className="sidebar-section-chevron">
+                      {openSections.migratis ? <ChevronUp /> : <ChevronDown />}
+                    </span>
+                  </div>
+                  {openSections.migratis && (
+                    <>
+                      <NavLink
+                        to="/migratis/item"
+                        className={({isActive}) => `sidebar-item ${isActive ? 'active' : ''}`}
+                        onClick={props.onMobileClose}
+                      >
+                        <AtOutline />
+                        <span className="sidebar-label">{t('items')}</span>
+                      </NavLink>
+                      <NavLink
+                        to="/migratis/subitem"
+                        className={({isActive}) => `sidebar-item ${isActive ? 'active' : ''}`}
+                        onClick={props.onMobileClose}
+                      >
+                        <AtCircleOutline />
+                        <span className="sidebar-label">{t('subitems')}</span>
+                      </NavLink>
+                    </>
+                  )}
+                </div>
+              )}
+
+<div className="sidebar-divider" />
 
               <div className="sidebar-section">
                 <NavLink
@@ -189,32 +182,6 @@ export const MenuLeft = (props) => {
                 <span className="sidebar-label">{t('contact')}</span>
               </a>
             </div>
-          )}
-
-          {/* Pages contributed by installed modules (built into module_registry.js).
-              Filtered by the viewer's role against each entry's min_list_role —
-              the same navigation rule the sandbox applies. `props.user` makes
-              the filter re-run on login/logout. */}
-          {moduleMenuItems.filter((item) => isMenuItemVisible(item, moduleRoles)).length > 0 && (
-            <>
-              <div className="sidebar-divider" />
-              <div className="sidebar-section">
-                {moduleMenuItems.filter((item) => isMenuItemVisible(item, moduleRoles)).map((item) => {
-                  const Icon = MENU_ICONS[item.icon] || GridOutline;
-                  return (
-                    <NavLink
-                      key={item.path}
-                      to={item.path}
-                      className={({isActive}) => `sidebar-item ${isActive ? 'active' : ''}`}
-                      onClick={props.onMobileClose}
-                    >
-                      <Icon />
-                      <span className="sidebar-label">{t(item.label, item.label)}</span>
-                    </NavLink>
-                  );
-                })}
-              </div>
-            </>
           )}
         </div>
       </div>

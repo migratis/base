@@ -64,6 +64,8 @@ INSTALLED_APPS = [
     # 'migratis.cookie.apps.CookieConfig',
     # 'migratis.support.apps.SupportConfig',
     # 'migratis.subscription.apps.SubscriptionConfig',
+    # 'migratis.stripe_payment.apps.StripePaymentConfig',
+    # 'migratis.credits.apps.CreditsConfig',
 ]
 
 # django.contrib.postgres requires a live PostgreSQL backend — exclude for SQLite.
@@ -217,7 +219,17 @@ EMAIL_MODERATOR = env('EMAIL_MODERATOR', default='')
 STRIPE_API_KEY  = env('STRIPE_API_KEY')
 STRIPE_SECRET_KEY = env('STRIPE_SECRET_KEY')
 STRIPE_WEBHOOK_SECRET_KEY = env('STRIPE_WEBHOOK_SECRET_KEY')
- 
+
+# ── credits (migratis.credits) ─────────────────────────────────────────────
+# Read by the credits app when activated. Harmless when inactive.
+CREDITS_FREE_TIER_LIMIT = 10  # free credits per user
+CREDIT_TIERS = [
+    {'max_calls': 20, 'extra_amount': 20, 'price': '9.99'},
+    {'max_calls': 100, 'extra_amount': 50, 'price': '19.99'},
+    {'max_calls': None, 'extra_amount': 100, 'price': '29.99'},
+]
+CREDITS_CURRENCY = 'eur'
+
 CRONJOBS = []
 
 # Subscription gate — False means check_access() enforces subscription
