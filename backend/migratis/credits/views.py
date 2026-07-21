@@ -7,15 +7,22 @@ POST /billing/checkout?purpose=credits → GET /billing/checkout/verify.
 from django.conf import settings
 from ninja import Router
 
-from migratis.subscription.decorators import check_access
 from .models import CreditCost
 from .services import get_or_create_balance, has_active_subscription
 
 router = Router()
 
 
+# NOTE on @check_access: these endpoints are intentionally NOT gated by
+# @check_access(). Credits exist FOR users WITHOUT a subscription — the default
+# entitlement provider denies exactly those users, so gating the credit balance /
+# price list behind the entitlement they come here to buy would be a
+# contradiction (the same reasoning that leaves /billing/checkout and the
+# subscription plans/tax endpoints ungated). They still require authentication
+# (the API default auth) and scope strictly to request.user.
+
+
 @router.get('/balance')
-@check_access()
 def balance(request):
     """Current credit balance. `unlimited` is True when an active subscription
     covers usage — the frontend hides the counter / buy affordance in that case
@@ -28,7 +35,6 @@ def balance(request):
 
 
 @router.get('/tiers')
-@check_access()
 def tiers(request):
     """Available credit packs for purchase."""
     return [
@@ -42,7 +48,6 @@ def tiers(request):
 
 
 @router.get('/costs')
-@check_access()
 def costs(request):
     """Return the credit cost for each configured operation."""
     return {c.operation: c.credits for c in CreditCost.objects.all()}
