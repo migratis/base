@@ -192,8 +192,12 @@ def grant_for_session(session):
         return False, None
 
     metadata = _get(session, 'metadata') or {}
-    purpose = metadata.get('purpose') if isinstance(metadata, dict) else _get(metadata, 'purpose')
-    user_id = metadata.get('user_id') if isinstance(metadata, dict) else _get(metadata, 'user_id')
+    # A live webhook delivers metadata as a Stripe `StripeObject`, on which
+    # `dict(...)` raises — normalise to a plain dict (unit tests pass a dict).
+    if hasattr(metadata, 'to_dict'):
+        metadata = metadata.to_dict()
+    purpose = metadata.get('purpose')
+    user_id = metadata.get('user_id')
     if not purpose or not user_id:
         return False, None
 
