@@ -10,6 +10,7 @@ from migratis.subscription.decorators import check_access
 from migratis.stripe_payment.services import (
     ensure_customer as _ensure_customer,
     stripe_error_dict as _stripe_error_dict,
+    sync_invoices as _sync_invoices,
 )
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
@@ -102,6 +103,13 @@ def resubscribe(request):
 @router.get('/invoices', response=List[schemas.InvoiceSchema])
 def invoices(request):
     userId = request.user.id
+    # Pull any invoices Stripe has but we don't (missed/undelivered webhooks —
+    # always the case on a localhost dev box). Best-effort: a Stripe hiccup must
+    # not blank the list, so we still return whatever is already stored.
+    try:
+        _sync_invoices(request.user)
+    except Exception:
+        pass
     invoices = models.Invoice.objects.select_related(
         'user',
         'customer',

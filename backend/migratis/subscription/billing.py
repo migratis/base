@@ -13,6 +13,7 @@ Registers, for the ``subscription`` purpose:
 Wired at app start from ``SubscriptionConfig.ready()``.
 """
 from datetime import datetime
+from decimal import Decimal
 
 import requests
 import stripe
@@ -167,8 +168,12 @@ def on_invoice_created(event):
         amount=data_object['amount_due'],
     )
     detailed_invoice = stripe.Invoice.retrieve(data_object['id'], expand=['total_tax_amounts.tax_rate'])
-    if detailed_invoice.get('total_tax_amounts'):
-        invoice.tax = detailed_invoice.total_tax_amounts[0].tax_rate.percentage
+    # `retrieve` returns a StripeObject, on which `.get(...)` raises — read the
+    # optional field with getattr (StripeObject raises AttributeError on a
+    # missing key, so the default applies).
+    tax_amounts = getattr(detailed_invoice, 'total_tax_amounts', None)
+    if tax_amounts:
+        invoice.tax = tax_amounts[0].tax_rate.percentage
     invoice.save()
 
 
@@ -257,20 +262,26 @@ def on_customer_deleted(event):
 def on_product_updated(event):
     data_object = event['data']['object']
     plan = models.Plan.objects.filter(product=data_object['id']).first()
-    if plan:
-        if plan.label.key == "subscription-life":
-            plan.life = True
-        plan.active = bool(data_object['active'])
-        plan.save()
-    else:
+    if plan is None:
         label = TranslationKey.objects.get(key=data_object['name'])
-        new_plan = models.Plan(product=data_object['id'], label=label, active=True)
-        if label.key == "subscription-life":
-            new_plan.life = True
-        price = stripe.Price.retrieve(data_object['default_price'])
-        new_plan.price = price.unit_amount / 100
-        new_plan.stripe_id = data_object['default_price']
-        new_plan.save()
+        plan = models.Plan(product=data_object['id'], label=label)
+
+    plan.active = bool(data_object['active'])
+    if plan.label.key == "subscription-life":
+        plan.life = True
+
+    # Keep the local Price id + amount in sync with the product's default price
+    # on EVERY event, not only on first create. Otherwise a plan created with a
+    # stale/wrong stripe_id (e.g. a product id instead of a price id, or a
+    # live-mode id in a test-mode account) never self-heals and Checkout keeps
+    # failing with "No such price".
+    default_price = data_object.get('default_price')
+    if default_price:
+        price = stripe.Price.retrieve(default_price)
+        plan.stripe_id = default_price
+        plan.price = Decimal(price.unit_amount) / Decimal(100)
+
+    plan.save()
 
 
 def register():

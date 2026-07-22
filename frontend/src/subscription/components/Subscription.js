@@ -30,32 +30,32 @@ export const Subscription = (props) => {
   const [ wait, setWait ] = useState(true);
   //const subscriptionChangeable = ["active", "pause"]
 
+  // `useState(props.subscription)` only seeds the initial value; the profile is
+  // fetched asynchronously by the parent, so without re-syncing here the tab
+  // would stay on "no subscription" forever even once the active plan loads.
   useEffect(() => {
-    SubscriptionService.getInvoices().then(
-        (response) => {
-          setInvoices(response);
-        }
-    );
-    if (subscription) {
+    setSubscription(props.subscription);
+  }, [props.subscription]);
+
+  // Invoices are always loaded — a user who only bought credits (no
+  // subscription) still needs to see/download their receipts.
+  useEffect(() => {
+    SubscriptionService.getInvoices().then((response) => setInvoices(response));
+  }, []);
+
+  // Selectable upgrade/downgrade plans depend on the (async) current plan.
+  useEffect(() => {
+    if (subscription && subscription.access && subscription.plan) {
       setWait(true);
-      SubscriptionService.getPlans().then(
-        (response) => {
-          let filterPlans = response.filter(
-            (item) => {     
-              return (item.id !== subscription.plan.id);
-            }
-          );
-          let selectablePlans = filterPlans.map(
-            (item) => {
-              return {value: item.id, label: t(item.label.key) + " (" + item.price + "€)"}
-            }          
-          )
-          setSelectablePlans(selectablePlans);
-        }
-      );
-      setWait(false);
+      SubscriptionService.getPlans().then((response) => {
+        const plans = response
+          .filter((item) => item.id !== subscription.plan.id)
+          .map((item) => ({ value: item.id, label: t(item.label.key) + " (" + item.price + "€)" }));
+        setSelectablePlans(plans);
+        setWait(false);
+      });
     }
-  }, []);// eslint-disable-line react-hooks/exhaustive-deps
+  }, [subscription]);// eslint-disable-line react-hooks/exhaustive-deps
 
   const handleChangePlan= (id) => {
     setDisableSubmit(true);
@@ -171,36 +171,6 @@ export const Subscription = (props) => {
               }
             </>
           }
-          <br/><br/>
-          { invoices.length > 0 && 
-            <>
-              <h5>{t('your-invoices')}:</h5>
-              <br/><br/>
-              <div className="invoices">  
-              { invoices.map(item => 
-                <p key={item.id}>
-                  {item.label_key ? t(item.label_key, { ns: item.purpose === 'ai_credits' ? 'billing' : 'subscription' }) : ''}&nbsp;
-                  { item.amount === 0 &&
-                    <span>
-                      ({t("trial-period")})&nbsp;
-                    </span>
-                  }
-                  {t('of')}&nbsp;
-                  {moment(item.mdate).format('DD-MM-y')}&nbsp;
-                  {item.amount/100}&euro;
-                  &nbsp;&nbsp;
-                  <Badge bg={item.status==="paid"?"success":"danger"}>{item.status==="paid"?t('paid'):t('unpaid')}</Badge>&nbsp;&nbsp;
-                  { item.status==="paid" &&
-                    <button className="link btn btn-white" onClick={() => handleDownload(item)}>
-                      <DownloadOutline color={COLOR_LINK} title={t('download-invoice')} height="25px" width="25px"/>
-                    </button>
-                  } 
-                </p>
-                )
-              }
-              </div>
-            </>
-          }
           <ConfirmationModal
             show={confirmationModalShow}
             onHide={() => setConfirmationModalShow(false)}
@@ -244,6 +214,39 @@ export const Subscription = (props) => {
             </div>        
           </ChangeModal>
           }
+        </>
+      }
+
+      {/* Invoices are shown regardless of subscription state, so a user who only
+          purchased credits can still download their receipts. */}
+      { invoices.length > 0 &&
+        <>
+          <br/><br/>
+          <h5>{t('your-invoices')}:</h5>
+          <br/><br/>
+          <div className="invoices">
+          { invoices.map(item =>
+            <p key={item.id}>
+              {item.label_key ? t(item.label_key, { ns: item.purpose === 'credits' ? 'billing' : 'subscription' }) : ''}&nbsp;
+              { item.amount === 0 &&
+                <span>
+                  ({t("trial-period")})&nbsp;
+                </span>
+              }
+              {t('of')}&nbsp;
+              {moment(item.mdate).format('DD-MM-y')}&nbsp;
+              {item.amount/100}&euro;
+              &nbsp;&nbsp;
+              <Badge bg={item.status==="paid"?"success":"danger"}>{item.status==="paid"?t('paid'):t('unpaid')}</Badge>&nbsp;&nbsp;
+              { item.status==="paid" &&
+                <button className="link btn btn-white" onClick={() => handleDownload(item)}>
+                  <DownloadOutline color={COLOR_LINK} title={t('download-invoice')} height="25px" width="25px"/>
+                </button>
+              }
+            </p>
+            )
+          }
+          </div>
         </>
       }
     </div>

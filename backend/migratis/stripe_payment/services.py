@@ -27,12 +27,21 @@ def _customer_model():
 def stripe_error_dict(error):
     """Map a Stripe error to the ``formatErrors()`` dict the API answers with.
 
-    ``InvalidRequestError`` is the caller's data (the tax number is the only
-    free-form field forwarded); anything else is the payment service itself
-    failing — say so instead of blaming the form.
+    An ``InvalidRequestError`` is only about the tax number when Stripe points
+    at a tax field (``error.param`` like ``tax_id``/``tax_id_data``) — the one
+    free-form value the registration round-trip forwards. Any other invalid
+    request is a platform/config problem, not the user's tax number: e.g. a
+    ``Plan`` whose ``stripe_id`` isn't a live Price (a live/test mode mismatch →
+    "No such price", ``param='line_items[0][price]'``), or an address rejected
+    by automatic tax. Blaming the tax field there is a lie that misdirects every
+    debugger — report the config failure truthfully instead. Anything that isn't
+    an invalid request is the service itself failing.
     """
     if isinstance(error, stripe._error.InvalidRequestError):
-        return {"taxnumber": ["taxnumber-invalid"]}
+        param = getattr(error, "param", "") or ""
+        if "tax" in param:
+            return {"taxnumber": ["taxnumber-invalid"]}
+        return {"stripe": ["payment-config-error"]}
     return {"stripe": ["payment-service-unavailable"]}
 
 
@@ -110,6 +119,51 @@ def _customer_id(user):
 
 
 # --------------------------------------------------------------------------- #
+# Invoice back-fill
+# --------------------------------------------------------------------------- #
+def sync_invoices(user):
+    """Materialise any of the user's Stripe invoices that aren't local yet.
+
+    Invoices are normally created by the ``invoice.*`` webhooks, but those never
+    reach a localhost dev box (no public URL) and can be missed/late in prod
+    too. This pulls the customer's finalised invoices straight from Stripe and
+    replays each missing one through the **already-registered** ``invoice.created``
+    + ``invoice.finalized`` handlers — so the exact same, tested mapping runs
+    (subscription vs credits self-selects via each handler's own filter) and the
+    PDF is downloaded, with no logic duplicated here and no import into any
+    feature app. Idempotent: the handlers skip invoices already stored.
+    """
+    if settings.NO_SUBSCRIPTION:
+        return
+    customer_id = _customer_id(user)
+    if not customer_id:
+        return
+
+    from .models import Invoice as InvoiceModel
+
+    existing = set(
+        InvoiceModel.objects.filter(user=user).values_list('stripe_id', flat=True)
+    )
+    try:
+        stripe_invoices = stripe.Invoice.list(customer=customer_id, limit=100)
+    except stripe._error.StripeError:
+        return
+
+    for inv in stripe_invoices.auto_paging_iter():
+        data = inv.to_dict() if hasattr(inv, 'to_dict') else dict(inv)
+        # Only finalised invoices have a PDF and a settled status worth showing.
+        if data.get('status') not in ('paid', 'open', 'uncollectible'):
+            continue
+        if data.get('id') in existing:
+            continue
+        event = {'data': {'object': data}}
+        for handler in registry.get_event_handlers('invoice.created'):
+            handler(event)
+        for handler in registry.get_event_handlers('invoice.finalized'):
+            handler(event)
+
+
+# --------------------------------------------------------------------------- #
 # Checkout
 # --------------------------------------------------------------------------- #
 def create_checkout_session(user, *, mode, purpose, line_items,
@@ -143,6 +197,15 @@ def create_checkout_session(user, *, mode, purpose, line_items,
     if customer_id:
         params['customer'] = customer_id
         params['automatic_tax'] = {"enabled": True}
+        # Automatic tax needs a tax-determinable customer address. Many users
+        # (e.g. non-professionals, who aren't required to give a full billing
+        # address at registration) have none stored, which would make Stripe
+        # reject the session with an InvalidRequestError and block the payment.
+        # Have Checkout collect the address and persist it back onto the
+        # Customer so the transaction goes through regardless of what was
+        # captured up front.
+        params['billing_address_collection'] = 'required'
+        params['customer_update'] = {'address': 'auto'}
 
     if mode == 'payment':
         # Carry the routing metadata onto the PaymentIntent too, for parity with

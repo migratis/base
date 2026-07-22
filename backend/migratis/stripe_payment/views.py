@@ -7,6 +7,7 @@ import stripe
 from migratis.api.functions import formatErrors
 from . import registry
 from .services import (
+    _get,
     create_checkout_session,
     grant_for_session,
     process_event,
@@ -65,7 +66,11 @@ def verify(request, session_id: str = None):
     except stripe._error.StripeError:
         return JsonResponse({'success': False})
 
-    metadata = session.get('metadata') or {}
+    # `Session.retrieve` returns a Stripe `StripeObject`, not a dict — `.get`
+    # raises on it. Read metadata the same way the grant path does.
+    metadata = _get(session, 'metadata') or {}
+    if hasattr(metadata, 'to_dict'):
+        metadata = metadata.to_dict()
     if str(metadata.get('user_id')) != str(request.user.id):
         # Never apply someone else's session to the caller.
         return JsonResponse({'success': False})

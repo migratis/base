@@ -70,6 +70,14 @@ const Subscribe = () => {
 
   const handlePayment = (id) => {
     if (!id) return;
+    // Starting Checkout requires an authenticated session. An anonymous visitor
+    // who reaches this page would otherwise fire the request and get a confusing
+    // pair of toasts (an "access denied" from the rejected call, then a generic
+    // payment failure). Prompt them to log in instead.
+    if (!user) {
+      window.dispatchEvent(new Event('disconnected'));
+      return;
+    }
     setProcessing(true);
     SubscriptionService.startCheckout(id).then((response) => {
       if (response && response.checkout_url) {

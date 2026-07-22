@@ -5,8 +5,9 @@ from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from django.views.decorators.csrf import ensure_csrf_cookie
+from django.conf import settings as django_settings
 # ── Activated by generated app settings_patch.py ──────────────────────────
-# from migratis.user.views import router as user_router
+from migratis.user.views import router as user_router
 from migratis.i18n.views import router as i18n_router
 from migratis.cookie.views import router as cookie_router
 # from migratis.support.views import router as support_router
@@ -14,14 +15,12 @@ from migratis.cookie.views import router as cookie_router
 # from migratis.stripe_payment.views import router as stripe_payment_router
 # from migratis.credits.views import router as credits_router
 # from migratis.generator.views import router as generator_router
+from migratis.api.functions import formatErrors as _formatErrors
 from migratis.installer.views import router as installer_router
 import datetime
 import decimal
 import importlib
 import json
-
-from django.conf import settings as django_settings
-
 
 class CustomEncoder(json.JSONEncoder):
 
@@ -58,8 +57,26 @@ api = NinjaAPI(
     renderer=CustomRenderer(),
 )
 
+# Register the entitlement-denial handler only when the subscription app is
+# actually installed. base activates subscription/stripe_payment on demand via
+# settings_patches, so importing decorators unconditionally would pull in
+# stripe_payment.models at startup and crash ("doesn't declare an explicit
+# app_label and isn't in an application in INSTALLED_APPS") on deployments that
+# ship without those apps.
+try:
+    from migratis.subscription.decorators import AccessDenied as _AccessDenied
+
+    @api.exception_handler(_AccessDenied)
+    def _access_denied(request, exc):
+        return JsonResponse({
+            "detail": _formatErrors({"access": ["access-denied"]}),
+            "entitlement": exc.result.payload(),
+        }, status=403)
+except (ImportError, RuntimeError):
+    pass
+
 # ── Activated by generated app settings_patch.py ──────────────────────────
-# api.add_router("/user/", user_router)
+api.add_router("/user/", user_router)
 api.add_router("/i18n/",    i18n_router)
 api.add_router("/cookie/",  cookie_router)
 # api.add_router("/support/", support_router)

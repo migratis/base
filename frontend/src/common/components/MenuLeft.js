@@ -18,8 +18,8 @@ import { toast } from 'react-toastify';
 import CreditsIndicator from '../../credits/components/CreditsIndicator';
 import Login from "../../user/components/Login";
 import { BlockedModal as LoginModal } from "../modals/BlockedModal";
-import { MIGRATIS, CREDITS, SUPPORT } from '../../settings';
-// The generator module (and its left menu) is not shipped in base.
+import { MIGRATIS, GENERATOR, CREDITS, SUPPORT } from '../../settings';
+import { LeftMenu as GeneratorLeftMenu } from '../../generator/components/LeftMenu';
 import logo from '../../img/logo.png';
 
 export const MenuLeft = (props) => {
@@ -55,6 +55,15 @@ export const MenuLeft = (props) => {
     }
   }, [props.mobileOpen]);
 
+  // Open the login modal when any action needs an authenticated session but the
+  // visitor is anonymous (e.g. clicking "pay" on the plans page). Mirrors the
+  // Header's handling so the prompt works on pages that render only the sidebar.
+  useEffect(() => {
+    const handleDisconnected = () => setLoginModalShow(true);
+    window.addEventListener("disconnected", handleDisconnected);
+    return () => window.removeEventListener("disconnected", handleDisconnected);
+  }, []);
+
   const logOut = () => {
     UserService.logout().then(
       (response) => {
@@ -85,9 +94,10 @@ export const MenuLeft = (props) => {
         <div className="sidebar-content">
           {props.user ? (
             <>
-              {CREDITS && (
+              {(CREDITS || GENERATOR) && (
                 <div className="sidebar-section">
-                  <CreditsIndicator compact />
+                  {CREDITS && <CreditsIndicator compact />}
+                  {GENERATOR && <GeneratorLeftMenu onMobileClose={props.onMobileClose} user={props.user} />}
                 </div>
               )}
 
