@@ -1652,6 +1652,24 @@ TRANSLATIONS['modal'] = {
     },
 }
 
+# Cross-cutting vocabulary for module-agnostic components under
+# frontend/src/common/ (e.g. ExpandableText). Neutral default namespace so a
+# common component never has to borrow a feature's namespace.
+TRANSLATIONS['common'] = {
+    'show-less': {
+        'en': 'Show less',
+        'fr': 'Voir moins',
+        'es': 'Ver menos',
+        'ro': 'Vezi mai puțin',
+    },
+    'show-more': {
+        'en': 'Show more',
+        'fr': 'Voir plus',
+        'es': 'Ver más',
+        'ro': 'Vezi mai mult',
+    },
+}
+
 TRANSLATIONS['account'] = {
     'account-settings': {
         'en': 'Account settings',

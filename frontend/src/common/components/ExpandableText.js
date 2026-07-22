@@ -16,13 +16,13 @@ const MOBILE_BREAKPOINT = 758;
  *   maxChars        {number}  — character threshold before collapsing (default 120)
  *   mobileMaxChars  {number}  — mobile threshold (default 60)
  *   ns              {string}  — i18next namespace for show-more / show-less keys
- *                             (default 'generator')
+ *                             (default 'common')
  */
-const ExpandableText = ({ 
-  text = '', 
-  maxChars = 120, 
+const ExpandableText = ({
+  text = '',
+  maxChars = 120,
   mobileMaxChars = 60,
-  ns = 'generator' 
+  ns = 'common'
 }) => {
   const { t } = useTranslation(ns);
   const [expanded, setExpanded] = useState(false);
