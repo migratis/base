@@ -1,17 +1,16 @@
 import { useState, useEffect } from "react";
 import { useLocation, Outlet } from "react-router-dom";
-import { useAuth } from "../../user/hooks/useAuth";
 import { MenuLeft } from "./MenuLeft";
 import { ToastContainer } from 'react-toastify';
 import { SPCookieConsent } from "./CookieConsent";
 import { BlockedModal } from "../modals/BlockedModal";
-import Login from "../../user/components/Login";
 import { useTranslation } from "react-i18next";
 import { IoMenuOutline as MenuIcon } from 'react-icons/io5';
-import UserService from "../../user/services/user.service";
+import { useShell } from '../shell/ShellContext';
 
 export const Layout = (props) => {
   const { t } = useTranslation('layout');
+  const { useAuth, LoginComponent, userService } = useShell();
   const { user, setUser } = useAuth();
   const location = useLocation();
   const [ assistant, setAssistant ] = useState(false);
@@ -29,7 +28,7 @@ export const Layout = (props) => {
   // (e.g. is_staff) are always up to date in localStorage and React state.
   useEffect(() => {
     if (user) {
-      UserService.getProfile().then((fresh) => {
+      userService.getProfile().then((fresh) => {
         if (fresh && fresh.id) {
           localStorage.setItem("user", JSON.stringify(fresh));
           setUser(fresh);
@@ -99,17 +98,13 @@ export const Layout = (props) => {
       { location.pathname !== "/cookies" &&
         <SPCookieConsent/>
       }
-      {/* The installer is a public, config-gated route with its own login
-          (to the remote Migratis instance) — never wall it behind the base
-          login modal. Layout mounts before the lazy InstallerPage can clear
-          a stale session_expired flag, so the exemption must live here. */}
       <BlockedModal
-        show={sessionExpiredShow && location.pathname !== "/installer"}
+        show={sessionExpiredShow}
         onHide={() => setSessionExpiredShow(false)}
         title={t('session-expired')}
         showCloseButton={false}
       >
-        <Login      
+        <LoginComponent
           setUser={setUser}
           setLoginModalShow={setSessionExpiredShow}
         />

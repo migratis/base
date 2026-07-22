@@ -5,32 +5,29 @@ import {
   IoPersonOutline as PersonOutline,
   IoLogOutOutline as LogOutOutline,
   IoHelpBuoyOutline as HelpOutline,
-  IoAtOutline as AtOutline,
-  IoAtCircleOutline as AtCircleOutline,
   IoGlobeOutline as GlobeOutline,
-  IoChevronDown as ChevronDown,
-  IoChevronUp as ChevronUp,
-  IoGridOutline as GridOutline,
 } from 'react-icons/io5';
 import LangSelector from './LangSelector';
-import UserService from "../../user/services/user.service";
 import { toast } from 'react-toastify';
-import CreditsIndicator from '../../credits/components/CreditsIndicator';
-import Login from "../../user/components/Login";
 import { BlockedModal as LoginModal } from "../modals/BlockedModal";
-import { MIGRATIS, GENERATOR, CREDITS, SUPPORT } from '../../settings';
-import { LeftMenu as GeneratorLeftMenu } from '../../generator/components/LeftMenu';
+import { SUPPORT } from '../../settings';
 import logo from '../../img/logo.png';
+import { sidebarSlots } from '../shell/registry';
+import { useShell } from '../shell/ShellContext';
 
 export const MenuLeft = (props) => {
   const { t } = useTranslation('layout');
   const navigate = useNavigate();
+  const { LoginComponent, userService } = useShell();
   const [ expanded, setExpanded ] = useState(false);
   const [ loginModalShow, setLoginModalShow ] = useState(false);
-  const [ openSections, setOpenSections ] = useState({
-    migratis: true,
-    generator: true,
-  });
+
+  // Module-contributed sidebar snippets, discovered from each module's
+  // shell.js (see common/shell/registry.js). Inline widgets share one section;
+  // `section: true` snippets (collapsible groups) get their own.
+  const enabledSlots = sidebarSlots.filter((slot) => slot.enabled());
+  const inlineSlots = enabledSlots.filter((slot) => !slot.section);
+  const sectionSlots = enabledSlots.filter((slot) => slot.section);
 
   useEffect(() => {
     const handleResize = () => {
@@ -41,13 +38,6 @@ export const MenuLeft = (props) => {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
-
-  const toggleSection = (section) => {
-    setOpenSections(prev => ({
-      ...prev,
-      [section]: !prev[section]
-    }));
-  };
 
   useEffect(() => {
     if (props.mobileOpen) {
@@ -65,7 +55,7 @@ export const MenuLeft = (props) => {
   }, []);
 
   const logOut = () => {
-    UserService.logout().then(
+    userService.logout().then(
       (response) => {
         if (response.detail[0].success) {
           toast.success(t(response.detail[0].success));
@@ -94,49 +84,28 @@ export const MenuLeft = (props) => {
         <div className="sidebar-content">
           {props.user ? (
             <>
-              {(CREDITS || GENERATOR) && (
+              {inlineSlots.length > 0 && (
                 <div className="sidebar-section">
-                  {CREDITS && <CreditsIndicator compact />}
-                  {GENERATOR && <GeneratorLeftMenu onMobileClose={props.onMobileClose} user={props.user} />}
+                  {inlineSlots.map((slot) => (
+                    <slot.Component
+                      key={slot.id}
+                      user={props.user}
+                      onMobileClose={props.onMobileClose}
+                    />
+                  ))}
                 </div>
               )}
 
-              {MIGRATIS && (
-                <div className="sidebar-section">
-                  <div
-                    className="sidebar-section-header"
-                    onClick={() => toggleSection('migratis')}
-                  >
-                    <GridOutline />
-                    <span className="sidebar-section-title">{t('migratis')}</span>
-                    <span className="sidebar-section-chevron">
-                      {openSections.migratis ? <ChevronUp /> : <ChevronDown />}
-                    </span>
-                  </div>
-                  {openSections.migratis && (
-                    <>
-                      <NavLink
-                        to="/migratis/item"
-                        className={({isActive}) => `sidebar-item ${isActive ? 'active' : ''}`}
-                        onClick={props.onMobileClose}
-                      >
-                        <AtOutline />
-                        <span className="sidebar-label">{t('items')}</span>
-                      </NavLink>
-                      <NavLink
-                        to="/migratis/subitem"
-                        className={({isActive}) => `sidebar-item ${isActive ? 'active' : ''}`}
-                        onClick={props.onMobileClose}
-                      >
-                        <AtCircleOutline />
-                        <span className="sidebar-label">{t('subitems')}</span>
-                      </NavLink>
-                    </>
-                  )}
+              {sectionSlots.map((slot) => (
+                <div className="sidebar-section" key={slot.id}>
+                  <slot.Component
+                    user={props.user}
+                    onMobileClose={props.onMobileClose}
+                  />
                 </div>
-              )}
+              ))}
 
-<div className="sidebar-divider" />
+              <div className="sidebar-divider" />
 
               <div className="sidebar-section">
                 <NavLink
@@ -147,14 +116,14 @@ export const MenuLeft = (props) => {
                   <PersonOutline />
                   <span className="sidebar-label">{t('account-settings')}</span>
                 </NavLink>
-                
+
                 <div className="sidebar-item">
                   <GlobeOutline />
                   <span className="sidebar-label">
                     <LangSelector />
                   </span>
                 </div>
-                
+
                 {SUPPORT ? (
                   <a href="/support/ticket" className="sidebar-item" onClick={props.onMobileClose}>
                     <HelpOutline />
@@ -179,14 +148,14 @@ export const MenuLeft = (props) => {
                 <PersonOutline />
                 <span className="sidebar-label">{t('login')}</span>
               </div>
-              
+
               <div className="sidebar-item">
                 <GlobeOutline />
                 <span className="sidebar-label">
                   <LangSelector />
                 </span>
               </div>
-              
+
               <a href="/contact" className="sidebar-item" onClick={props.onMobileClose}>
                 <HelpOutline />
                 <span className="sidebar-label">{t('contact')}</span>
@@ -201,7 +170,7 @@ export const MenuLeft = (props) => {
         onHide={() => setLoginModalShow(false)}
         title={t('login')}
       >
-        <Login      
+        <LoginComponent
           setUser={props.setUser}
           setLoginModalShow={setLoginModalShow}
         />

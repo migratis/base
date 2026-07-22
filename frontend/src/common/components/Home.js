@@ -1,107 +1,236 @@
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
+import { useShell } from '../shell/ShellContext';
+import {
+  IoCodeSlashOutline as CodeIcon,
+  IoSparklesOutline as SparklesIcon,
+  IoRocketOutline as RocketIcon,
+  IoShieldCheckmarkOutline as ShieldIcon,
+  IoGitNetworkOutline as NetworkIcon,
+  IoGlobeOutline as GlobeIcon,
+  IoBuildOutline as BuildIcon,
+  IoLayersOutline as LayersIcon,
+  IoCheckmarkCircleOutline as CheckIcon,
+} from 'react-icons/io5';
 
-const Step = ({ number, title, children }) => (
-  <div className="d-flex gap-3 mb-4">
-    <div
-      className="flex-shrink-0 d-flex align-items-center justify-content-center rounded-circle fw-bold text-white"
-      style={{ width: 36, height: 36, minWidth: 36, background: 'var(--color-primary, #d97757)' }}
-    >
-      {number}
+const Home = () => {
+  const { useAuth } = useShell();
+  const { user } = useAuth();
+  const { t } = useTranslation('home');
+
+  return (
+    <div className="home-page">
+      {/* Hero Section */}
+      <section className="hero-section text-center text-white py-5">
+        <div className="container">
+          <h1 className="display-4 fw-bold mb-3">{t('hero-title', 'Build Apps with AI')}</h1>
+          <p className="lead mb-4">{t('hero-subtitle', 'Design, prototype, and generate full-stack applications powered by AI')}</p>
+          {!user && (
+            <Link to="/register" className="btn btn-light btn-lg px-5">
+              {t('get-started', 'Get Started')}
+            </Link>
+          )}
+        </div>
+      </section>
+
+      {/* Chapter 1: AI-Powered Generation */}
+      <section className="chapter-section py-5">
+        <div className="container">
+          <div className="row align-items-center">
+            <div className="col-md-6">
+              <div className="chapter-icon">
+                <SparklesIcon size={64} />
+              </div>
+              <h2 className="mb-3">{t('ch1-title', 'AI-Powered Schema Design')}</h2>
+              <p className="lead">{t('ch1-desc', 'Describe your application in plain language and let our AI generate the complete data model with entities, fields, relationships, and validation rules.')}</p>
+            </div>
+            <div className="col-md-6">
+              <ul className="feature-list list-unstyled">
+                <li><CheckIcon className="me-2" /> {t('ch1-f1', 'Natural language application descriptions')}</li>
+                <li><CheckIcon className="me-2" /> {t('ch1-f2', 'Automatic entity and field generation')}</li>
+                <li><CheckIcon className="me-2" /> {t('ch1-f3', 'Smart relationship detection')}</li>
+                <li><CheckIcon className="me-2" /> {t('ch1-f4', 'AI-guided validation rules')}</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Chapter 2: Interactive Sandbox */}
+      <section className="chapter-section py-5 bg-light">
+        <div className="container">
+          <div className="row align-items-center flex-row-reverse">
+            <div className="col-md-6">
+              <div className="chapter-icon">
+                <BuildIcon size={64} />
+              </div>
+              <h2 className="mb-3">{t('ch2-title', 'Interactive Sandbox Testing')}</h2>
+              <p className="lead">{t('ch2-desc', 'Test your data model in a live sandbox environment before generating any code. Create, edit, and delete records to verify your schema works exactly as intended.')}</p>
+            </div>
+            <div className="col-md-6">
+              <ul className="feature-list list-unstyled">
+                <li><CheckIcon className="me-2" /> {t('ch2-f1', 'Real-time data model testing')}</li>
+                <li><CheckIcon className="me-2" /> {t('ch2-f2', 'Search, filter, and sort records')}</li>
+                <li><CheckIcon className="me-2" /> {t('ch2-f3', 'Multiple display modes (table, cards, kanban)')}</li>
+                <li><CheckIcon className="me-2" /> {t('ch2-f4', 'AI-powered sandbox configuration')}</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Chapter 3: Code Generation */}
+      <section className="chapter-section py-5">
+        <div className="container">
+          <div className="row align-items-center">
+            <div className="col-md-6">
+              <div className="chapter-icon">
+                <CodeIcon size={64} />
+              </div>
+              <h2 className="mb-3">{t('ch3-title', 'One-Click Code Generation')}</h2>
+              <p className="lead">{t('ch3-desc', 'Generate production-ready Django backend and React frontend code from your validated schema. Everything you need to deploy your application.')}</p>
+            </div>
+            <div className="col-md-6">
+              <ul className="feature-list list-unstyled">
+                <li><CheckIcon className="me-2" /> {t('ch3-f1', 'Django models and APIs')}</li>
+                <li><CheckIcon className="me-2" /> {t('ch3-f2', 'React components and forms')}</li>
+                <li><CheckIcon className="me-2" /> {t('ch3-f3', 'Admin interface configuration')}</li>
+                <li><CheckIcon className="me-2" /> {t('ch3-f4', 'Database migrations included')}</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Chapter 4: Public "base" Repository */}
+      <section className="chapter-section py-5 bg-light">
+        <div className="container">
+          <div className="row align-items-center flex-row-reverse">
+            <div className="col-md-6">
+              <div className="chapter-icon">
+                <NetworkIcon size={64} />
+              </div>
+              <h2 className="mb-3">{t('ch4-title', 'Public "base" Repository')}</h2>
+              <p className="lead">{t('ch4-desc', 'Migratis provides a public GitHub repository called "base" from which you can install any application generated by the platform. Your apps are ready to deploy in minutes.')}</p>
+            </div>
+            <div className="col-md-6">
+              <ul className="feature-list list-unstyled">
+                <li><CheckIcon className="me-2" /> {t('ch4-f1', 'Pre-configured Django project structure')}</li>
+                <li><CheckIcon className="me-2" /> {t('ch4-f2', 'Ready-to-install application modules')}</li>
+                <li><CheckIcon className="me-2" /> {t('ch4-f3', 'One-command deployment setup')}</li>
+                <li><CheckIcon className="me-2" /> {t('ch4-f4', 'Shared infrastructure and dependencies')}</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Chapter 5: Multi-Language Support */}
+      <section className="chapter-section py-5">
+        <div className="container">
+          <div className="row align-items-center">
+            <div className="col-md-6">
+              <div className="chapter-icon">
+                <GlobeIcon size={64} />
+              </div>
+              <h2 className="mb-3">{t('ch5-title', 'Multi-Language Support')}</h2>
+              <p className="lead">{t('ch5-desc', 'Build applications that support multiple languages out of the box. Our AI generates translations for all your entities and fields.')}</p>
+            </div>
+            <div className="col-md-6">
+              <ul className="feature-list list-unstyled">
+                <li><CheckIcon className="me-2" /> {t('ch5-f1', 'Built-in i18n support')}</li>
+                <li><CheckIcon className="me-2" /> {t('ch5-f2', 'AI-generated translations')}</li>
+                <li><CheckIcon className="me-2" /> {t('ch5-f3', '40+ languages supported')}</li>
+                <li><CheckIcon className="me-2" /> {t('ch5-f4', 'Easy translation management')}</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Chapter 6: Ready-Made Modules */}
+      <section className="chapter-section py-5 bg-light">
+        <div className="container">
+          <div className="row align-items-center flex-row-reverse">
+            <div className="col-md-6">
+              <div className="chapter-icon">
+                <LayersIcon size={64} />
+              </div>
+              <h2 className="mb-3">{t('ch6-title', 'Ready-Made Modules')}</h2>
+              <p className="lead">{t('ch6-desc', 'Accelerate development with pre-built modules for authentication, subscriptions, internationalization, support tickets, and cookie consent.')}</p>
+            </div>
+            <div className="col-md-6">
+              <ul className="feature-list list-unstyled">
+                <li><CheckIcon className="me-2" /> {t('ch6-f1', 'User authentication & profiles')}</li>
+                <li><CheckIcon className="me-2" /> {t('ch6-f2', 'Stripe subscription billing')}</li>
+                <li><CheckIcon className="me-2" /> {t('ch6-f3', 'GDPR cookie consent')}</li>
+                <li><CheckIcon className="me-2" /> {t('ch6-f4', 'Customer support system')}</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Chapter 7: Security & Best Practices */}
+      <section className="chapter-section py-5">
+        <div className="container">
+          <div className="row align-items-center">
+            <div className="col-md-6">
+              <div className="chapter-icon">
+                <ShieldIcon size={64} />
+              </div>
+              <h2 className="mb-3">{t('ch7-title', 'Security & Best Practices')}</h2>
+              <p className="lead">{t('ch7-desc', 'Generated code follows Django and React best practices with proper security measures, validation, and error handling built-in.')}</p>
+            </div>
+            <div className="col-md-6">
+              <ul className="feature-list list-unstyled">
+                <li><CheckIcon className="me-2" /> {t('ch7-f1', 'CSRF and XSS protection')}</li>
+                <li><CheckIcon className="me-2" /> {t('ch7-f2', 'Input validation included')}</li>
+                <li><CheckIcon className="me-2" /> {t('ch7-f3', 'Role-based access control')}</li>
+                <li><CheckIcon className="me-2" /> {t('ch7-f4', 'Clean, documented code')}</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Chapter 8: Workflow Automation */}
+      <section className="chapter-section py-5 bg-light">
+        <div className="container">
+          <div className="row align-items-center flex-row-reverse">
+            <div className="col-md-6">
+              <div className="chapter-icon">
+                <RocketIcon size={64} />
+              </div>
+              <h2 className="mb-3">{t('ch8-title', 'Workflow Automation')}</h2>
+              <p className="lead">{t('ch8-desc', 'Define automated workflows that trigger actions based on events. Create, update, compute, and export data automatically with AI-guided logic.')}</p>
+            </div>
+            <div className="col-md-6">
+              <ul className="feature-list list-unstyled">
+                <li><CheckIcon className="me-2" /> {t('ch8-f1', 'Event-driven automation')}</li>
+                <li><CheckIcon className="me-2" /> {t('ch8-f2', 'AI-assisted workflow design')}</li>
+                <li><CheckIcon className="me-2" /> {t('ch8-f3', 'Visual workflow builder')}</li>
+                <li><CheckIcon className="me-2" /> {t('ch8-f4', 'Scheduled and triggered actions')}</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      {!user && (
+        <section className="cta-section text-center py-5 text-white">
+          <div className="container">
+            <h2 className="mb-4">{t('cta-title', 'Ready to Build Your First App?')}</h2>
+            <p className="lead mb-4">{t('cta-desc', 'Start designing your application with AI-powered tools today.')}</p>
+            <Link to="/register" className="btn btn-light btn-lg px-5">
+              {t('get-started', 'Get Started')}
+            </Link>
+          </div>
+        </section>
+      )}
     </div>
-    <div>
-      <h5 className="mb-1">{title}</h5>
-      <div className="text-muted">{children}</div>
-    </div>
-  </div>
-);
-
-const Home = () => (
-  <div className="container py-5" style={{ maxWidth: 740 }}>
-
-    <div className="text-center mb-5">
-      <h1 className="fw-bold mb-2">Get Started with Migratis</h1>
-      <p className="lead text-muted">
-        Generate a full-stack application in minutes — no code required.
-      </p>
-    </div>
-
-    <div className="card shadow-sm p-4 mb-4">
-      <Step number={1} title="Generate your application on migratis.ai">
-        <p className="mb-2">
-          Go to{' '}
-          <a href="https://migratis.ai" target="_blank" rel="noreferrer">
-            migratis.ai
-          </a>{' '}
-          and describe your application in plain language. The AI will build the
-          full data model (entities, fields, relationships) and a live sandbox
-          preview you can tweak until it matches what you need.
-        </p>
-        <p className="mb-0">
-          Once you are happy with the result, click <strong>Generate</strong> to
-          produce the deployable package.
-        </p>
-      </Step>
-
-      <Step number={2} title="Run this base environment with Docker">
-        <p className="mb-1">Clone the base repository and start the containers:</p>
-        <pre className="bg-light rounded p-3 small mb-2">{`git clone https://github.com/migratis/base.git
-cd base/backend && bash build-docker-local.sh
-cd ../frontend && docker compose up -d`}</pre>
-        <p className="mb-0">
-          The backend runs on{' '}
-          <code>http://127.0.0.1:8004</code> and the frontend on{' '}
-          <code>http://127.0.0.1:3002</code>. No database setup needed — SQLite
-          is used by default.
-        </p>
-      </Step>
-
-      <Step number={3} title="Install your application with the Installer">
-        <p className="mb-2">
-          Open the{' '}
-          <Link to="/installer">
-            <strong>Installer</strong>
-          </Link>{' '}
-          page (or click the download icon in the sidebar) and connect with your
-          migratis.ai credentials. Select the generated application and click{' '}
-          <strong>Install</strong>.
-        </p>
-        <p className="mb-0">
-          The installer will automatically:
-        </p>
-        <ul className="mt-1 mb-0">
-          <li>Download and extract the backend Django module</li>
-          <li>Activate the required framework modules in settings</li>
-          <li>Run database migrations</li>
-          <li>Seed translation strings</li>
-        </ul>
-      </Step>
-
-      <Step number={4} title="Restart the backend">
-        <p className="mb-1">Restart the backend container to load the new module:</p>
-        <pre className="bg-light rounded p-3 small mb-2">{`docker restart backend-base-api-1`}</pre>
-        <p className="mb-1">
-          <strong>If your frontend is served by nginx</strong> (production build),
-          rebuild the static assets from inside the <code>frontend/</code> directory:
-        </p>
-        <pre className="bg-light rounded p-3 small mb-0">{`npm run build`}</pre>
-      </Step>
-
-      <Step number={5} title="Create your first admin user">
-        <pre className="bg-light rounded p-3 small mb-0">{`docker exec -it backend-base-api-1 bash
-python /backend/manage.py createsuperuser`}</pre>
-      </Step>
-    </div>
-
-    <div className="card border-0 bg-light p-4">
-      <h6 className="fw-semibold mb-2">Useful links</h6>
-      <ul className="mb-0 small">
-        <li><a href="https://migratis.ai" target="_blank" rel="noreferrer">migratis.ai</a> — application generator</li>
-        <li><a href="https://github.com/migratis/base" target="_blank" rel="noreferrer">github.com/migratis/base</a> — this base environment</li>
-        <li><Link to="/installer">Installer</Link> — connect, browse and install generated apps</li>
-      </ul>
-    </div>
-
-  </div>
-);
+  );
+};
 
 export default Home;

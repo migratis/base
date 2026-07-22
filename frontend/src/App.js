@@ -4,8 +4,17 @@ import { Routes, Route, useLocation } from "react-router-dom";
 import "./App.scss";
 import 'react-toastify/dist/ReactToastify.css';
 import { Layout as Public, Layout as Private } from './common/components/Layout';
+import { ShellProvider } from './common/shell/ShellContext';
+import { useAuth } from './user/hooks/useAuth';
+import Login from './user/components/Login';
+import UserService from './user/services/user.service';
 import { SUPPORT, SUBSCRIPTION, USER, COOKIE, CONTACT } from './settings';
 import { moduleRoutes } from './module_registry';
+
+// Composition root: inject the concrete `user` module primitives into the
+// shell so common components (MenuLeft/Header/Layout/Home) consume auth without
+// importing the user module directly.
+const shellServices = { useAuth, LoginComponent: Login, userService: UserService };
 
 const Home = lazyWithRetry(() => import('./common/components/Home'));
 const Message = lazyWithRetry(() => import('./common/components/Message'));
@@ -44,7 +53,7 @@ const App = () => {
   }, [location.pathname]);
 
   return (
-    <>
+    <ShellProvider value={shellServices}>
       <Routes>
         <Route element={<Public private={false}/>}>
           <Route exact path="/home" element={<Home />} />
@@ -93,7 +102,7 @@ const App = () => {
           }
         </Route>
       </Routes>
-    </>
+    </ShellProvider>
   );
 };
 

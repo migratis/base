@@ -11,21 +11,24 @@ import {
   IoMailOutline as MailOutline
 } from 'react-icons/io5';
 import { MenuLeft } from "./MenuLeft";
-import UserService from "../../user/services/user.service";
 import { toast } from 'react-toastify';
-import Login from "../../user/components/Login";
 import { BlockedModal as LoginModal } from "../modals/BlockedModal";
 import { useQuery } from '../hooks/useQuery';
 import { useNavigate } from "react-router-dom";
-import { SUPPORT, SUBSCRIPTION, CREDITS } from "../../settings";
-import CreditsIndicator from '../../credits/components/CreditsIndicator';
+import { SUPPORT, SUBSCRIPTION } from "../../settings";
+import { headerWidgets } from '../shell/registry';
+import { useShell } from '../shell/ShellContext';
 
 export const Header = (props) => {
   const { t } = useTranslation('layout');
   const query = useQuery();
+  const { LoginComponent, userService } = useShell();
   const [ loginModalShow, setLoginModalShow ] = useState(false);
   const [ expanded, setExpanded ] = useState(false);
   const navigate = useNavigate();
+
+  // Module-contributed header widgets, discovered from each module's shell.js.
+  const enabledWidgets = headerWidgets.filter((widget) => widget.enabled());
 
   useEffect(() => {
     if (!props.user) {
@@ -37,7 +40,7 @@ export const Header = (props) => {
 
   const logOut = () => {
     window.removeEventListener("disconnected", handleLogin);
-    UserService.logout().then(
+    userService.logout().then(
       (response) => {
         if (response.detail[0].success) {
           toast.success(t(response.detail[0].success));
@@ -100,9 +103,9 @@ export const Header = (props) => {
                         &nbsp;<CardOutline color={'#000000'} title={t('subscribe')} height="25px" width="25px"/>
                       </Nav.Link>
                     }
-                    { CREDITS &&
-                      <CreditsIndicator />
-                    }   
+                    { enabledWidgets.map((widget) => (
+                      <widget.Component key={widget.id} />
+                    )) }
                     <Nav.Link className="nav-item btn btn-light" href="/profile">
                       {t('profile')}
                       &nbsp;<Person color={'#000000'} title={t('profile')} height="25px" width="25px"/>
@@ -144,7 +147,7 @@ export const Header = (props) => {
         onHide={() => setLoginModalShow(false)}
         title={t('login')}
       >
-        <Login      
+        <LoginComponent
           setUser={props.setUser}
           setLoginModalShow={setLoginModalShow}
           setExpanded={setExpanded}
