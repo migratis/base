@@ -4,7 +4,7 @@ import { BrowserRouter } from "react-router-dom";
 import './i18n';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
-import { AuthProvider } from "./user/hooks/useAuth";
+import { ShellRoot } from "./common/shell/ShellRoot";
 import { LoaderIndicator } from './common/components/LoaderIndicator';
 
 const container = document.getElementById('root');
@@ -14,23 +14,23 @@ const root = createRoot(container);
 if (!window.location.host.match("127.0.0.1")) {
   root.render(
     <StrictMode>
-      <BrowserRouter> 
-        <AuthProvider>   
+      <BrowserRouter>
+        <ShellRoot>
           <Suspense fallback={<LoaderIndicator />}>
             <App />
-          </Suspense>   
-        </AuthProvider>
+          </Suspense>
+        </ShellRoot>
       </BrowserRouter>
-    </StrictMode>      
+    </StrictMode>
   );
 } else {
   root.render(
-    <BrowserRouter> 
-      <AuthProvider>   
+    <BrowserRouter>
+      <ShellRoot>
         <Suspense fallback={<LoaderIndicator />}>
           <App />
-        </Suspense>   
-      </AuthProvider>
+        </Suspense>
+      </ShellRoot>
     </BrowserRouter>
   );
 }

@@ -35,3 +35,14 @@ try {
 
 export const sidebarSlots = collect(modules, 'sidebar');
 export const headerWidgets = collect(modules, 'headerWidgets');
+
+// Context providers a module needs mounted at the app root (e.g. the user
+// module's AuthProvider). Rendered by ShellRoot, outermost-first by `order`.
+export const shellProviders = collect(modules, 'providers');
+
+// The auth service a module injects into ShellContext ({ useAuth,
+// LoginComponent, userService }). Optional: a deployment without the user
+// module contributes none, and the shell falls back to ShellContext's no-op
+// defaults (renders logged-out). First contributor wins.
+const authModule = modules.filter(Boolean).find((mod) => mod.auth);
+export const authService = authModule ? authModule.auth : undefined;
