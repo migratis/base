@@ -1,16 +1,5 @@
 from functools import wraps
-from django.conf import settings
 
-from . import models
-
-def test_access(user):
-    if settings.NO_SUBSCRIPTION:
-        return True
-
-    access = models.Subscription.objects.select_related("user").filter(user=user.id, access=True)
-    if access:
-        return True
-    return False
 
 class AccessDenied(Exception):
     """Raised by `check_access` when the entitlement provider blocks a request.
@@ -39,7 +28,7 @@ def check_access(action=None):
     def decorator(view):
         @wraps(view)
         def _wrapped_view(request, *args, **kwargs):
-            # Imported lazily: entitlement imports test_access from this module.
+            # Imported lazily to avoid an import cycle at module load.
             from .entitlement import check_entitlement
             result = check_entitlement(request, action=action)
             if not result.allowed:

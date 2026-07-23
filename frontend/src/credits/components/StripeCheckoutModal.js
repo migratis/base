@@ -7,7 +7,6 @@ import CreditsService from '../services/credits.service';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-toastify';
 import { IoCartOutline as CartIcon } from 'react-icons/io5';
-import { SUBSCRIPTION } from '../../settings';
 
 const StripeCheckoutModal = ({ show, onHide, onSuccess, currentUsage }) => {
   const { t } = useTranslation(['credits', 'billing']);
@@ -87,17 +86,9 @@ const StripeCheckoutModal = ({ show, onHide, onSuccess, currentUsage }) => {
         </button>
       </Modal.Header>
       <Modal.Body className="migratis-modal-body">
-        {SUBSCRIPTION &&
-          <div className="alert alert-info d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-            <span>{t('subscribe-for-unlimited')}</span>
-            <button
-              className="btn btn-sm btn-primary"
-              onClick={() => { onHide(); window.location.href = '/subscribe'; }}
-            >
-              {t('subscribe')}
-            </button>
-          </div>
-        }
+        {/* No "subscribe for unlimited" upsell: a subscription no longer grants
+            unlimited AI — it only covers the one-time sandbox-approval charge, so
+            buying credits is the right path for human-lane AI (owner 2026-07-22). */}
         {isLimitReached && <p className="mb-3">{t('limit-reached-description')}</p>}
 
         <div className="text-center mb-4">

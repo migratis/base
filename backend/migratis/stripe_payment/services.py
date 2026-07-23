@@ -48,11 +48,12 @@ def stripe_error_dict(error):
 def ensure_customer(user):
     """Create-if-missing / refresh-if-present the Stripe customer for ``user``.
 
-    Honors ``NO_SUBSCRIPTION`` (no Stripe round-trip). Returns ``(saved, error)``
-    — the same contract the whole codebase already expects from the old
+    When Stripe is not configured (no ``STRIPE_API_KEY`` — e.g. local dev), skip
+    the round-trip and succeed silently. Returns ``(saved, error)`` — the same
+    contract the whole codebase already expects from the old
     ``subscription.saveCustomer`` (which now delegates here).
     """
-    if settings.NO_SUBSCRIPTION:
+    if not settings.STRIPE_API_KEY:
         return True, None
 
     Customer = _customer_model()
@@ -132,8 +133,11 @@ def sync_invoices(user):
     (subscription vs credits self-selects via each handler's own filter) and the
     PDF is downloaded, with no logic duplicated here and no import into any
     feature app. Idempotent: the handlers skip invoices already stored.
+
+    When Stripe is not configured (no ``STRIPE_API_KEY`` — e.g. local dev), there
+    is nothing to pull; return early.
     """
-    if settings.NO_SUBSCRIPTION:
+    if not settings.STRIPE_API_KEY:
         return
     customer_id = _customer_id(user)
     if not customer_id:

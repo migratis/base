@@ -221,7 +221,7 @@ const Entities = (props) => {
   
   return (
     <>   
-      <header className="page-header-row">
+      <header className="page-header-row sticky-top">
         <h2>{t(`${props.entity}s`)}</h2>
         {props.renderMenu && props.renderMenu(handleEdit)}
       </header>

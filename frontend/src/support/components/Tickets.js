@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from 'react-i18next';
 import SupportService from '../services/support.service';
-import Container from 'react-bootstrap/Container';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import { IoAddCircleOutline as AddCircleOutline } from 'react-icons/io5';
@@ -15,6 +14,25 @@ import { LoaderIndicator } from '../../common/components/LoaderIndicator';
 import { toast } from 'react-toastify';
 import { useQuery } from '../../common/hooks/useQuery';
 import { COLOR_LINK } from "../../settings";
+
+const tabStyle = {
+  '--bs-nav-tabs-link-active-color': COLOR_LINK,
+  '--bs-nav-tabs-link-active-border-color': COLOR_LINK,
+};
+
+const tabCss = `
+  .support-tabs .nav-link.active {
+    color: ${COLOR_LINK} !important;
+    border-color: ${COLOR_LINK} !important;
+    border-bottom-color: ${COLOR_LINK} !important;
+  }
+  .support-tabs .nav-link {
+    color: #6c757d;
+  }
+  .support-tabs .nav-link:hover {
+    color: ${COLOR_LINK};
+  }
+`;
 
 const Tickets = () => {
   const { t } = useTranslation('support');
@@ -132,6 +150,7 @@ const Tickets = () => {
   
   return (
     <>
+      <style>{tabCss}</style>
       <header className="sticky-top">
         <div className="row">
           <div className="col-sm-6">
@@ -139,7 +158,7 @@ const Tickets = () => {
           </div>
           <div className="col-sm-6">
             <span className="link float-end" onClick={() => handleTicketEdit()}>
-              <AddCircleOutline color={null} title={t('add-ticket')} />
+              <AddCircleOutline color={COLOR_LINK} title={t('add-ticket')} />
             </span>            
           </div>          
         </div>
@@ -147,15 +166,15 @@ const Tickets = () => {
       <LoaderIndicator />     
       { !wait && (openTickets.length > 0 || closedTickets.length > 0) ?
         <Tabs 
+          style={tabStyle}
           defaultActiveKey="open_tickets" 
           id="projection-tab"
           activeKey={currentTab}
           onSelect={(tab) => handleSelectTab(tab)}
-          className="mb-3"
+          className="mb-3 support-tabs"
         >
           <Tab eventKey="open_tickets" title={t('open-tickets')} >
-            <Container>
-              { openTickets.length > 0 ? openTickets.map(
+            { openTickets.length > 0 ? openTickets.map(
                 item =>
                   <Ticket
                     key={item.id}
@@ -183,7 +202,6 @@ const Tickets = () => {
                   </Col>
                 </Row>
               }
-            </Container>
           </Tab>
           <Tab eventKey="closed_tickets" title={t('closed-tickets')} >
             { closedTickets.length > 0 && closedTickets.map(
@@ -204,7 +222,7 @@ const Tickets = () => {
                   handleClose={handleClose}                                                                
                 />              
               )
-            }              
+            }
           </Tab>
         </Tabs>
       :

@@ -145,10 +145,10 @@ def getTax(request, id: str):
     try:
         customer = models.Customer.objects.select_related('user').get(user=user)
     except models.Customer.DoesNotExist:
-        # A user who registered while the subscription module was off has no
-        # Stripe customer yet (ensure_customer short-circuits under
-        # NO_SUBSCRIPTION). Materialise it here so the tax preview can be
-        # computed instead of dead-ending on "no-customer".
+        # A user who registered while Stripe was unconfigured has no Stripe
+        # customer yet (ensure_customer short-circuits when STRIPE_API_KEY is
+        # empty). Materialise it here so the tax preview can be computed instead
+        # of dead-ending on "no-customer".
         saved, error = saveCustomer(user)
         if not saved:
             return JsonResponse({"detail": formatErrors(stripeErrorDict(error))}, status=422)

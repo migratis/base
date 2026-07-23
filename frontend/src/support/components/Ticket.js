@@ -18,35 +18,35 @@ const Ticket = (props) => {
 
   return (
     <div className="border-top striped">
-      <Row>                      
-        <Col className="text-left" sm={12} lg={10}>
+      <Row className="w-100">
+        {/* Left pane: ticket metadata — badge top-left, actions top-right. */}
+        <Col className="text-left" sm={12} lg={4}>
+          <div className="d-flex justify-content-between align-items-start mb-2">
+            <Badge className="badge badge-danger">
+              {t('number')}: {props.ticket.id}
+            </Badge>
+            { props.ticket.status !== 'c' &&
+              <div className="text-right">
+                <span className="link action" onClick={() => props.handleTicketEdit(props.ticket.id)}>
+                  <SettingsOutline color={COLOR_LINK} title={t('edit')} />
+                </span>
+                &nbsp;
+                <span className="link action" onClick={ () => props.handleClose(props.ticket.id)}>
+                  <CloseCircleOutline color={COLOR_LINK} title={t('close')} />
+                </span>
+              </div>
+            }
+          </div>
           <strong>{t('topic')}:&nbsp;</strong>{props.ticket.topic?t(props.ticket.topic.label.key):props.ticket.object}<br/>
           <strong>{t('creation-date')}:&nbsp;</strong>{moment(props.ticket.cdate).format('DD-MM-YYYY HH:mm:ss')}<br/>
           <strong>{t('modification-date')}:&nbsp;</strong>{moment(props.ticket.mdate).format('DD-MM-YYYY HH:mm:ss')}
         </Col>
-        <Col className="text-right" sm={12} lg={2}>
-          <Badge className="badge badge-danger">
-            {t('number')}: {props.ticket.id} 
-          </Badge>&nbsp;&nbsp;
-          { props.ticket.status !== 'c' &&
-            <> 
-              <span className="link action" onClick={() => props.handleTicketEdit(props.ticket.id)}>
-                <SettingsOutline color={COLOR_LINK} title={t('edit')} />
-              </span>
-              &nbsp;                   
-              <span className="link action" onClick={ () => props.handleClose(props.ticket.id)}>
-                <CloseCircleOutline color={COLOR_LINK} title={t('close')} />
-              </span>
-            </>
-          }           
-        </Col>
-      </Row>
-      <Row>
-        <Col className="text-left" sm={12} lg={12}>
-          <Accordion id={"accordion-" + props.ticket.id} activeKey={props.activeKey} onSelect={e => props.setActiveKey(e)} >
+        {/* Right pane: the Discussion accordion spans the full width of the pane. */}
+        <Col className="text-left px-0" sm={12} lg={8}>
+          <Accordion id={"accordion-" + props.ticket.id} activeKey={props.activeKey} onSelect={e => props.setActiveKey(e)}>
             <Accordion.Item eventKey={props.ticket.id}>
               <Accordion.Header as="h3"><strong>{t('discussion')}</strong></Accordion.Header>
-              <Accordion.Body onEntered={(e) => props.handleAccordion(props.ticket.id)}>
+              <Accordion.Body>
                 <div>
                   <strong>{t('message-from-you')}:&nbsp;</strong>{props.ticket.content}
                 </div>
@@ -112,7 +112,7 @@ const Ticket = (props) => {
         </Col>
       </Row>
     </div>
-  ); 
+  );  
 };
 
 export default Ticket;

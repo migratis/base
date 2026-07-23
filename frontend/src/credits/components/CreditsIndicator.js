@@ -36,9 +36,10 @@ const CreditsIndicator = ({ compact = false, dark = false }) => {
     return 'var(--color-green)';
   };
 
-  // A subscriber has unlimited AI (credits are bypassed) — don't show a credit
-  // counter or a buy-credits affordance at all.
-  if (!usage || usage.unlimited) return null;
+  // Everyone spends credits on human-lane AI now — a subscription only covers
+  // the one-time sandbox-approval charge, not AI calls (owner 2026-07-22). So
+  // the counter always shows once the balance has loaded.
+  if (!usage) return null;
 
   if (compact) {
     return (

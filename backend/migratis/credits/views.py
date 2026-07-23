@@ -8,7 +8,7 @@ from django.conf import settings
 from ninja import Router
 
 from .models import CreditCost
-from .services import get_or_create_balance, has_active_subscription
+from .services import get_or_create_balance
 
 router = Router()
 
@@ -24,13 +24,17 @@ router = Router()
 
 @router.get('/balance')
 def balance(request):
-    """Current credit balance. `unlimited` is True when an active subscription
-    covers usage — the frontend hides the counter / buy affordance in that case
-    (a subscriber never spends credits)."""
+    """Current credit balance.
+
+    `unlimited` is always False (owner 2026-07-22): a subscription no longer
+    grants unlimited AI — human-lane AI calls always cost credits; a subscription
+    only covers the one-time human sandbox-approval charge. The field is retained
+    for frontend contract stability but the "unlimited" state is retired. Kept
+    subscription-agnostic — credits does not import subscription."""
     bal = get_or_create_balance(request.user)
     return {
         'credits':   bal.credits,
-        'unlimited': has_active_subscription(request.user),
+        'unlimited': False,
     }
 
 
