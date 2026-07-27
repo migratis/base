@@ -42,8 +42,11 @@ const LangSelector = ({ compact = true }) => {
           className="lang-dropdown"
           style={{
             position: 'absolute',
-            bottom: '100%',
+            // Drops down from the trigger. The sidebar entry sits mid-list, so
+            // opening upwards put the options behind the items above it.
+            top: '100%',
             left: '0',
+            marginTop: '4px',
             background: 'var(--color-dark)',
             borderRadius: 'var(--border-radius)',
             padding: '8px',
