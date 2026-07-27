@@ -7,6 +7,7 @@ import GalleryDisplay from './GalleryDisplay';
 import CalendarDisplay from './CalendarDisplay';
 import GridDisplay from './GridDisplay';
 import HubDetailDisplay from './HubDetailDisplay';
+import MapDisplay from './MapDisplay';
 import CustomDisplay from './CustomDisplay';
 
 export const DISPLAY_MODE_MAP = {
@@ -19,6 +20,7 @@ export const DISPLAY_MODE_MAP = {
   calendar: CalendarDisplay,
   grid: GridDisplay,
   hub_detail: HubDetailDisplay,
+  map: MapDisplay,
 };
 
 export const getDisplayMode = (mode) => {

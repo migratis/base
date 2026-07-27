@@ -1,5 +1,6 @@
 import { useMemo, useEffect, useCallback } from 'react';
 import { useFormContext, useController } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import Button from 'react-bootstrap/Button';
 import {
   MapContainer,
@@ -157,6 +158,7 @@ const MapField = ({
 }) => {
   const mode = GEO_MODES.includes(geoMode) ? geoMode : 'point';
   const ro = disabled || readOnly;
+  const { t } = useTranslation('common');
 
   const { control } = useFormContext();
   const { field } = useController({ name, control, defaultValue: '' });
@@ -248,7 +250,7 @@ const MapField = ({
           data-testid="map-clear"
           onClick={() => setGeo(null)}
         >
-          ✕ Clear
+          ✕ {t('map-clear', 'Clear')}
         </Button>
       )}
 
