@@ -79,7 +79,7 @@ const Activate = () => {
                     <strong>{ t(message.token) }</strong>
                     <br /><br /> 
                     <Link to="/reset">
-                      <button className="btn btn-primary btn-block">{ t('reset') }</button>
+                      <button className="btn btn-primary btn-block">{ t('reset-password') }</button>
                     </Link>                  
                   </>
                 :

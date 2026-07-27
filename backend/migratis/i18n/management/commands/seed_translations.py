@@ -26,6 +26,10 @@ TRANSLATIONS = {}
 # --------------------------------------------------------------------------- #
 NAMESPACE_LINKS = {}
 
+# Activate.js offers a "reset password" way out when the activation token is
+# bad or expired; the copy is owned by the login / reset namespaces.
+NAMESPACE_LINKS['activate'] = ['reset-password']
+
 
 # ===========================================================================
 # layout
@@ -2006,6 +2010,19 @@ TRANSLATIONS['register'] = {
         'es': 'Registrarse',
         'ro': 'Înregistrare',
     },
+    # LinkToCguv — the terms-of-service line next to the download link.
+    'link-to-cgu': {
+        'en': 'I accept the terms and conditions',
+        'fr': "J'accepte les conditions générales",
+        'es': 'Acepto los términos y condiciones',
+        'ro': 'Accept termenii și condițiile',
+    },
+    'download-cgu': {
+        'en': 'Download the terms and conditions',
+        'fr': 'Télécharger les conditions générales',
+        'es': 'Descargar los términos y condiciones',
+        'ro': 'Descărcați termenii și condițiile',
+    },
 }
 
 TRANSLATIONS['profile'] = {
@@ -2054,6 +2071,46 @@ TRANSLATIONS['profile'] = {
 }
 
 TRANSLATIONS['password'] = {
+    # PasswordValidation checklist — one line per rule, shown live under the
+    # password fields on register / reset / set-password. The length figure
+    # matches the `requiredLength` that component passes (10), which is
+    # stricter than Django's MinimumLengthValidator (8) on purpose.
+    'password-length': {
+        'en': 'At least 10 characters',
+        'fr': 'Au moins 10 caractères',
+        'es': 'Al menos 10 caracteres',
+        'ro': 'Cel puțin 10 caractere',
+    },
+    'password-number': {
+        'en': 'At least one number',
+        'fr': 'Au moins un chiffre',
+        'es': 'Al menos un número',
+        'ro': 'Cel puțin o cifră',
+    },
+    'password-uppercase': {
+        'en': 'At least one uppercase letter',
+        'fr': 'Au moins une lettre majuscule',
+        'es': 'Al menos una letra mayúscula',
+        'ro': 'Cel puțin o literă mare',
+    },
+    'password-lowercase': {
+        'en': 'At least one lowercase letter',
+        'fr': 'Au moins une lettre minuscule',
+        'es': 'Al menos una letra minúscula',
+        'ro': 'Cel puțin o literă mică',
+    },
+    'password-special-characters': {
+        'en': 'At least one special character',
+        'fr': 'Au moins un caractère spécial',
+        'es': 'Al menos un carácter especial',
+        'ro': 'Cel puțin un caracter special',
+    },
+    'password-match': {
+        'en': 'Passwords match',
+        'fr': 'Les mots de passe correspondent',
+        'es': 'Las contraseñas coinciden',
+        'ro': 'Parolele se potrivesc',
+    },
     'change-password': {
         'en': 'Change password',
         'fr': 'Changer le mot de passe',
