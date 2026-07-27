@@ -36,6 +36,11 @@ try {
 export const sidebarSlots = collect(modules, 'sidebar');
 export const headerWidgets = collect(modules, 'headerWidgets');
 
+// Extra blocks a module adds to Account → Preferences (e.g. the generator's
+// default-LLM picker). Keeps the user module from importing feature modules to
+// render settings that are not its own.
+export const accountSections = collect(modules, 'accountSections');
+
 // Context providers a module needs mounted at the app root (e.g. the user
 // module's AuthProvider). Rendered by ShellRoot, outermost-first by `order`.
 export const shellProviders = collect(modules, 'providers');
