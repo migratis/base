@@ -4,10 +4,16 @@ import { useForm } from 'react-hook-form';
 import UserService from "../services/user.service";
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-toastify';
+import { firstEnabled } from '../../common/shell/collect';
+import { landingRoutes } from '../../common/shell/registry';
 
 const Login = (props) => {
   const navigate = useNavigate();
-  const location = useLocation();  
+  const location = useLocation();
+  // The user module authenticates; it does not decide what the app is *for*.
+  // Whichever module ships the main workspace claims the landing page through
+  // its shell.js `landingRoutes`; /home when no module contributes one.
+  const landingPath = firstEnabled(landingRoutes)?.path || '/home';
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [serverErrors, setserverErrors] = useState([]);    
@@ -91,7 +97,7 @@ const Login = (props) => {
             props.setUser(response.user);
             if (props.setExpanded) props.setExpanded(false);
             if (location.pathname === "/home" || location.pathname === "/register") {
-              navigate("/generator/application");
+              navigate(landingPath);
             } else {
               window.location.reload();
             }
@@ -125,7 +131,7 @@ const Login = (props) => {
             props.setUser(response.user);
             if (props.setExpanded) props.setExpanded(false);
             if (location.pathname === "/home" || location.pathname === "/register") {
-              navigate("/generator/application");
+              navigate(landingPath);
             } else {
               window.location.reload();
             }

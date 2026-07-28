@@ -41,6 +41,21 @@ export const headerWidgets = collect(modules, 'headerWidgets');
 // render settings that are not its own.
 export const accountSections = collect(modules, 'accountSections');
 
+// Blocks a module adds to Account → Billing (credits, subscription, …). The
+// tab itself only exists when at least one module contributes an enabled
+// section, so a deployment that monetizes nothing simply never shows it.
+export const billingSections = collect(modules, 'billingSections');
+
+// Where an authenticated session should land ({ path }). Winner-takes-all via
+// `firstEnabled` — the lowest-`order` enabled contributor wins and the user
+// module falls back to /home when no feature module claims a landing page.
+export const landingRoutes = collect(modules, 'landingRoutes');
+
+// The in-app page documenting the token-authenticated API ({ path }), published
+// by whichever module exposes it. Winner-takes-all; Account → API access hides
+// the "read the docs" hint entirely when nothing is contributed.
+export const tokenDocs = collect(modules, 'tokenDocs');
+
 // Context providers a module needs mounted at the app root (e.g. the user
 // module's AuthProvider). Rendered by ShellRoot, outermost-first by `order`.
 export const shellProviders = collect(modules, 'providers');

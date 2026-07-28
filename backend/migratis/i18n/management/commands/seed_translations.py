@@ -1543,36 +1543,10 @@ TRANSLATIONS['account'] = {
         'es': 'Suscríbete para acceso continuo, o compra créditos de IA cuando los necesites — ambos permiten mantener tu aplicación y desplegar nuevas versiones a tu base.',
         'ro': 'Abonează-te pentru acces continuu sau cumpără credite AI după nevoie — ambele permit întreținerea aplicației și implementarea de noi versiuni în baza ta.',
     },
-    'billing-subscription-title': {
-        'en': 'Subscription',
-        'fr': 'Abonnement',
-        'es': 'Suscripción',
-        'ro': 'Abonament',
-    },
-    'billing-credits-title': {
-        'en': 'AI credits',
-        'fr': 'Crédits IA',
-        'es': 'Créditos de IA',
-        'ro': 'Credite AI',
-    },
-    'billing-credits-balance': {
-        'en': 'You have {{credits}} AI credits.',
-        'fr': 'Vous avez {{credits}} crédits IA.',
-        'es': 'Tienes {{credits}} créditos de IA.',
-        'ro': 'Ai {{credits}} credite AI.',
-    },
-    'billing-credits-unlimited': {
-        'en': 'Your subscription includes unlimited AI — no credits needed.',
-        'fr': 'Votre abonnement inclut une IA illimitée — aucun crédit nécessaire.',
-        'es': 'Tu suscripción incluye IA ilimitada — no se necesitan créditos.',
-        'ro': 'Abonamentul tău include AI nelimitat — nu sunt necesare credite.',
-    },
-    'billing-buy-credits': {
-        'en': 'Buy credits',
-        'fr': 'Acheter des crédits',
-        'es': 'Comprar créditos',
-        'ro': 'Cumpără credite',
-    },
+    # NOTE: the Billing *blocks* are contributed by the modules that own them
+    # (credits/shell.js, subscription/shell.js), so their copy lives in the
+    # `credits` / `subscription` namespaces below — only the tab's own intro
+    # stays here. See common/shell/registry.js `billingSections`.
     'language-intro': {
         'en': 'Choose your interface language. This is saved to your account.',
         'fr': "Choisissez la langue de l'interface. Ce choix est enregistré sur votre compte.",
@@ -2270,6 +2244,15 @@ TRANSLATIONS['upload'] = {
 }
 
 TRANSLATIONS['subscription'] = {
+    # Account → Billing block (SubscriptionBilling), contributed through the
+    # shell registry's `billingSections` slot — the heading moved off the
+    # `account` namespace with the component so the module stays self-contained.
+    'billing-subscription-title': {
+        'en': 'Subscription',
+        'fr': 'Abonnement',
+        'es': 'Suscripción',
+        'ro': 'Abonament',
+    },
     'plans': {
         'en': 'Plans',
         'fr': 'Forfaits',
@@ -2671,6 +2654,27 @@ TRANSLATIONS['billing'] = {
 # De-AI'd credit widget / purchase-modal copy. The credits FE module resolves
 # from `credits` + `billing` only.
 TRANSLATIONS['credits'] = {
+    # Account → Billing block (CreditsBilling), contributed through the shell
+    # registry's `billingSections` slot — the copy moved off the `account`
+    # namespace with the component so the module stays self-contained.
+    'billing-credits-title': {
+        'en': 'AI credits',
+        'fr': 'Crédits IA',
+        'es': 'Créditos de IA',
+        'ro': 'Credite AI',
+    },
+    'billing-credits-balance': {
+        'en': 'You have {{credits}} AI credits.',
+        'fr': 'Vous avez {{credits}} crédits IA.',
+        'es': 'Tienes {{credits}} créditos de IA.',
+        'ro': 'Ai {{credits}} credite AI.',
+    },
+    'billing-buy-credits': {
+        'en': 'Buy credits',
+        'fr': 'Acheter des crédits',
+        'es': 'Comprar créditos',
+        'ro': 'Cumpără credite',
+    },
     'credits': {
         'en': 'Credits available: {{remaining}}',
         'fr': 'Crédits disponibles : {{remaining}}',

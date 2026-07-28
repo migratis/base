@@ -219,8 +219,30 @@ const Entities = (props) => {
     }
   }, [location.search]);// eslint-disable-line react-hooks/exhaustive-deps
   
+  // Record count, plus the bulk-delete affordance when the caller asks for it.
+  // `bulkDelete` is an opt-in *prop*: this used to be inferred from
+  // `app === 'generator' && entity === 'entity'`, which taught a generic list
+  // component the name of one feature module and silently denied the
+  // affordance to every other caller. The endpoint behind it
+  // (`/{app}/{entity}/delete-all`) was always generic.
+  //
+  // `active` scopes the deletion to the tab in view (true/false), or null for
+  // an untabbed list — it is the same argument the tab renders under.
+  const renderCountToolbar = (active) => (
+    <div className="d-flex justify-content-between align-items-center p-2">
+      <div>
+        {count > 1 && <> <Badge>{start}</Badge> {t('count-to')} <Badge>{end}</Badge> {t('count-of')} </> } <Badge>{count}</Badge>
+      </div>
+      {count > 0 && props.bulkDelete && (
+        <Button variant="outline-danger" size="sm" onClick={() => handleDeleteAll(active)}>
+          {t('delete-all')}
+        </Button>
+      )}
+    </div>
+  );
+
   return (
-    <>   
+    <>
       <header className="page-header-row sticky-top">
         <h2>{t(`${props.entity}s`)}</h2>
         {props.renderMenu && props.renderMenu(handleEdit)}
@@ -256,16 +278,7 @@ const Entities = (props) => {
                   >
                     <Tab eventKey="active" title={t('active')}>
                       <Container>
-                        <div className="d-flex justify-content-between align-items-center p-2">
-                          <div>
-                            {count > 1 && <> <Badge>{start}</Badge> {t('count-to')} <Badge>{end}</Badge> {t('count-of')} </> } <Badge>{count}</Badge>
-                          </div>
-                          {count > 0 && props.app === 'generator' && props.entity === 'entity' && (
-                            <Button variant="outline-danger" size="sm" onClick={() => handleDeleteAll(true)}>
-                              {t('delete-all')}
-                            </Button>
-                          )}
-                        </div>
+                        {renderCountToolbar(true)}
                         <props.list
                           entities={entities}
                           active={true}
@@ -283,16 +296,7 @@ const Entities = (props) => {
                     </Tab>
                     <Tab eventKey="inactive" title={t('inactive')}>
                       <Container>
-                        <div className="d-flex justify-content-between align-items-center p-2">
-                          <div>
-                            {count > 1 && <> <Badge>{start}</Badge> {t('count-to')} <Badge>{end}</Badge> {t('count-of')} </> } <Badge>{count}</Badge>
-                          </div>
-                          {count > 0 && props.app === 'generator' && props.entity === 'entity' && (
-                            <Button variant="outline-danger" size="sm" onClick={() => handleDeleteAll(false)}>
-                              {t('delete-all')}
-                            </Button>
-                          )}
-                        </div>
+                        {renderCountToolbar(false)}
                         <props.list
                           entities={entities}
                           active={false}
@@ -311,16 +315,7 @@ const Entities = (props) => {
                   </Tabs>
 :
                   <>
-                    <div className="d-flex justify-content-between align-items-center p-2">
-                      <div>
-                        {count > 1 && <> <Badge>{start}</Badge> {t('count-to')} <Badge>{end}</Badge> {t('count-of')} </> } <Badge>{count}</Badge>
-                      </div>
-                      {count > 0 && props.app === 'generator' && props.entity === 'entity' && (
-                        <Button variant="outline-danger" size="sm" onClick={() => handleDeleteAll(null)}>
-                          {t('delete-all')}
-                        </Button>
-                      )}
-                    </div>
+                    {renderCountToolbar(null)}
                     <props.list
                       entities={entities}
                       handleEdit={handleEdit}

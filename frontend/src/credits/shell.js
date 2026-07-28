@@ -1,4 +1,5 @@
 import CreditsIndicator from './components/CreditsIndicator';
+import CreditsBilling from './components/CreditsBilling';
 import { CREDITS } from '../settings';
 
 /**
@@ -24,5 +25,19 @@ export const headerWidgets = [
     order: 10,
     enabled: () => CREDITS,
     Component: HeaderIndicator,
+  },
+];
+
+/**
+ * Account → Billing: balance + top-up. Buying credits is a credits concern, so
+ * the account page renders it through the slot instead of importing this module
+ * behind another module's feature flag.
+ */
+export const billingSections = [
+  {
+    id: 'credits',
+    order: 10,
+    enabled: () => CREDITS,
+    Component: CreditsBilling,
   },
 ];

@@ -19,3 +19,27 @@ export function collect(modules, key) {
     .flatMap((mod) => (Array.isArray(mod[key]) ? mod[key] : []))
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 }
+
+/**
+ * The slots a host should actually render, in `order`. A descriptor without an
+ * `enabled` predicate is always on (feature flags are optional).
+ *
+ * @param {object[]} slots  collected slot descriptors
+ * @returns {object[]} the enabled subset, order preserved
+ */
+export function enabledSlots(slots) {
+  return (slots || []).filter((slot) => !slot.enabled || slot.enabled());
+}
+
+/**
+ * Winner-takes-all resolution for slots that carry a *value* rather than a
+ * component — e.g. where to land after login, or which page documents the
+ * agent-lane token. The lowest-`order` enabled contributor wins; `undefined`
+ * when no module contributes, so the host can fall back to its own default.
+ *
+ * @param {object[]} slots  collected slot descriptors
+ * @returns {object|undefined} the winning descriptor
+ */
+export function firstEnabled(slots) {
+  return enabledSlots(slots)[0];
+}
