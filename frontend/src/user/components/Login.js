@@ -12,8 +12,8 @@ const Login = (props) => {
   const [password, setPassword] = useState("");
   const [serverErrors, setserverErrors] = useState([]);    
   const { t } = useTranslation('login');
-  const { register, formState: { errors }, handleSubmit, setValue } = useForm();
-  const emailField = useRef(null);  
+  const { register, unregister, formState: { errors }, handleSubmit, setValue } = useForm({ mode: 'onChange' });
+  const emailField = useRef(null);
   const passwordField = useRef(null);
 
   const [tfaMode, setTfaMode] = useState(false);
@@ -21,15 +21,60 @@ const Login = (props) => {
   const [tfaEmail, setTfaEmail] = useState("");
   const [rememberDevice, setRememberDevice] = useState(true);
 
-  useEffect(() => {  
-    let interval = setInterval(() => {
-      if (emailField.current && passwordField.current) {
-        setValue("email", emailField.current.value);
-        setValue("password", passwordField.current.value);
-        clearInterval(interval)
-      }
-    }, 100);   
+  // Each input keeps its own `value` / `onChange` / `ref`, so react-hook-form's
+  // must be composed with them rather than overwritten — otherwise the form
+  // validates an empty store and answers "empty-field" for everything.
+  const bind = (registration, localRef, dispatch) => ({
+    ...registration,
+    ref: (element) => {
+      registration.ref(element);
+      if (localRef) localRef.current = element;
+    },
+    onChange: (event) => {
+      registration.onChange(event);
+      dispatch(event.target.value);
+    },
   });
+
+  const emailRegistration = register("email", {
+    required: true,
+    maxLength: 150,
+    pattern: {
+      value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+      message: t('email-invalid')
+    }
+  });
+  const passwordRegistration = register("password", { required: true });
+  // Only while the code step is on screen: a registered-but-absent required
+  // field fails validation with nowhere to show the message, which would block
+  // the ordinary login silently.
+  const tfaCodeRegistration = tfaMode
+    ? register("tfaCode", { required: true, minLength: 6, maxLength: 6 })
+    : null;
+
+  // A password manager can fill the inputs without firing a change event React
+  // sees, which would leave the form thinking they are still empty. Poll the
+  // DOM briefly after mount to pick such a fill up; a real keystroke goes
+  // through `bind` above and needs none of this.
+  useEffect(() => {
+    const deadline = Date.now() + 5000;
+    const interval = setInterval(() => {
+      const filledEmail = emailField.current?.value;
+      const filledPassword = passwordField.current?.value;
+      if (filledEmail) {
+        setEmail(filledEmail);
+        setValue("email", filledEmail, { shouldValidate: true });
+      }
+      if (filledPassword) {
+        setPassword(filledPassword);
+        setValue("password", filledPassword, { shouldValidate: true });
+      }
+      if ((filledEmail && filledPassword) || Date.now() > deadline) {
+        clearInterval(interval);
+      }
+    }, 100);
+    return () => clearInterval(interval);
+  }, [setValue]);
 
   const onSubmit = async (data) => {
     if (tfaMode) {
@@ -136,6 +181,9 @@ const Login = (props) => {
     setTfaMode(false);
     setTfaCode("");
     setserverErrors([]);
+    // Drop the code field, otherwise it keeps failing `required` behind a step
+    // that is no longer displayed.
+    unregister("tfaCode");
   };
 
   if (tfaMode) {
@@ -152,20 +200,15 @@ const Login = (props) => {
                 <span style={{ color: 'red' }}>&nbsp;*</span>
               </label>
               <input
-                {...register("tfaCode", { 
-                  required: true, 
-                  minLength: 6, 
-                  maxLength: 6
-                })}
+                {...bind(tfaCodeRegistration, null, setTfaCode)}
                 type="text"
                 className={`form-control ${errors.tfaCode || serverErrors.code ? 'is-invalid' : ''}`}
                 name="tfaCode"
                 value={tfaCode}
-                onChange={(e) => setTfaCode(e.target.value)}
                 placeholder="000000"
                 autoComplete="off"
               />
-              <small className="form-text text-muted text-danger">
+              <small className="form-text text-danger">
                 {!errors.tfaCode && serverErrors.code}
                 {errors.tfaCode?.type === 'required' && t("tfa-code-required")}
                 {errors.tfaCode && (errors.tfaCode.type === "minLength" || errors.tfaCode.type === "maxLength") && t("tfa-code-invalid")}
@@ -219,25 +262,18 @@ const Login = (props) => {
                 { t('email') }
                 <span style={{ color: 'red' }}>&nbsp;*</span>
               </label>
-              <input { ...register("email", { 
-                required: true, 
-                maxLength: 150, 
-                pattern: {
-                  value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                  message: t('email-invalid')
-                }}) }
-                ref={emailField}
+              <input { ...bind(emailRegistration, emailField, setEmail) }
                 type="text"
                 className={ `form-control ${ errors.email || serverErrors.email ? 'is-invalid' : '' }` }
                 name="email"
                 value={ email }
-                onChange={(e) => setEmail(e.target.value)}
               />
-              <small className="form-text text-muted text-danger">
+              <small className="form-text text-danger">
                 { !errors.email && serverErrors.email }
                 { errors.email?.type === 'required' && t("empty-field") }
-                { errors.email && errors.email.type === "maxLength" && t("max-length-exceeded") }                                        
-              </small>  
+                { errors.email?.type === "maxLength" && t("max-length-exceeded") }
+                { errors.email?.type === "pattern" && t("email-invalid") }
+              </small>
             </div>
 
             <div className="migratis-field">
@@ -245,17 +281,13 @@ const Login = (props) => {
                 { t('password') }
                 <span style={{ color: 'red'} }>&nbsp;*</span>
               </label>
-              <input { ...register("password", { 
-                required: true 
-                }) }
-                ref={passwordField}
+              <input { ...bind(passwordRegistration, passwordField, setPassword) }
                 type="password"
                 className={ `form-control ${ errors.password || serverErrors.password ? 'is-invalid' : '' }` }
                 name="password"
                 value={ password }
-                onChange={ (e) => setPassword(e.target.value) }
               />
-              <small className="form-text text-muted text-danger">
+              <small className="form-text text-danger">
                 { !errors.password && serverErrors.password }
                 { errors.password?.type === 'required' && t("empty-field") }                                                                        
               </small>  

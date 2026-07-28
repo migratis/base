@@ -16,7 +16,7 @@ if (!window.location.host.match("127.0.0.1")) {
     <StrictMode>
       <BrowserRouter>
         <ShellRoot>
-          <Suspense fallback={<LoaderIndicator />}>
+          <Suspense fallback={<LoaderIndicator always />}>
             <App />
           </Suspense>
         </ShellRoot>
@@ -27,7 +27,7 @@ if (!window.location.host.match("127.0.0.1")) {
   root.render(
     <BrowserRouter>
       <ShellRoot>
-        <Suspense fallback={<LoaderIndicator />}>
+        <Suspense fallback={<LoaderIndicator always />}>
           <App />
         </Suspense>
       </ShellRoot>

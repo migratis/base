@@ -9,11 +9,12 @@ import {
     IoPersonOutline as PersonOutline
 } from 'react-icons/io5';
 import DOMPurify from 'dompurify';
-import cguv from "../../documents/cguv.txt";
-import rgpd from "../../documents/rgpd.txt";
+import { cguvDocument, rgpdDocument } from "../tools/legalDocuments";
 
 export const Footer = (props) => {
-    const { t } = useTranslation('layout');
+    const { t, i18n } = useTranslation('layout');
+    const cguv = cguvDocument(i18n.language);
+    const rgpd = rgpdDocument(i18n.language);
 
     return (
 

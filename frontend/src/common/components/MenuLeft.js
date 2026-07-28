@@ -117,11 +117,9 @@ export const MenuLeft = (props) => {
                   <span className="sidebar-label">{t('account-settings')}</span>
                 </NavLink>
 
-                <div className="sidebar-item">
+                <div className="sidebar-item sidebar-item-lang">
                   <GlobeOutline />
-                  <span className="sidebar-label">
-                    <LangSelector />
-                  </span>
+                  <LangSelector />
                 </div>
 
                 {SUPPORT ? (
@@ -149,11 +147,9 @@ export const MenuLeft = (props) => {
                 <span className="sidebar-label">{t('login')}</span>
               </div>
 
-              <div className="sidebar-item">
+              <div className="sidebar-item sidebar-item-lang">
                 <GlobeOutline />
-                <span className="sidebar-label">
-                  <LangSelector />
-                </span>
+                <LangSelector />
               </div>
 
               <a href="/contact" className="sidebar-item" onClick={props.onMobileClose}>

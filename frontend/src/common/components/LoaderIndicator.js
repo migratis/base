@@ -3,11 +3,15 @@ import { usePromiseTracker } from "react-promise-tracker";
 import { ThreeDots } from 'react-loader-spinner';
 import { COLOR_LINK } from '../../settings';
 
+// `always` shows the spinner without a tracked promise behind it — used as the
+// Suspense fallback for lazy routes, where nothing goes through
+// react-promise-tracker and the page would otherwise stay blank while the
+// chunk downloads.
 export const LoaderIndicator = props => {
     const { promiseInProgress } = usePromiseTracker();
 
     return (
-      promiseInProgress &&
+      (promiseInProgress || props.always) &&
       <Modal
         show={true}
         size="lg"

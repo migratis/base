@@ -24,7 +24,9 @@ const Contact = () => {
     SupportService.getTopics().then(
         (response) => {
           const topic_list = [];
-          response.forEach(element => {
+          // An anonymous visitor still gets whatever the endpoint answers; an
+          // error body is an object, not the list of topics.
+          (Array.isArray(response) ? response : []).forEach(element => {
             topic_list.push({ 
               value: element.id, 
               label: t(element.label.key) 
@@ -46,7 +48,7 @@ const Contact = () => {
 
   const onSubmit = async (data) => {
     setDisableSubmit(true);
-    data.topic_id = data.topic_id?.value ?? data.topic_id;
+    data.topic_id = data.topic_id.value;
     data.language = localStorage.getItem('i18nextLng');
     SupportService.sendSupport(data).then(
       (response) => {

@@ -229,6 +229,16 @@
   }
 }
 
+// ── Sidebar row holding the language selector ────────────────────────────────
+// The dropdown opens inside this row. Sibling `.sidebar-item`s are positioned
+// too, so they paint after it and used to cover the options; lifting the whole
+// row above them is what keeps the dropdown on top. The selector is also kept
+// out of `.sidebar-label` (whose opacity/transform transition would trap the
+// dropdown in a stacking context and render it translucent).
+.sidebar-item-lang {
+  z-index: $z-sidebar-dropdown;
+}
+
 // ── Sidebar item with badge ───────────────────────────────────────────────────
 .sidebar-item-badge {
   margin-left: auto;
@@ -423,6 +433,7 @@
 .main-content {
   margin-left: var(--sidebar-width);
   padding: $content-padding;
+  padding-bottom: 48px;
   min-height: 100vh;
   background-color: var(--color-bg-body);
 }

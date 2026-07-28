@@ -59,7 +59,7 @@ export default function ChoiceField ({
       <label htmlFor={id?id:name + "-" + option} className={`form-check-label ${ error ? 'text-danger' : '' }`}>
         {label}
         {required?<span style={{ color: 'red' }}>&nbsp;*</span>:""}
-        {help ? <small className="form-text text-muted">&nbsp;&nbsp;{help}</small> : null}
+        {help ? <small className="form-check-help text-muted">&nbsp;&nbsp;{help}</small> : null}
       </label>
       <small className="form-text text-danger d-block">
         { !error?.type && error }
