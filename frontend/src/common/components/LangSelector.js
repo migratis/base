@@ -31,7 +31,9 @@ const LangSelector = ({ compact = true }) => {
       >
         <span style={{ fontSize: '16px' }}>{currentFlag}</span>
         {!compact && (
-          <span className="sidebar-label" style={{ marginLeft: '8px' }}>
+          // Spacing comes from the row's own gap, so the label lines up with
+          // every other sidebar label instead of an extra 8px to the right.
+          <span className="sidebar-label">
             {currentLabel}
           </span>
         )}

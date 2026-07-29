@@ -119,7 +119,7 @@ export const MenuLeft = (props) => {
                 {/* No globe icon: the selected flag *is* this row's icon. A
                     generic globe next to it said nothing the flag did not. */}
                 <div className="sidebar-item sidebar-item-lang">
-                  <LangSelector />
+                  <LangSelector compact={false} />
                 </div>
 
                 {SUPPORT ? (
@@ -148,7 +148,7 @@ export const MenuLeft = (props) => {
               </div>
 
               <div className="sidebar-item sidebar-item-lang">
-                <LangSelector />
+                <LangSelector compact={false} />
               </div>
 
               <a href="/contact" className="sidebar-item" onClick={props.onMobileClose}>

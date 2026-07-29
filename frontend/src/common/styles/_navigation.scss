@@ -238,6 +238,15 @@
 .sidebar-item-lang {
   z-index: $z-sidebar-dropdown;
 
+  // This row's flag and label live one level deeper than a plain sidebar item's
+  // icon and label, so the trigger has to reproduce the row's own layout — same
+  // 12px gap — for the two columns to line up with every other row.
+  .lang-selector-trigger {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
   // The selected flag stands in for the row's icon, so it has to occupy the
   // same 20px slot every other sidebar icon does — otherwise this row's
   // content starts a few pixels off the shared left edge.
