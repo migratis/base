@@ -204,6 +204,12 @@ EMAIL_HOST = env('EMAIL_HOST')
 EMAIL_HOST_USER = env('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')
 EMAIL_PORT = 587
+# Django defaults this to None, which hands smtplib a blocking socket: an
+# unreachable mail host then stalls on the OS TCP timeout (~130s). Mail is sent
+# inline on request paths — sendTFA() runs inside POST /user/login — so an
+# unbounded wait there is an unbounded request, and a proxy in front returns
+# 504 long before Python gives up. Bound it well under that read timeout.
+EMAIL_TIMEOUT = 10
 EMAIL_SENDER = env('EMAIL_SENDER')
 EMAIL_MODERATOR = env('EMAIL_MODERATOR')
 

@@ -31,7 +31,6 @@ customAxios.interceptors.request.use(
         request.url.match("user/login") 
         || request.url.match("/user/change_password") 
         || request.url.match("/user/reset_password")
-        || request.url.match("/user/activate")
         || request.url.match("/user/register")              
       ) {
         return request;

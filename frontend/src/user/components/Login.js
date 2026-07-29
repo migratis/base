@@ -144,12 +144,7 @@ const Login = (props) => {
               var message = {};
               var error = true;
               for (var i=0;i<response.detail.length;i++) {
-                if (response.detail[i].loc[1] === "email" && response.detail[i].msg === "account-not-activated") {
-                  error = false;
-                  toast.warning(t("confirm-link-in-email"), {autoClose:false});
-                  props.setLoginModalShow(false);
-                  navigate("/message", { state: t("confirm-link-in-email")});
-                } else if (response.detail[i].loc[1] === "email" && response.detail[i].msg === "account-deleted") {
+                if (response.detail[i].loc[1] === "email" && response.detail[i].msg === "account-deleted") {
                   error = false;
                   toast.warning(t("account-deleted"), {autoClose:false});
                   props.setLoginModalShow(false);

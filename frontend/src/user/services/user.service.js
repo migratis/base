@@ -105,25 +105,6 @@ const register = (data) => {
   });
 };
   
-const activate = (uidb64, token) => {
-  return api.post("/user/activate", qs.stringify({
-    uidb64: uidb64,
-    token: token          
-  }), 
-  { 
-    headers: {
-      'content-type': 'application/x-www-form-urlencoded'
-    }
-  }).then( (response) => {
-    if (response.data) return response.data;
-    else return response;
-  }).catch( (error) => {   
-    if (error.response.status === 422) {
-      return error.response.data;
-    } 
-  });
-};
-  
 const reset = (data) => {
   return api.post('/user/reset_password', qs.stringify({
     email: data.email,
@@ -279,7 +260,6 @@ const UserService = {
   tfaResend,
   logout,
   register,
-  activate,
   reset,
   password,
   getProfile,

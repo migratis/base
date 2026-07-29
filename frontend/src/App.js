@@ -12,7 +12,6 @@ const Message = lazyWithRetry(() => import('./common/components/Message'));
 const Cookies = lazyWithRetry(() => import('./common/components/Cookies'));
 const Register = lazyWithRetry(() => import('./user/components/Register'));
 const Invitation = lazyWithRetry(() => import('./user/components/Invitation'));
-const Activate = lazyWithRetry(() => import('./user/components/Activate'));
 const Reset = lazyWithRetry(() => import('./user/components/Reset'));
 const Password = lazyWithRetry(() => import('./user/components/Password'));
 const Profile = lazyWithRetry(() => import('./user/components/Profile'));
@@ -58,7 +57,6 @@ const App = () => {
             <>
               <Route exact path="/register" element={<Register />} />
               <Route exact path="/invitation" element={<Invitation />} />
-              <Route exact path="/activate" element={<Activate />} />
               <Route exact path="/reset" element={<Reset />} />
               <Route exact path="/password" element={<Password />} />
             </>

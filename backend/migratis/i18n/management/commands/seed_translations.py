@@ -26,10 +26,6 @@ TRANSLATIONS = {}
 # --------------------------------------------------------------------------- #
 NAMESPACE_LINKS = {}
 
-# Activate.js offers a "reset password" way out when the activation token is
-# bad or expired; the copy is owned by the login / reset namespaces.
-NAMESPACE_LINKS['activate'] = ['reset-password']
-
 
 # ===========================================================================
 # layout
@@ -267,119 +263,11 @@ TRANSLATIONS['layout'] = {
         'es': 'Puede subir imágenes, PDF o documentos (máx 10MB)',
         'ro': 'Puteți încărca imagini, PDF sau documente (max 10MB)',
     },
-}
-
-# ===========================================================================
-# activate
-# ===========================================================================
-TRANSLATIONS['activate'] = {
-    'email-activation': {
-        'en': 'Email confirmation',
-        'fr': 'Confirmation du couriel',
-        'es': 'Confirmación del correo electrónico',
-        'ro': 'Confirmare email',
-    },
-    'error-occured': {
-        'en': 'Error in the form !',
-        'fr': 'Erreur dans le formulaire !',
-        'es': '¡Error en el formulario!',
-        'ro': 'Eroare în formular!',
-    },
-    'login': {
-        'en': 'Login',
-        'fr': 'Se connecter',
-        'es': 'Iniciar sesión',
-        'ro': 'Autentificare',
-    },
-    'password-already-used': {
-        'en': 'Password already used',
-        'fr': 'Ce mot de passe a déjà été utilisé',
-        'es': 'Contraseña ya utilizada',
-        'ro': 'Parolă deja utilizată',
-    },
-    'register': {
-        'en': 'Register',
-        'fr': "S'enregistrer",
-        'es': 'Registrarse',
-        'ro': 'Înregistrează-te',
-    },
-    'registration-confirmation-done': {
-        'en': 'Activation already done.',
-        'fr': "L'activation a déjà été faite.",
-        'es': 'Activación ya realizada.',
-        'ro': 'Activarea a fost deja efectuată.',
-    },
-    'registration-confirmation-failed': {
-        'en': 'Your profile activation has failed, please reset your password',
-        'fr': "L'activation de votre profil a échouée, veuillez réinitialiser votre mot de passe",
-        'es': 'La activación de tu perfil ha fallado, por favor restablece tu contraseña.',
-        'ro': 'Activarea profilului tău a eșuat, te rugăm să îți resetezi parola.',
-    },
-    'registration-confirmed': {
-        'en': 'Your profile is now activated, you can log in.',
-        'fr': 'Votre profil est maintenant activé, vous pouvez vous connecter.',
-        'es': 'Tu perfil ya está activado, puedes iniciar sesión.',
-        'ro': 'Profilul tău este acum activat, te poți autentifica.',
-    },
-    'try-again-later': {
-        'en': 'Try again later.',
-        'fr': 'Essayez plus tard.',
-        'es': 'Inténtalo de nuevo más tarde.',
-        'ro': 'Încearcă din nou mai târziu.',
-    },
-    'user-not-exists': {
-        'en': 'Unknown user',
-        'fr': 'Utilisateur inconnu',
-        'es': 'Usuario desconocido',
-        'ro': 'Utilizator necunoscut',
-    },
-    'validate': {
-        'en': 'Validate',
-        'fr': 'Valider',
-        'es': 'Validar',
-        'ro': 'Validează',
-    },
-    'tfa-code-required': {
-        'en': 'TFA code is required',
-        'fr': 'Le code TFA est requis',
-        'es': 'Se requiere código TFA',
-        'ro': 'Codul TFA este obligatoriu',
-    },
-    'tfa-code-invalid': {
-        'en': 'Invalid TFA code',
-        'fr': 'Code TFA invalide',
-        'es': 'Código TFA inválido',
-        'ro': 'Cod TFA invalid',
-    },
-    'tfa-code-expired': {
-        'en': 'TFA code has expired, please request a new one',
-        'fr': 'Le code TFA a expiré, veuillez en demander un nouveau',
-        'es': 'El código TFA ha expirado, por favor solicita uno nuevo',
-        'ro': 'Codul TFA a expirat, te rugăm să ceri unul nou',
-    },
-    'tfa-max-attempts': {
-        'en': 'Too many attempts, please request a new TFA code',
-        'fr': 'Trop de tentatives, veuillez demander un nouveau code TFA',
-        'es': 'Demasiados intentos, por favor solicita un nuevo código TFA',
-        'ro': 'Prea multe încercări, te rugăm să ceri un nou cod TFA',
-    },
-    'tfa-code-sent': {
-        'en': 'TFA code sent to your email',
-        'fr': 'Code TFA envoyé à votre email',
-        'es': 'Código TFA enviado a tu correo',
-        'ro': 'Codul TFA a fost trimis pe email',
-    },
-    'tfa-resend-rate-limit': {
-        'en': 'Please wait before requesting a new TFA code',
-        'fr': 'Veuillez attendre avant de demander un nouveau code TFA',
-        'es': 'Por favor espera antes de solicitar un nuevo código TFA',
-        'ro': 'Te rugăm să aștepți înainte de a cere un nou cod TFA',
-    },
-    'remember-device': {
-        'en': 'Remember this device for 1 week',
-        'fr': 'Se souvenir de cet appareil pendant 1 semaine',
-        'es': 'Recordar este dispositivo durante 1 semana',
-        'ro': 'Ține minte acest dispozitiv timp de 1 săptămână',
+    'session-expired': {
+        'en': 'Session Expired',
+        'fr': 'Session Expirée',
+        'es': 'Sesión Expirada',
+        'ro': 'Sesiune Expirată',
     },
 }
 
@@ -458,12 +346,6 @@ TRANSLATIONS['email'] = {
         'fr': 'Changement de mot de passe',
         'es': 'Cambio de contraseña',
         'ro': 'Schimbare parolă',
-    },
-    'confirm-registration': {
-        'en': 'Profile activation',
-        'fr': 'Activation de votre profil',
-        'es': 'Activación del perfil',
-        'ro': 'Activarea profilului',
     },
     'tfa-email-subject': {
         'en': 'Your security code',
@@ -1861,12 +1743,6 @@ TRANSLATIONS['login'] = {
         'es': 'Inicio de sesión exitoso',
         'ro': 'Autentificare reușită',
     },
-    'confirm-link-in-email': {
-        'en': 'Confirmation link sent to your email',
-        'fr': 'Lien de confirmation envoyé à votre email',
-        'es': 'Enlace de confirmación enviado a tu correo',
-        'ro': 'Link de confirmare trimis pe email',
-    },
     'account-deleted': {
         'en': 'Account deleted',
         'fr': 'Compte supprimé',
@@ -1974,6 +1850,12 @@ TRANSLATIONS['login'] = {
         'fr': 'Inscription réussie',
         'es': 'Registro exitoso',
         'ro': 'Înregistrare reușită',
+    },
+    'tfa-email-send-failed': {
+        'en': 'We could not send your verification code. Please try again in a moment.',
+        'fr': "Nous n'avons pas pu envoyer votre code de vérification. Veuillez réessayer dans un instant.",
+        'es': 'No hemos podido enviar tu código de verificación. Inténtalo de nuevo en un momento.',
+        'ro': 'Nu am putut trimite codul de verificare. Vă rugăm să încercați din nou într-un moment.',
     },
 }
 
