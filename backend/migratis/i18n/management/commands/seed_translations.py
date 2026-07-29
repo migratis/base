@@ -2214,6 +2214,15 @@ TRANSLATIONS['userform'] = {
         'es': 'Se produjo un error. Inténtalo de nuevo.',
         'ro': 'A apărut o eroare. Încercați din nou.',
     },
+    # The birthdate picker used to render with no label at all — legible only
+    # because it sat alone under a labelled field. It shares a row now, so it
+    # has to name itself.
+    'birthdate': {
+        'en': 'Date of birth',
+        'fr': 'Date de naissance',
+        'es': 'Fecha de nacimiento',
+        'ro': 'Data nașterii',
+    },
 }
 
 TRANSLATIONS['upload'] = {

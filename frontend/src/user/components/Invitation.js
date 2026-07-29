@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { LoaderIndicator } from '../../common/components/LoaderIndicator';
 import { useLocation } from 'react-router-dom';
 import { UserForm } from './UserForm';
+import { PageShell } from '../../common/components/PageShell';
 
 const Invitation = () => {
   const { t } = useTranslation('invitation');
@@ -36,21 +37,14 @@ const Invitation = () => {
     <>
       <LoaderIndicator/> 
       { !wait &&
-      <>
-      <header className="sticky-top">
-        <div className="row">
-            <div className="col-sm-12">
-              <h2>{t('complete-invitation')}</h2>
-            </div>
-          </div>
-        </header>      
-        <UserForm 
-          invitation={invitation} 
-          uidb64={uidb64} 
-          token={token} 
-          id={id}
-        />
-      </>
+        <PageShell title={t('complete-invitation')} width="form">
+          <UserForm
+            invitation={invitation}
+            uidb64={uidb64}
+            token={token}
+            id={id}
+          />
+        </PageShell>
       }
 
     </>

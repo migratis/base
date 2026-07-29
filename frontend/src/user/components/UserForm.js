@@ -123,7 +123,7 @@ export const UserForm = (props) => {
 
 	return (
 		<>
-			<p className="text-center">
+			<p className="form-intro">
 				{ t('fields-mandatory') }
 				<span style={{color: 'red'}}>&nbsp;*</span>
 			</p>
@@ -156,25 +156,27 @@ export const UserForm = (props) => {
 								  serverError={serverErrors.email}
 							  />
             
-					      <InputField
-						      name="password"
-						      type="password"
-						      label={ t('password') }
-						      required={true}  
-                  maxLength={50}                                      
-						      dispatch={setPassword}
-						      serverError={serverErrors.password??passwordErrors}
-					      />
-            
-					      <InputField
-						      name="confPassword"
-						      type="password"
-						      label={ t('confirm-password') }
-						      required={true}    
-                  maxLength={50}                                       
-						      dispatch={setConfPassword}           
-						      error={errors.confPassword??serverErrors.confPassword??passwordErrors}              
-					      />
+					      <div className="field-row">
+						      <InputField
+							      name="password"
+							      type="password"
+							      label={ t('password') }
+							      required={true}
+	                  maxLength={50}
+							      dispatch={setPassword}
+							      serverError={serverErrors.password??passwordErrors}
+						      />
+
+						      <InputField
+							      name="confPassword"
+							      type="password"
+							      label={ t('confirm-password') }
+							      required={true}
+	                  maxLength={50}
+							      dispatch={setConfPassword}
+							      error={errors.confPassword??serverErrors.confPassword??passwordErrors}
+						      />
+					      </div>
 
   						  <PasswordValidation
 							    password={password}
@@ -185,22 +187,25 @@ export const UserForm = (props) => {
 	            </>  
 	          }
               
-					  <InputField
-					    name="first_name"
-					    label={ t('first_name') }
-					    required={true}                    
-              maxLength={50}                  
-					    serverError={serverErrors.first_name}
-					  />
-	        
-					  <InputField
-					    name="last_name"
-					    label={ t('last_name') }
-					    required={true}                    
-              maxLength={50}               
-					    serverError={serverErrors.last_name}
-					  />               
+					  <div className="field-row">
+						  <InputField
+						    name="first_name"
+						    label={ t('first_name') }
+						    required={true}
+	              maxLength={50}
+						    serverError={serverErrors.first_name}
+						  />
 
+						  <InputField
+						    name="last_name"
+						    label={ t('last_name') }
+						    required={true}
+	              maxLength={50}
+						    serverError={serverErrors.last_name}
+						  />
+					  </div>
+
+					  <div className="field-row">
 					  <div className={"migratis-field"}>
 					    <label htmlFor="country" className={ errors.country || serverErrors.country ? 'text-danger' : '' }>
 					      { t('country') }
@@ -229,15 +234,18 @@ export const UserForm = (props) => {
 					    </small>
 					  </div>
 					
-						<DateField    
-            	name="birthdate"    
-              required={false}          
+						<DateField
+            	name="birthdate"
+            	label={ t('birthdate') }
+              required={false}
 					  	dateFormat="dd-MM-yyyy"
 					  	showMonthDropdown="true"
 					  	showYearDropdown="true"
 					  	dropdownMode="select"
               serverError={serverErrors.birthdate}
 					  />
+					  </div>
+
 						<ChoiceField
 							name="professional"
 							option="true"  
@@ -248,24 +256,26 @@ export const UserForm = (props) => {
 							dispatch={setProfessional}           
 					  />		  
             
+	  				<div className="field-row">
 	  				<InputField
 						  name="company"
 						  label={ t('company-name') }
 						  required={professional?true:false}
-              maxLength={150}             
+              maxLength={150}
 						  serverError={serverErrors.company}
 						  isVisible={professional?true:false}
 					  />
-	            
+
 	  				<InputField
 						  name="taxnumber"
 						  label={ t('taxnumber') }
 						  required={false}
-              maxLength={30}             
+              maxLength={30}
 						  serverError={serverErrors.taxnumber}
 						  isVisible={professional?true:false}
 					  />
-          
+					  </div>
+
 					  <TextareaField
 						  name="address"
 						  label={ t('address') }
@@ -276,24 +286,25 @@ export const UserForm = (props) => {
 						  isVisible={professional?true:false}                  
 					  />
 	              
+	  				<div className="field-row">
 	  				<InputField
 						  name="zipcode"
 						  label={ t('zipcode') }
-						  required={professional?true:false}                    
-              maxLength={20}               
+						  required={professional?true:false}
+              maxLength={20}
 						  serverError={serverErrors.zipcode}
-						  isVisible={professional?true:false}                  
+						  isVisible={professional?true:false}
 					  />
 
-          
 	  				<InputField
 						  name="city"
 						  label={ t('city') }
-						  required={professional?true:false}                    
-              maxLength={150}              
+						  required={professional?true:false}
+              maxLength={150}
 						  serverError={serverErrors.city}
-						  isVisible={professional?true:false}                  
+						  isVisible={professional?true:false}
 					  />
+					  </div>
 
 	          { ((props.profile && props.register) || props.invitation) &&
 	  			    
@@ -309,11 +320,11 @@ export const UserForm = (props) => {
 	            />  
 	          }
 
-				    <div className="migratis-field text-center">
-						  <button type="submit" disabled={disableSubmit} className="btn btn-primary btn-block">
+				    <div className="form-actions">
+						  <button type="submit" disabled={disableSubmit} className="btn btn-primary">
                 {props.profile && !props.register? t('modify') : t('validate')}
               </button>
-				    </div> 
+				    </div>
 				  </fieldset>           
 		    </form>
       </FormProvider>

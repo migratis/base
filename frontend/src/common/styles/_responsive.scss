@@ -79,13 +79,12 @@
 }
 
 // ── Large desktop (≥ 1400px) ─────────────────────────────────────────────────
-@media (min-width: 1400px) {
-  .main-content {
-    max-width: 1200px;
-    margin-left: auto;
-    margin-right: auto;
-  }
-}
+// The workspace used to be capped at 1200px and centred with `margin: auto`,
+// which centred it on the *viewport* and so pulled every page half a sidebar
+// to the left of the space it actually occupies — and capped wide list pages
+// below the width they ask for. The measure is now `.page-shell`'s job (see
+// `_layout.scss`); `.main-content` simply spans the band beside the sidebar and
+// lets each page centre itself in it.
 
 // ── Print styles ───────────────────────────────────────────────────────────────
 @media print {

@@ -237,6 +237,19 @@
 // dropdown in a stacking context and render it translucent).
 .sidebar-item-lang {
   z-index: $z-sidebar-dropdown;
+
+  // The selected flag stands in for the row's icon, so it has to occupy the
+  // same 20px slot every other sidebar icon does — otherwise this row's
+  // content starts a few pixels off the shared left edge.
+  .lang-selector-trigger > span:first-child {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    flex-shrink: 0;
+    font-size: 18px !important;
+    line-height: 1;
+  }
 }
 
 // ── Sidebar item with badge ───────────────────────────────────────────────────

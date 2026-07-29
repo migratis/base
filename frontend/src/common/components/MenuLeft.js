@@ -5,7 +5,6 @@ import {
   IoPersonOutline as PersonOutline,
   IoLogOutOutline as LogOutOutline,
   IoHelpBuoyOutline as HelpOutline,
-  IoGlobeOutline as GlobeOutline,
 } from 'react-icons/io5';
 import LangSelector from './LangSelector';
 import { toast } from 'react-toastify';
@@ -117,8 +116,9 @@ export const MenuLeft = (props) => {
                   <span className="sidebar-label">{t('account-settings')}</span>
                 </NavLink>
 
+                {/* No globe icon: the selected flag *is* this row's icon. A
+                    generic globe next to it said nothing the flag did not. */}
                 <div className="sidebar-item sidebar-item-lang">
-                  <GlobeOutline />
                   <LangSelector />
                 </div>
 
@@ -148,7 +148,6 @@ export const MenuLeft = (props) => {
               </div>
 
               <div className="sidebar-item sidebar-item-lang">
-                <GlobeOutline />
                 <LangSelector />
               </div>
 

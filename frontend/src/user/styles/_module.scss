@@ -4,4 +4,77 @@
 // All design tokens from src/styles/_variables.scss are available here.
 // =============================================================================
 
-// Add user-specific styles below.
+// ── Password rule checklist ───────────────────────────────────────────────────
+// Rendered live under the password fields while the user types. It is a
+// checklist, so it is styled as one: a quiet two-column list that fills in as
+// the rules are met, not six floating pills shouting in red before a single
+// character has been entered.
+.password-rules {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 2px 16px;
+  list-style: none;
+  margin: 0 0 18px;
+  padding: 14px 16px;
+  background-color: var(--color-light-gray);
+  border-radius: var(--border-radius);
+  font-size: 0.8125rem;
+}
+
+.password-rule {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+  color: var(--color-text-soft);
+  transition: color var(--transition-fast);
+
+  &--met {
+    color: var(--color-text-dark);
+  }
+}
+
+.password-rule-marker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: rgba(20, 20, 19, 0.12);
+  color: var(--color-white);
+  transition: background-color var(--transition-fast);
+
+  svg {
+    width: 11px !important;
+    height: 11px !important;
+  }
+
+  .password-rule--met & {
+    background-color: var(--color-green);
+  }
+}
+
+// ── Country picker ────────────────────────────────────────────────────────────
+// react-flags-select renders its own button; match it to the control height and
+// border treatment the rest of the fields use so a form row does not step.
+.migratis-field .react-flags-select {
+  .menu-flags-button {
+    width: 100%;
+    min-height: 40px;
+    padding: 8px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius);
+    font-size: 0.9375rem;
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+
+    &:hover {
+      border-color: rgba(20, 20, 19, 0.2);
+    }
+
+    &.onError {
+      border-color: #dc3545;
+    }
+  }
+}

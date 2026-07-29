@@ -37,44 +37,27 @@ export const PasswordValidation = (props) => {
     props
   ]);
   
-  return (  
-    <ul className="list-group migratis-field">
-        <li className="list-group-item">
-          { t("password-length") } 
-          <span className="link">
-            { validLength ? <Checkmark color={'#4e9a06'} title={"ok"} /> : <Close color={'#cc0000'} title={"ko"} /> }
-          </span>
-        </li>
-        <li className="list-group-item">
-          { t("password-number") }
-          <span className="link">
-            { hasNumber ? <Checkmark color={'#4e9a06'} title={"ok"} /> : <Close color={'#cc0000'} title={"ko"} /> }
-          </span>
-        </li>
-        <li className="list-group-item">
-          { t("password-uppercase") }
-          <span className="link">
-            { upperCase ? <Checkmark color={'#4e9a06'} title={"ok"} /> : <Close color={'#cc0000'} title={"ko"} /> }
-          </span>
-        </li>
-        <li className="list-group-item">
-          { t("password-lowercase") }
-          <span className="link">
-            { lowerCase ? <Checkmark color={'#4e9a06'} title={"ok"} /> : <Close color={'#cc0000'} title={"ko"} /> }
-          </span>
-        </li>
-        <li className="list-group-item">
-          { t("password-special-characters") }
-          <span className="link">
-           { specialChar ? <Checkmark color={'#4e9a06'} title={"ok"} /> : <Close color={'#cc0000'} title={"ko"} /> }
-          </span>
-        </li>
-        <li className="list-group-item">
-          { t("password-match") }
-          <span className="link">
-           { match ? <Checkmark color={'#4e9a06'} title={"ok"} /> : <Close color={'#cc0000'} title={"ko"} /> }
-          </span>
-        </li>
+  // Icon first, then the rule: the eye scans one column of state markers rather
+  // than hunting for a marker at the ragged right edge of six different pills.
+  // A rule that is not met yet is neutral, not red — nothing is wrong about an
+  // empty password field, it is simply not done.
+  const Rule = ({ met, children }) => (
+    <li className={`password-rule${met ? ' password-rule--met' : ''}`}>
+      <span className="password-rule-marker" aria-hidden="true">
+        { met ? <Checkmark /> : <Close /> }
+      </span>
+      { children }
+    </li>
+  );
+
+  return (
+    <ul className="password-rules migratis-field">
+      <Rule met={validLength}>{ t("password-length") }</Rule>
+      <Rule met={hasNumber}>{ t("password-number") }</Rule>
+      <Rule met={upperCase}>{ t("password-uppercase") }</Rule>
+      <Rule met={lowerCase}>{ t("password-lowercase") }</Rule>
+      <Rule met={specialChar}>{ t("password-special-characters") }</Rule>
+      <Rule met={match}>{ t("password-match") }</Rule>
     </ul>
 	);
 }

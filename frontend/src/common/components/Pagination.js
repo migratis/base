@@ -5,7 +5,8 @@ const MigratisPagination = (props) => {
   return (
     <>
       { props.pages > 1 &&
-        <Pagination className="justify-content-center mt-3">
+        <div className="pagination-wrap">
+        <Pagination className="justify-content-center mb-0">
           <Pagination.First onClick={() => props.setPage(1)} disabled={props.page === 1}/>
           <Pagination.Prev onClick={() => props.setPage(Math.max(props.page - 1, 1))} disabled={props.page === 1}/>
       
@@ -22,6 +23,7 @@ const MigratisPagination = (props) => {
           <Pagination.Next onClick={() => props.setPage(Math.min(props.page + 1, props.pages))} disabled={props.page === props.pages}/>
           <Pagination.Last onClick={() => props.setPage(props.pages)} disabled={props.page === props.pages}/>
         </Pagination>
+        </div>
       }
     </>
   );

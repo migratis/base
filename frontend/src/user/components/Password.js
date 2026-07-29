@@ -5,6 +5,7 @@ import { PasswordValidation } from "./PasswordValidation";
 import UserService from "../services/user.service";
 import { useTranslation } from 'react-i18next';
 import { useAuth } from "../../user/hooks/useAuth";
+import { PageShell } from '../../common/components/PageShell';
 import { toast } from 'react-toastify';
 
 const Password = () => {
@@ -54,15 +55,8 @@ const Password = () => {
   };
 
   return (
-    <>
-      <header className="sticky-top">
-        <div className="row">
-          <div className="col-sm-12">
-            <h2>{ t('change-password') }</h2>
-          </div>
-        </div>
-      </header>                
-      <p className="text-center">
+    <PageShell title={ t('change-password') } width="form">
+      <p className="form-intro">
         {t('fields-mandatory')}
         <span style={{color: 'red'}}>&nbsp;*</span>
       </p>
@@ -126,21 +120,17 @@ const Password = () => {
 						confPassword={confPassword}
 						setPasswordOk={setPasswordOk}
 					/>
-          <div className='migratis-field texyt-center'>
-              <button className="btn btn-primary btn-block">{t('validate')}</button>
-          </div>	          
-          { message && 
-              <div >
-                  <div 
-                      className = {"alert alert-danger"}
-                      role="alert">
-                      {message}
-                  </div>
+          { message &&
+              <div className="alert alert-danger" role="alert">
+                  {message}
               </div>
           }
-				</fieldset>										                  
+          <div className="form-actions">
+              <button className="btn btn-primary">{t('validate')}</button>
+          </div>
+				</fieldset>
       </form>
-    </>
+    </PageShell>
   )
 }
  

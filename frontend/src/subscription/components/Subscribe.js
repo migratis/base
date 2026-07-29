@@ -5,6 +5,7 @@ import Table from 'react-bootstrap/Table';
 import { IoCardOutline as CardOutline } from 'react-icons/io5';
 import { toast } from 'react-toastify';
 import { LoaderIndicator } from '../../common/components/LoaderIndicator';
+import { PageShell, PagePanel } from '../../common/components/PageShell';
 import DOMPurify from 'dompurify';
 import UserService from "../../user/services/user.service";
 import { useOutletContext, useNavigate, useSearchParams } from "react-router-dom";
@@ -91,25 +92,21 @@ const Subscribe = () => {
   };
 
   return (
-    <>
-      <header className="sticky-top">
-        <div className="row">
-          <div className="col-sm-12">
-            <h2>{t('plans')}</h2>
-          </div>
-        </div>
-      </header>
-      <p>
-        <strong>
-          <span dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(showTrial ? t('trial-subscription') : t('normal-subscription')) }} />
-        </strong>
-      </p>
-      { showTrial &&
-        <p className="card card-success">
-          {t("trial-explanation")}
+    <PageShell title={t('plans')} panel={false}>
+      <PagePanel>
+        <p className="mb-0">
+          <strong>
+            <span dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(showTrial ? t('trial-subscription') : t('normal-subscription')) }} />
+          </strong>
         </p>
-      }
+        { showTrial &&
+          <p className="panel-callout">
+            {t("trial-explanation")}
+          </p>
+        }
+      </PagePanel>
       { processing && <LoaderIndicator /> }
+      <PagePanel className="page-panel--flush">
       <Table striped responsive bordered hover>
         <thead>
           <tr>
@@ -143,7 +140,8 @@ const Subscribe = () => {
           }
         </tbody>
       </Table>
-    </>
+      </PagePanel>
+    </PageShell>
   );
 };
 

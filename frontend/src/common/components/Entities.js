@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { Fragment, useState, useEffect, useMemo, useCallback } from "react";
 import { useTranslation } from 'react-i18next';
 import {
   IoAddCircleOutline as AddCircleOutline
@@ -10,12 +10,18 @@ import CommonService from '../services/common.service';
 import { toast } from 'react-toastify';
 import { useLocation } from 'react-router-dom';
 import MigratisPagination from '../../common/components/Pagination';
+import { PageShell, PagePanel } from './PageShell';
 import { ITEMS_PER_PAGE as pageSize } from '../../settings';
 import Badge from 'react-bootstrap/Badge';
 import { Tabs, Tab } from 'react-bootstrap';
-import Container from 'react-bootstrap/Container';
 import Button from 'react-bootstrap/Button';
 import { COLOR_LINK } from "../../settings";
+
+// Rows and tables want to run edge to edge, so the panel drops its padding and
+// clips them to its own radius.
+const ListPanel = ({ children }) => (
+  <PagePanel className="page-panel--flush">{children}</PagePanel>
+);
 
 const Entities = (props) => {
   const { t } = useTranslation(props.entity);
@@ -229,7 +235,7 @@ const Entities = (props) => {
   // `active` scopes the deletion to the tab in view (true/false), or null for
   // an untabbed list — it is the same argument the tab renders under.
   const renderCountToolbar = (active) => (
-    <div className="d-flex justify-content-between align-items-center p-2">
+    <div className="entities-toolbar d-flex justify-content-between align-items-center">
       <div>
         {count > 1 && <> <Badge>{start}</Badge> {t('count-to')} <Badge>{end}</Badge> {t('count-of')} </> } <Badge>{count}</Badge>
       </div>
@@ -241,18 +247,25 @@ const Entities = (props) => {
     </div>
   );
 
+  // Lists that bring their own surfaces (the application card grid) opt out of
+  // the panel; row/table lists sit on a flush one so the rows reach its edges.
+  const Surface = props.panel === false ? Fragment : ListPanel;
+
   return (
-    <>
-      <header className="page-header-row sticky-top">
-        <h2>{t(`${props.entity}s`)}</h2>
-        {props.renderMenu && props.renderMenu(handleEdit)}
-      </header>
+    <PageShell
+      title={t(`${props.entity}s`)}
+      description={props.description}
+      actions={props.renderMenu && props.renderMenu(handleEdit)}
+      width={props.width || 'wide'}
+      panel={false}
+      sticky
+    >
       {props.renderFilter && props.renderFilter()}
       <div>
         { !wait &&
           <>
             { noEntity ?
-              <>
+              <PagePanel className="page-panel--empty">
                 {props.renderAlternative ?
                   <>
                     {props.renderAlternative(handleEdit)}
@@ -262,10 +275,10 @@ const Entities = (props) => {
                     {t(`no-${props.entity}-yet-add-first`)}&nbsp;
                     <span className="link action" onClick={() => handleEdit()}>
                       <AddCircleOutline color={COLOR_LINK} title={t(`add-${props.entity}`)} height="30px" width="30px"/>
-                    </span> 
+                    </span>
                   </>
                 }
-              </>
+              </PagePanel>
             :
               <>
                 { props.activeTabs ?
@@ -277,7 +290,7 @@ const Entities = (props) => {
                     className="mb-3"
                   >
                     <Tab eventKey="active" title={t('active')}>
-                      <Container>
+                      <Surface>
                         {renderCountToolbar(true)}
                         <props.list
                           entities={entities}
@@ -292,10 +305,10 @@ const Entities = (props) => {
                           pageSize={pageSize}
                           setPage={setPage}
                         />
-                      </Container>
+                      </Surface>
                     </Tab>
                     <Tab eventKey="inactive" title={t('inactive')}>
-                      <Container>
+                      <Surface>
                         {renderCountToolbar(false)}
                         <props.list
                           entities={entities}
@@ -310,11 +323,11 @@ const Entities = (props) => {
                           pageSize={pageSize}
                           setPage={setPage}
                         />
-                      </Container>
+                      </Surface>
                     </Tab>
                   </Tabs>
 :
-                  <>
+                  <Surface>
                     {renderCountToolbar(null)}
                     <props.list
                       entities={entities}
@@ -327,13 +340,13 @@ const Entities = (props) => {
                       pages={pages}
                       pageSize={pageSize}
                       setPage={setPage}
-                    /> 
-                  </>
+                    />
+                  </Surface>
                 }
               </>
             }
-          </> 
-        }               
+          </>
+        }
       </div>
       <EditModal
         show={editModalShow}
@@ -351,9 +364,9 @@ const Entities = (props) => {
           saveEntity={saveEntity}
           {...(props.formProps || {})}
         />
-      </EditModal>    
-    </>
+      </EditModal>
+    </PageShell>
   );
-}; 
+};
 
 export default Entities;

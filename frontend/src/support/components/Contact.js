@@ -8,6 +8,7 @@ import InputField from '../../common/fields/InputField';
 import SelectField from '../../common/fields/SelectField';
 import TextareaField from '../../common/fields/TextareaField';
 import  { LoaderIndicator } from '../../common/components/LoaderIndicator';
+import { PageShell } from '../../common/components/PageShell';
 
 const Contact = () => {
   const { t } = useTranslation('support');
@@ -72,14 +73,7 @@ const Contact = () => {
 
 
   return (
-    <>
-      <header className="sticky-top">
-        <div className="row">
-          <div className="col-sm-12">
-            <h2>{t('contact')}</h2>
-          </div>
-        </div>
-      </header>    
+    <PageShell title={t('contact')} width="form">
       <LoaderIndicator />
       <FormProvider {...methods}>
         <form onSubmit={ handleSubmit(onSubmit) }>
@@ -122,19 +116,16 @@ const Contact = () => {
               serverError={serverErrors.content}
             />
 
-            <div className="migratis-field text-center">
-              <br/>
-              <button disabled={disableSubmit} className="btn btn-primary btn-block btn-wide">
+            <div className="form-actions">
+              <button disabled={disableSubmit} className="btn btn-primary">
                 {t('validate')}
               </button>
-              <br/>
-              <br/>
             </div>
 
           </fieldset>
         </form>
       </FormProvider>
-    </>
+    </PageShell>
   );
 
 }; 

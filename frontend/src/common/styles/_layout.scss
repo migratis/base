@@ -78,6 +78,196 @@ h4 { font-size: 1.1rem; }
   }
 }
 
+// ── Page shell ────────────────────────────────────────────────────────────────
+// The surface every route renders into (see `common/components/PageShell.js`).
+// Three things make a set of screens read as one product: a shared measure, a
+// shared header rhythm, and a single elevated surface for content. Everything
+// below is those three things — nothing here introduces a colour that is not
+// already in `_variables.scss`.
+.page-shell {
+  width: 100%;
+  margin: 0 auto;
+  padding-bottom: 32px;
+
+  // Content measure. Long forms and prose become unreadable past ~70ch, so a
+  // page declares the width its content wants rather than inheriting the full
+  // 1400px workspace.
+  &--form    { max-width: 660px; }
+  &--content { max-width: 940px; }
+  &--wide    { max-width: 1320px; }
+  &--full    { max-width: none; }
+}
+
+.page-shell-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--color-border);
+
+  // List pages keep their title and actions in reach while scrolling. The
+  // translucent backdrop stops rows from bleeding through the header.
+  &.sticky-top {
+    top: 0;
+    z-index: 5;
+    padding-top: 16px;
+    margin-top: -16px;
+    background-color: var(--color-bg-body);
+
+    @supports (backdrop-filter: blur(8px)) {
+      background-color: rgba(250, 249, 245, 0.85);
+      backdrop-filter: blur(8px);
+    }
+  }
+}
+
+.page-shell-heading {
+  min-width: 0;
+  flex: 1 1 320px;
+}
+
+.page-shell-title {
+  position: relative;
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+
+  // A short accent rule above the title — the one piece of brand colour on an
+  // otherwise quiet page, and the marker that tells you where a screen starts.
+  &::before {
+    content: '';
+    display: block;
+    width: 28px;
+    height: 3px;
+    margin-bottom: 14px;
+    border-radius: 2px;
+    background-color: var(--color-orange);
+  }
+}
+
+.page-shell-subtitle {
+  margin: 8px 0 0;
+  max-width: 68ch;
+  font-size: 0.9375rem;
+  color: var(--color-text-soft);
+}
+
+.page-shell-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+// ── Page panel ────────────────────────────────────────────────────────────────
+// The white surface content sits on. Two shadows rather than one: a hairline
+// that defines the edge, and a wide, very soft drop that lifts the card off the
+// warm background without ever reading as a box-shadow.
+.page-panel {
+  background-color: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-lg);
+  box-shadow:
+    0 1px 2px rgba(20, 20, 19, 0.04),
+    0 18px 40px -28px rgba(20, 20, 19, 0.35);
+  padding: 32px;
+
+  & + .page-panel {
+    margin-top: 20px;
+  }
+
+  @media (max-width: 768px) {
+    padding: 20px;
+    border-radius: var(--border-radius);
+  }
+}
+
+.page-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin: -8px 0 20px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.page-panel-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.page-panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+// A panel that only wraps a list/table wants the rows to reach its edges. Its
+// own head and any prose still need gutters, since the panel no longer has any.
+.page-panel--flush {
+  padding: 0;
+  overflow: hidden;
+
+  > .page-panel-head {
+    margin: 0;
+    padding: 16px 20px;
+  }
+
+  > .panel-help,
+  > .panel-note {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+
+  // `.panel-help` tucks up under a padded panel's head; a flush panel's head
+  // owns its own padding, so the pull-up would ride onto the hairline.
+  > .panel-help {
+    margin-top: 12px;
+  }
+}
+
+// Guidance under a panel title, and the "loading" / "nothing here" line a panel
+// shows in place of its content.
+.panel-help {
+  margin: -6px 0 16px;
+  font-size: 0.8125rem;
+  color: var(--color-text-soft);
+}
+
+.panel-note {
+  padding: 24px 0;
+  color: var(--color-text-soft);
+}
+
+// A highlighted aside inside a panel (a trial offer, a caveat). Marked by a
+// rule in the accent colour rather than a competing box.
+.panel-callout {
+  margin: 16px 0 0;
+  padding: 12px 16px;
+  background-color: var(--color-light-gray);
+  border-left: 3px solid var(--color-orange);
+  border-radius: 0 var(--border-radius) var(--border-radius) 0;
+  font-size: 0.9375rem;
+}
+
+// A short outcome message that is the whole point of the page (activation
+// result, "check your inbox"), rather than a caption on something else.
+.page-message {
+  margin: 0;
+  padding: 8px 0;
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
 // ── Page containers ───────────────────────────────────────────────────────────
 .page-header {
   margin-bottom: 24px;

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next';
 import { useLocation, Link } from 'react-router-dom';
 import UserService from "../services/user.service";
+import { PageShell } from '../../common/components/PageShell';
 
 const Activate = () => {
   const [message, setMessage] = useState('');
@@ -45,21 +46,14 @@ const Activate = () => {
   }, [once, uidb64, token]);
 
   return (
-    <>
-      <header className="sticky-top">
-        <div className="row">
-          <div className="col-sm-12">
-            <h2>{ t('email-activation') }</h2>
-          </div>
-        </div>
-      </header>    
-      <p className="text-center">
+    <PageShell title={ t('email-activation') } width="form">
+      <p className="page-message">
         { success === 'ok' ?
           <>
             <strong>{ t(message) }</strong>
             <br /><br />              
             <Link onClick={handleGoToLogin}>
-              <button className="btn btn-primary btn-block">{ t('login') }</button>                        
+              <button className="btn btn-primary">{ t('login') }</button>                        
             </Link>
           </>
         :
@@ -69,7 +63,7 @@ const Activate = () => {
                 <strong>{ t(message.user) }</strong>
                 <br /><br />             
                 <Link to="/register">
-                  <button className="btn btn-primary btn-block">{ t('register') }</button>
+                  <button className="btn btn-primary">{ t('register') }</button>
                 </Link>
               </>
             :
@@ -79,7 +73,7 @@ const Activate = () => {
                     <strong>{ t(message.token) }</strong>
                     <br /><br /> 
                     <Link to="/reset">
-                      <button className="btn btn-primary btn-block">{ t('reset-password') }</button>
+                      <button className="btn btn-primary">{ t('reset-password') }</button>
                     </Link>                  
                   </>
                 :
@@ -89,7 +83,7 @@ const Activate = () => {
                         <strong>{ t(message.active) }</strong>
                         <br /><br />     
                         <Link onClick={handleGoToLogin}>
-                          <button className="btn btn-primary btn-block">{ t('login') }</button>
+                          <button className="btn btn-primary">{ t('login') }</button>
                         </Link>                        
                       </>
                     }
@@ -107,8 +101,8 @@ const Activate = () => {
           </>
         }
       </p>
-    </>
+    </PageShell>
   );
-} 
+}
 
 export default Activate

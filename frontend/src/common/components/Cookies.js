@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { LoaderIndicator } from '../../common/components/LoaderIndicator';
 import Table from 'react-bootstrap/Table';
 import CommonService from '../services/common.service';
+import { PageShell, PagePanel } from './PageShell';
 
 const Cookies = () => {
     const { t } = useTranslation('cookie');
@@ -39,15 +40,9 @@ const Cookies = () => {
     }
 
     return (
-        <div>
-          <header className="sticky-top">
-            <div className="row">
-              <div className="col-sm-12">
-                <h2>{t('cookies-list')}</h2>
-              </div>
-            </div>
-          </header>
+        <PageShell title={t('cookies-list')} width="wide" panel={false}>
           <LoaderIndicator />
+          <PagePanel className="page-panel--flush">
           <Table striped responsive bordered hover>
             <thead>
               <tr>
@@ -67,7 +62,8 @@ const Cookies = () => {
               )}
             </tbody>
           </Table>
-        </div>
+          </PagePanel>
+        </PageShell>
     )
 };
 

@@ -6,6 +6,7 @@ import Profile from '../Profile';
 import Preferences from './Preferences';
 import ApiAccess from './ApiAccess';
 import Billing from './Billing';
+import { PageShell, PagePanel } from '../../../common/components/PageShell';
 import { enabledSlots } from '../../../common/shell/collect';
 import { billingSections } from '../../../common/shell/registry';
 
@@ -31,31 +32,27 @@ const AccountSettings = () => {
   };
 
   return (
-    <>
-      <header className="sticky-top">
-        <div className="row">
-          <div className="col-sm-12">
-            <h2>{t('account-settings')}</h2>
-          </div>
-        </div>
-      </header>
-      <Tabs activeKey={active} onSelect={selectTab} className="mb-3">
+    /* The tab strip is navigation and belongs above the surface; each pane
+       gets its own panel so switching tabs swaps the content of one card
+       rather than redrawing the page. */
+    <PageShell title={t('account-settings')} panel={false}>
+      <Tabs activeKey={active} onSelect={selectTab}>
         <Tab eventKey="profile" title={t('profile')}>
-          <Profile />
+          <PagePanel><Profile /></PagePanel>
         </Tab>
         <Tab eventKey="preferences" title={t('preferences')}>
-          <Preferences />
+          <PagePanel><Preferences /></PagePanel>
         </Tab>
         <Tab eventKey="api" title={t('api-access')}>
-          <ApiAccess />
+          <PagePanel><ApiAccess /></PagePanel>
         </Tab>
         {hasBilling &&
           <Tab eventKey="billing" title={t('billing')}>
-            <Billing />
+            <PagePanel><Billing /></PagePanel>
           </Tab>
         }
       </Tabs>
-    </>
+    </PageShell>
   );
 };
 

@@ -11,28 +11,10 @@ import download from 'downloadjs';
 import { Tabs, Tab } from 'react-bootstrap';
 import Ticket from './Ticket';
 import { LoaderIndicator } from '../../common/components/LoaderIndicator';
+import { PageShell } from '../../common/components/PageShell';
 import { toast } from 'react-toastify';
 import { useQuery } from '../../common/hooks/useQuery';
 import { COLOR_LINK } from "../../settings";
-
-const tabStyle = {
-  '--bs-nav-tabs-link-active-color': COLOR_LINK,
-  '--bs-nav-tabs-link-active-border-color': COLOR_LINK,
-};
-
-const tabCss = `
-  .support-tabs .nav-link.active {
-    color: ${COLOR_LINK} !important;
-    border-color: ${COLOR_LINK} !important;
-    border-bottom-color: ${COLOR_LINK} !important;
-  }
-  .support-tabs .nav-link {
-    color: #6c757d;
-  }
-  .support-tabs .nav-link:hover {
-    color: ${COLOR_LINK};
-  }
-`;
 
 const Tickets = () => {
   const { t } = useTranslation('support');
@@ -149,29 +131,24 @@ const Tickets = () => {
   };
   
   return (
-    <>
-      <style>{tabCss}</style>
-      <header className="sticky-top">
-        <div className="row">
-          <div className="col-sm-6">
-            <h2>{t('your-tickets')}</h2>
-          </div>
-          <div className="col-sm-6">
-            <span className="link float-end" onClick={() => handleTicketEdit()}>
-              <AddCircleOutline color={COLOR_LINK} title={t('add-ticket')} />
-            </span>            
-          </div>          
-        </div>
-      </header>    
-      <LoaderIndicator />     
+    <PageShell
+      title={t('your-tickets')}
+      panel={false}
+      sticky
+      actions={
+        <span className="link action" onClick={() => handleTicketEdit()}>
+          <AddCircleOutline color={COLOR_LINK} title={t('add-ticket')} />
+        </span>
+      }
+    >
+      <LoaderIndicator />
       { !wait && (openTickets.length > 0 || closedTickets.length > 0) ?
-        <Tabs 
-          style={tabStyle}
+        <Tabs
           defaultActiveKey="open_tickets" 
           id="projection-tab"
           activeKey={currentTab}
           onSelect={(tab) => handleSelectTab(tab)}
-          className="mb-3 support-tabs"
+          className="support-tabs"
         >
           <Tab eventKey="open_tickets" title={t('open-tickets')} >
             { openTickets.length > 0 ? openTickets.map(
@@ -250,8 +227,8 @@ const Tickets = () => {
         onHide={() => setUploadModalShow(false)}
         ticket={ticket}
         closeAndUpdate={closeAndUpdateUploadModal}
-      />  
-    </>
+      />
+    </PageShell>
   );
 }; 
 

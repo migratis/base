@@ -264,6 +264,132 @@
   }
 }
 
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+// Underline tabs. The selected label is marked by a rule in the accent colour
+// rather than a folder-tab outline, so the tab strip sits quietly above the
+// panel instead of competing with it for edges.
+.nav-tabs {
+  gap: 24px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--color-border);
+
+  .nav-link {
+    padding: 10px 2px;
+    margin-bottom: -1px;
+    border: none;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    background: none;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--color-text-soft);
+    transition: color var(--transition-fast), border-color var(--transition-fast);
+
+    &:hover {
+      color: var(--color-text-dark);
+      border-color: transparent transparent var(--color-border);
+    }
+
+    &.active {
+      background: none;
+      color: var(--color-text-dark);
+      border-color: transparent transparent var(--color-orange);
+    }
+  }
+}
+
+// ── Tables ────────────────────────────────────────────────────────────────────
+// Data reads best when the grid gets out of its way: no vertical rules, a
+// quiet uppercase header, and generous row padding.
+.table {
+  margin-bottom: 0;
+  font-size: 0.9375rem;
+  --bs-table-striped-bg: rgba(20, 20, 19, 0.02);
+  --bs-table-hover-bg: rgba(217, 119, 87, 0.06);
+
+  > thead > tr > th {
+    padding: 12px 16px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: var(--color-text-soft);
+    background-color: var(--color-light-gray);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  > tbody > tr > td {
+    padding: 12px 16px;
+    vertical-align: middle;
+    border-color: var(--color-border);
+  }
+}
+
+// Record count (and the bulk-delete affordance) above a list.
+.entities-toolbar {
+  margin-bottom: 12px;
+  font-size: 0.875rem;
+  color: var(--color-text-soft);
+}
+
+.pagination-wrap {
+  margin-top: 16px;
+}
+
+// A table inside a flush panel borrows the panel's own edges — its outer border
+// would otherwise double up with them, and the toolbar/pagination need the
+// gutters the panel gave up.
+.page-panel--flush {
+  .table > :not(caption) > * > * {
+    border-left-width: 0;
+    border-right-width: 0;
+  }
+
+  .table > tbody > tr:last-child > td {
+    border-bottom-width: 0;
+  }
+
+  .entities-toolbar,
+  .pagination-wrap {
+    margin: 0;
+    padding: 12px 16px;
+  }
+
+  .entities-toolbar {
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .pagination-wrap {
+    border-top: 1px solid var(--color-border);
+  }
+}
+
+// ── Pagination ────────────────────────────────────────────────────────────────
+.pagination {
+  --bs-pagination-border-color: var(--color-border);
+  --bs-pagination-color: var(--color-text-soft);
+  --bs-pagination-hover-color: var(--color-text-dark);
+  --bs-pagination-hover-bg: var(--color-light-gray);
+  --bs-pagination-hover-border-color: var(--color-border);
+  --bs-pagination-active-bg: var(--color-dark);
+  --bs-pagination-active-border-color: var(--color-dark);
+  --bs-pagination-focus-box-shadow: 0 0 0 3px rgba(217, 119, 87, 0.15);
+  --bs-pagination-padding-x: 12px;
+  --bs-pagination-padding-y: 5px;
+  --bs-pagination-font-size: 0.875rem;
+  --bs-pagination-border-radius: var(--border-radius-sm);
+  gap: 4px;
+}
+
+// Nothing to list yet — the invitation to create the first record, centred on
+// its own panel rather than orphaned at the top-left of the page.
+.page-panel--empty {
+  padding: 56px 32px;
+  text-align: center;
+  color: var(--color-text-soft);
+}
+
 // ── Striped rows (custom list rows) ──────────────────────────────────────────
 .striped {
   display: flex;
@@ -305,6 +431,39 @@
   .modal-dialog {
     max-width: 700px;
     margin: 1.75rem auto;
+  }
+}
+
+// ── Home Page ─────────────────────────────────────────────────────────────────
+.home-page {
+  .hero-section {
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+    min-height: 50vh;
+    display: flex;
+    align-items: center;
+  }
+
+  .chapter-section {
+    .chapter-icon {
+      color: var(--color-primary);
+      margin-bottom: 1.5rem;
+    }
+
+    .feature-list li {
+      display: flex;
+      align-items: center;
+      padding: 0.5rem 0;
+      color: var(--color-text);
+    }
+
+    .feature-list svg {
+      color: var(--color-success);
+      flex-shrink: 0;
+    }
+  }
+
+  .cta-section {
+    background: linear-gradient(135deg, var(--color-secondary) 0%, var(--color-primary) 100%);
   }
 }
 
@@ -639,6 +798,16 @@
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 16px;
+
+  // The grid owns the spacing; `.card`'s own vertical margin would add a second
+  // gutter on top of it.
+  .card {
+    margin: 0;
+    border-radius: var(--border-radius-lg);
+    box-shadow:
+      0 1px 2px rgba(20, 20, 19, 0.04),
+      0 18px 40px -28px rgba(20, 20, 19, 0.35);
+  }
 
   @media (max-width: 1200px) {
     grid-template-columns: repeat(2, 1fr);

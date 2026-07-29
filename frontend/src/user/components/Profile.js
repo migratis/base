@@ -2,10 +2,8 @@ import { useEffect, useState } from "react";
 import { useTranslation } from 'react-i18next';
 import UserService from '../services/user.service'
 import { toast } from 'react-toastify';
-import Row from 'react-bootstrap/Row';
-import Col from 'react-bootstrap/Col';
-import { Subscription } from '../../subscription/components/Subscription';
 import { UserForm } from './UserForm';
+import { Subscription } from '../../subscription/components/Subscription';
 import { useNavigate } from "react-router-dom";
 import { LoaderIndicator } from '../../common/components/LoaderIndicator';
 import { CommonModal as ConfirmDeleteModal } from '../../common/modals/CommonModal';
@@ -63,49 +61,35 @@ const Profile = () => {
       <LoaderIndicator/> 
       { user && profile &&
         <>
-          <header className="sticky-top">
-            <div className="row">
-              <div className="col-sm-12">
-                <h2>{t('profile')}</h2>
-              </div>
+          {/* This renders inside the Account settings "Profile" tab, which
+              already names the page — a second <h2>Profile</h2> here just said
+              it twice. */}
+          { SUBSCRIPTION &&
+            <div className="mb-4">
+              <Subscription subscription={subscription} setSubscription={setSubscription}/>
             </div>
-          </header>      
-          <Row>
-            { SUBSCRIPTION &&
-              <>
-                <Col sm={12} lg={5} className="text-center">
-                  <Subscription subscription={subscription} setSubscription={setSubscription}/> 
-                </Col>  
-                <Col className="separator" sm={12} lg={1}></Col>            
-              </>
-            }
-            <Col sm={12} lg={SUBSCRIPTION?6:12}>          
-              <h5 className="text-center">{t('your-informations')}</h5>
-              <br/>
-              <div className="text-center">             
-                <button className="btn btn-danger"
-                  onClick={() => handleConfirmDelete()}
-                >
-                  {t('delete-profile')}
-                </button>
-              </div>
-              <br/>            
-              <div className="text-center">             
-                <button className="btn btn-secondary"
-                  onClick={() => navigate("/password")}
-                >
-                  {t('password-change')}
-                </button>
-              </div>            
-              <br/>
-              <UserForm 
-                profile={profile} 
-                refresh={refresh} 
-                setRefresh={setRefresh} 
-                subscription={subscription}
-              />
-            </Col>
-          </Row>
+          }
+          <div className="page-panel-head">
+            <h3 className="page-panel-title">{t('your-informations')}</h3>
+            <div className="page-panel-actions">
+              <button className="btn btn-sm btn-outline-secondary"
+                onClick={() => navigate("/password")}
+              >
+                {t('password-change')}
+              </button>
+              <button className="btn btn-sm btn-outline-danger"
+                onClick={() => handleConfirmDelete()}
+              >
+                {t('delete-profile')}
+              </button>
+            </div>
+          </div>
+          <UserForm
+            profile={profile}
+            refresh={refresh}
+            setRefresh={setRefresh}
+            subscription={subscription}
+          />
         </>
       }
       <ConfirmDeleteModal

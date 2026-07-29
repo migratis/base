@@ -11,17 +11,158 @@ label {
 }
 
 // ── Field wrappers ────────────────────────────────────────────────────────────
+// `.migratis-field` is the seam every form in the product goes through — the
+// common field components, the hand-written forms, the modals and the sandbox
+// preview all wrap a control in it. Styling the seam rather than each page is
+// what makes one edit retheme every form.
 .migratis-fieldset {
   padding: 0;
   border: none;
+  min-width: 0; // a fieldset defaults to min-content, which breaks CSS grid children
 }
 
 .migratis-field {
-  padding: 8px 0;
+  padding: 0;
+  margin-bottom: 18px;
+
+  > label {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    line-height: 1.4;
+    color: var(--color-text-dark);
+    padding-bottom: 6px;
+  }
+
+  // Controls. Checkboxes and radios keep their native box — only the text-like
+  // controls get the surface treatment.
+  input:not([type='checkbox']):not([type='radio']):not([type='range']),
+  select,
+  textarea {
+    width: 100%;
+    min-height: 40px;
+    padding: 8px 12px;
+    font-size: 0.9375rem;
+    line-height: 1.5;
+    color: var(--color-text-dark);
+    background-color: var(--color-white);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius);
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+
+    &::placeholder {
+      color: var(--color-text-muted);
+    }
+
+    &:hover:not(:disabled):not(:focus) {
+      border-color: rgba(20, 20, 19, 0.2);
+    }
+
+    &:focus {
+      outline: none;
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px rgba(217, 119, 87, 0.15);
+    }
+
+    &:disabled {
+      background-color: var(--color-light-gray);
+      color: var(--color-text-soft);
+      cursor: not-allowed;
+    }
+
+    &.is-invalid,
+    &.onError {
+      border-color: #dc3545;
+
+      &:focus {
+        box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.15);
+      }
+    }
+  }
+
+  textarea {
+    min-height: 88px;
+    resize: vertical;
+  }
+
+  // Help sits under the label as guidance; errors sit under the control as a
+  // consequence. Both were previously unspaced `<small>`s that collided with
+  // the next field.
+  > small.form-text {
+    display: block;
+    margin-top: 6px;
+    font-size: 0.8125rem;
+    line-height: 1.45;
+
+    &.text-muted {
+      margin: 0 0 6px;
+      color: var(--color-text-soft) !important;
+    }
+  }
 }
 
 .migratis-field-no-label {
   padding: 0 0 8px;
+}
+
+// ── Field rows ────────────────────────────────────────────────────────────────
+// Two short fields that belong together (first/last name, zip/city) read as one
+// answer when they share a line, and stop a long form from feeling like an
+// endless column. Collapses to one column when there is no room.
+.field-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0 16px;
+}
+
+// ── Form intro / actions ──────────────────────────────────────────────────────
+// The "fields marked * are required" line: a quiet note above the fields, not a
+// centred sentence floating over the page.
+.form-intro {
+  margin: 0 0 20px;
+  font-size: 0.8125rem;
+  color: var(--color-text-soft);
+}
+
+// The submit row, separated from the fields by the same hairline the panel uses
+// so the commitment point is unmistakable.
+.form-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+  padding-top: 20px;
+  border-top: 1px solid var(--color-border);
+
+  .btn {
+    min-width: 160px;
+  }
+
+  &--split {
+    justify-content: space-between;
+  }
+
+  @media (max-width: 576px) {
+    flex-direction: column-reverse;
+    align-items: stretch;
+
+    .btn {
+      width: 100%;
+    }
+  }
+}
+
+// Secondary routes out of a form (reset password, "no account yet") — links,
+// not a stack of competing buttons.
+.form-alt-actions {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+  font-size: 0.875rem;
 }
 
 // Ensure forms in modals don't stretch
@@ -57,13 +198,27 @@ label {
 }
 
 .form-check-input {
-  margin-top: 2px;
+  margin-top: 3px;
   flex-shrink: 0;
+  width: 1.05em;
+  height: 1.05em;
+  border-color: rgba(20, 20, 19, 0.25);
+  cursor: pointer;
+
+  &:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(217, 119, 87, 0.15);
+  }
 }
 
 .form-check-label {
   cursor: pointer;
-  margin-left: 8px;
+  margin-left: 10px;
+  // The global `label` rule is bold — right for a field label naming its input,
+  // wrong for a checkbox label, which is the sentence you are agreeing to.
+  font-weight: 400;
+  font-size: 0.9375rem;
+  padding-bottom: 0;
 }
 
 // Inline `help` snippet rendered next to a checkbox label (e.g. the CGUV
@@ -95,13 +250,18 @@ label {
 }
 
 // ── Password / text input icon overlay ───────────────────────────────────────
+// The span follows the input in flow and is pulled back over it, so the offset
+// tracks the control height set in `.migratis-field` above — change one and
+// change the other.
 .input-icon {
   position: relative;
-  top: -38px;
+  top: -36px;
   float: right;
-  right: 8px;
+  right: 10px;
   cursor: pointer;
-  font-size: 1.5rem;
+  font-size: 1.25rem;
+  line-height: 1;
+  color: var(--color-text-soft);
 }
 
 // ── Number input — hide spinners ──────────────────────────────────────────────

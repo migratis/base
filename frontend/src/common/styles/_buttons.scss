@@ -43,6 +43,21 @@
   }
 }
 
+// Bootstrap derives this from `$secondary`, which is the mid-gray chrome tone —
+// as *label* colour it lands around 2:1 on white and reads as a disabled
+// control. The border keeps the tone; the text takes the readable ink.
+.btn-outline-secondary {
+  border-color: var(--color-border);
+  color: var(--color-text-soft);
+  background-color: transparent;
+
+  &:hover, &:focus {
+    background-color: var(--color-light-gray);
+    border-color: rgba(20, 20, 19, 0.2);
+    color: var(--color-text-dark);
+  }
+}
+
 .btn-secondary {
   background-color: var(--color-mid-gray);
   color: var(--color-dark);

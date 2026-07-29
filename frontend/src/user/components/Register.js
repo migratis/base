@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { PageShell } from '../../common/components/PageShell';
 import { UserForm } from './UserForm';
 
 const Register = (props) => {
@@ -17,16 +18,9 @@ const Register = (props) => {
   }
 
   return (
-    <>
-      <header className="sticky-top">
-        <div className="row">
-          <div className="col-sm-12">
-            <h2>{ t('register') }</h2>
-          </div>
-        </div>
-      </header>
+    <PageShell title={ t('register') } width="form">
       <UserForm profile={profile} register={true}/>
-    </>
+    </PageShell>
   );
 
 };

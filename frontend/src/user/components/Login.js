@@ -195,9 +195,9 @@ const Login = (props) => {
   if (tfaMode) {
     return (
       <div>
-        <p className="text-center">
+        <p className="form-intro">
           {t('tfa-enter-code')}
-        </p>  
+        </p>
         <form onSubmit={handleSubmit(onSubmit)}>
           <fieldset className="migratis-fieldset">
             <div className="migratis-field">
@@ -236,18 +236,19 @@ const Login = (props) => {
               </div>
             </div>
 
-            <div className="migratis-field text-center">
-              <br/><button className="btn btn-primary btn-block">{t('validate')}</button><br/>
+            <div className="form-actions">
+              <button className="btn btn-primary">{t('validate')}</button>
             </div>
           </fieldset>
         </form>
-           
-        <div className="text-center">
-          <button className="btn btn-link" onClick={handleResendCode}>
+
+        {/* Getting a new code and stepping back are escape hatches, not choices
+            of equal weight with "Validate" — links, not a stack of buttons. */}
+        <div className="form-alt-actions">
+          <button type="button" className="btn btn-link" onClick={handleResendCode}>
             {t('tfa-resend-code')}
           </button>
-          <br/><br/>
-          <button className="btn btn-secondary" onClick={handleBackToLogin}>
+          <button type="button" className="btn btn-link" onClick={handleBackToLogin}>
             {t('tfa-back')}
           </button>
         </div>
@@ -257,10 +258,10 @@ const Login = (props) => {
 
   return (
       <div>
-        <p className="text-center">
-            { t('fields-mandatory') } 
+        <p className="form-intro">
+            { t('fields-mandatory') }
             <span style={{ color: 'red' }}>&nbsp;*</span>
-        </p>  
+        </p>
           <form onSubmit={ handleSubmit(onSubmit) }>
             <fieldset className="migratis-fieldset">
             <div className="migratis-field">
@@ -314,20 +315,23 @@ const Login = (props) => {
               </div>
             </div>
 
-            <div className="migratis-field text-center">
-              <br/><button className="btn btn-primary btn-block">{t('validate')}</button><br/>
+            <div className="form-actions">
+              <button className="btn btn-primary">{t('validate')}</button>
             </div>
             </fieldset>
           </form>
-              
-          <div className="text-center">              
+
+          {/* Signing in is the one action this form is for. Recovering a
+              password and creating an account are ways out of it — they belong
+              on one quiet line, not in a stack of three full-width buttons that
+              makes the primary action indistinguishable. */}
+          <div className="form-alt-actions">
               <Link to="/reset" onClick={() => props.setLoginModalShow(false)}>
-                <br/><button className="btn btn-secondary btn-block">{ t('reset-password') }</button><br/>
+                { t('reset-password') }
               </Link>
-              <br/>
-              <Link className="nav-item btn btn-light" to="/register" onClick={() => props.setLoginModalShow(false)}>
+              <Link to="/register" onClick={() => props.setLoginModalShow(false)}>
                   {t('no-account-register')}
-              </Link>   
+              </Link>
           </div>
         </div>
   );

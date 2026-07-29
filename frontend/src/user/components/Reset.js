@@ -3,6 +3,7 @@ import UserService from "../services/user.service";
 import { FormProvider, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import InputField from '../../common/fields/InputField';
+import { PageShell } from '../../common/components/PageShell';
 import { toast } from 'react-toastify';
 
 const Reset = () => {
@@ -41,28 +42,14 @@ const Reset = () => {
  
   if (success) {
     return (
-      <>
-        <header className="sticky-top">
-          <div className="row">
-            <div className="col-sm-12">
-              <h2>{ t('reset-password') }</h2>
-            </div>
-        	</div>
-        </header>
-        <p><strong>{ t(message) }</strong></p>
-      </>        
+      <PageShell title={ t('reset-password') } width="form">
+        <p className="page-message"><strong>{ t(message) }</strong></p>
+      </PageShell>
     );
   } else {
     return (
-      <>
-        <header className="sticky-top">
-          <div className="row">
-            <div className="col-sm-12">
-              <h2>{ t('reset-password') }</h2>
-            </div>
-          </div>
-        </header>            
-        <p className="text-center">
+      <PageShell title={ t('reset-password') } width="form">
+        <p className="form-intro">
           {t('fields-mandatory')}
           <span style={{color: 'red'}}>&nbsp;*</span>
         </p>
@@ -80,13 +67,13 @@ const Reset = () => {
                 serverError={serverErrors.email}
               />
 
-              <div className="migratis-field text-center">
-                <button className="btn btn-primary btn-block">{t('validate')}</button>
+              <div className="form-actions">
+                <button className="btn btn-primary">{t('validate')}</button>
               </div>
 					  </fieldset>
           </form>
         </FormProvider>
-      </>
+      </PageShell>
     );
   }
 }
