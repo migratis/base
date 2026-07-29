@@ -139,6 +139,35 @@ const InstallerPage = () => {
       .catch(() => {});
   }, []);
 
+  // Connection to the Migratis instance is gone — return to the login form
+  // (with a reconnect message) instead of leaving the user on a failed screen.
+  // Declared above the mount effect, which lists fetchApps (and through it
+  // this) as a dependency: a dep array is evaluated during render, so a `const`
+  // defined further down would still be in its temporal dead zone.
+  const showLogin = useCallback(() => {
+    setApps([]);
+    setSelectedApp(null);
+    setResult(null);
+    setStep(STEPS.CONNECT);
+    setError('not-connected');
+  }, []);
+
+  const fetchApps = useCallback((opts = {}) => {
+    if (!opts.keepStep) setLoading(true);
+    setError('');
+    InstallerService.listApps()
+      .then((data) => {
+        if (isDisconnected(data)) {
+          showLogin();
+          return;
+        }
+        setApps(data.apps || []);
+        if (!opts.keepStep) setStep(STEPS.SELECT);
+      })
+      .catch(() => setError('connection-failed'))
+      .finally(() => { if (!opts.keepStep) setLoading(false); });
+  }, [showLogin]);
+
   // Ask the backend whether the installer is enabled, then load state on mount.
   useEffect(() => {
     // The installer is a public page that manages its own connection to the
@@ -179,33 +208,7 @@ const InstallerPage = () => {
       // If the status check itself fails, fall back to enabled and let the
       // normal flow surface any backend error.
       .catch(() => setEnabled(true));
-  }, [fetchInstalled]);
-
-  // Connection to the Migratis instance is gone — return to the login form
-  // (with a reconnect message) instead of leaving the user on a failed screen.
-  const showLogin = () => {
-    setApps([]);
-    setSelectedApp(null);
-    setResult(null);
-    setStep(STEPS.CONNECT);
-    setError('not-connected');
-  };
-
-  const fetchApps = (opts = {}) => {
-    if (!opts.keepStep) setLoading(true);
-    setError('');
-    InstallerService.listApps()
-      .then((data) => {
-        if (isDisconnected(data)) {
-          showLogin();
-          return;
-        }
-        setApps(data.apps || []);
-        if (!opts.keepStep) setStep(STEPS.SELECT);
-      })
-      .catch(() => setError('connection-failed'))
-      .finally(() => { if (!opts.keepStep) setLoading(false); });
-  };
+  }, [fetchInstalled, fetchApps]);
 
   const handleConnect = (e) => {
     e.preventDefault();

@@ -75,7 +75,7 @@
   "scripts": {
     "analyze": "source-map-explorer 'build/static/js/*.js'",
     "start": "cross-env NODE_OPTIONS=--trace-deprecation react-scripts start",
-    "build": "react-scripts build",
+    "build": "cross-env NODE_ENV=production craco build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
@@ -98,6 +98,8 @@
     ]
   },
   "devDependencies": {
+    "cross-env": "^10.1.0",
+    "@craco/craco": "^7.1.0",
     "@babel/core": "^7.29.0",
     "@babel/plugin-proposal-private-property-in-object": "^7.21",
     "@babel/preset-env": "^7.29.0",
