@@ -11,7 +11,7 @@ import LangSelector from './LangSelector';
 import { toast } from 'react-toastify';
 import { BlockedModal as LoginModal } from "../modals/BlockedModal";
 import { SUPPORT } from '../../settings';
-import logo from '../../img/logo.png';
+import logo from '../../img/brand/mark.svg';
 import { sidebarSlots } from '../shell/registry';
 import { useShell } from '../shell/ShellContext';
 

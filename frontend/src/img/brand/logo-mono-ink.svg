@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -1 512 74" width="512" height="74" fill="none" role="img" aria-label="migratis.ai">
+  <g transform="translate(-5.06,-13.20) scale(1.35)">
+    <g fill="none" stroke="#141413" stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M8,50.5 L20,25.5 L31,42.5 L43,13.5 L56,42.5"/>
+    </g>
+  </g>
+  <g transform="translate(112.28,0)">
+    <g fill="none" stroke="#141413" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M0,56 L0,31 A15,15 0 0 1 30,31 L30,56"/>
+      <path d="M30,31 A15,15 0 0 1 60,31 L60,56"/>
+      <path d="M78,56 L78,16"/>
+      <path d="M134,36 A20,20 0 1 1 94,36 A20,20 0 1 1 134,36"/>
+      <path d="M134,16 L134,58 C134,66 127,71 118,69.5"/>
+      <path d="M150,56 L150,16"/>
+      <path d="M150,30 C150,21.5 156.5,16 166,16"/>
+      <path d="M212,36 A20,20 0 1 1 172,36 A20,20 0 1 1 212,36"/>
+      <path d="M212,16 L212,56"/>
+      <path d="M225,16 L252,16"/>
+      <path d="M239,4 L239,50 C239,55.5 243,58 248.5,56.5"/>
+      <path d="M266,56 L266,16"/>
+      <path d="M310,23 C310,18 304,16 295,16 C286,16 280,20 280,26 C280,32 286,36 295,36 C304,36 310,40 310,46 C310,52 304,56 295,56 C286,56 280,54 280,49"/>
+    </g>
+    <g fill="#141413">
+      <circle cx="78" cy="4" r="4"/>
+      <circle cx="266" cy="4" r="4"/>
+    </g>
+    <g fill="none" stroke="#141413" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M378,36 A20,20 0 1 1 338,36 A20,20 0 1 1 378,36"/>
+      <path d="M378,16 L378,56"/>
+      <path d="M396,56 L396,16"/>
+    </g>
+    <g fill="#141413">
+      <circle cx="328" cy="56" r="4"/>
+      <circle cx="396" cy="4" r="4"/>
+    </g>
+  </g>
+</svg>

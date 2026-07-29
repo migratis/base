@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import LangSelector from './LangSelector';
-import logo from '../../img/logo.png';
+import logo from '../../img/brand/mark.svg';
 import { useTranslation } from 'react-i18next';
 import Nav from 'react-bootstrap/Nav';
 import Navbar from 'react-bootstrap/Navbar';
