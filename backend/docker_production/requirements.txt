@@ -21,6 +21,14 @@ email_validator>=2.1.1
 openpyxl>=3.0.10
 # Generated app code emits `from PIL import Image` (image-field seed data).
 pillow>=10.0.0
+# Mailjet delivery over HTTPS. Where the host's provider drops outbound SMTP
+# (the migratis.ai box has 587, 465 and 2525 all timing out while :22 to the
+# same mail server answers instantly), mail cannot leave over SMTP at all.
+# Anymail's Mailjet backend posts to api.mailjet.com:443 instead and keeps
+# Django's EmailMessage API, so no mail call site changes. Inactive until
+# MAILJET_API_KEY is set — see settings.py. The [mailjet] extra pulls no
+# additional packages; it is named for intent.
+django-anymail[mailjet]>=15.0
 python-dateutil>=2.8.2
 requests>=2.31.0
 six>=1.16.0

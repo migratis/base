@@ -198,20 +198,52 @@ SITE_NAME = 'Simple Projection'
 FRONTEND_URL = env('FRONTEND_URL')
 BACKEND_URL = env('BACKEND_URL')
 
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_USE_TLS = True
 EMAIL_HOST = env('EMAIL_HOST')
 EMAIL_HOST_USER = env('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')
 EMAIL_PORT = 587
-# Django defaults this to None, which hands smtplib a blocking socket: an
-# unreachable mail host then stalls on the OS TCP timeout (~130s). Mail is sent
-# inline on request paths — sendTFA() runs inside POST /user/login — so an
-# unbounded wait there is an unbounded request, and a proxy in front returns
-# 504 long before Python gives up. Bound it well under that read timeout.
+# Only governs the SMTP path below. Django defaults it to None, which hands
+# smtplib a blocking socket: an unreachable mail host then stalls on the OS TCP
+# timeout (~130s). Mail is sent inline on request paths — sendTFA() runs inside
+# POST /user/login — so an unbounded wait there is an unbounded request, and a
+# proxy in front returns 504 long before Python gives up.
 EMAIL_TIMEOUT = 10
 EMAIL_SENDER = env('EMAIL_SENDER')
 EMAIL_MODERATOR = env('EMAIL_MODERATOR')
+
+# --------------------------------------------------------------------------- #
+# Outbound mail transport
+#
+# Some hosts' providers drop outbound SMTP wholesale — on the migratis.ai box
+# 587, 465 and 2525 all time out while port 22 to the same mail server answers
+# in 0.11s and a third-party probe gets Postfix's banner. Nothing is wrong with
+# the mail server; mail simply cannot leave over SMTP. Mailjet's HTTPS Send API
+# goes out over 443, which is the one path that does work.
+#
+# Anymail keeps Django's EmailMessage API, so every existing call site
+# (sendTFA, password reset, invitations, support) is untouched.
+#
+# Stays on SMTP unless both Mailjet keys are set, so a host whose .env predates
+# this keeps working instead of raising at import. Tests are unaffected either
+# way: Django's test runner swaps in the locmem backend.
+# --------------------------------------------------------------------------- #
+MAILJET_API_KEY = env('MAILJET_API_KEY', default='')
+MAILJET_SECRET_KEY = env('MAILJET_SECRET_KEY', default='')
+
+if MAILJET_API_KEY and MAILJET_SECRET_KEY:
+    EMAIL_BACKEND = 'anymail.backends.mailjet.EmailBackend'
+    ANYMAIL = {
+        'MAILJET_API_KEY': MAILJET_API_KEY,
+        'MAILJET_SECRET_KEY': MAILJET_SECRET_KEY,
+        # EMAIL_TIMEOUT does not reach this backend — it is an SMTP setting.
+        # Without this, an unresponsive api.mailjet.com would hang a login for
+        # anymail's 30s default: the same unbounded wait inside a request that
+        # the SMTP timeout above exists to prevent, just over 443.
+        'REQUESTS_TIMEOUT': 10,
+    }
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 
 FILE_UPLOAD_HANDLERS = (
     'django.core.files.uploadhandler.TemporaryFileUploadHandler',
