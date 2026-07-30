@@ -746,10 +746,6 @@ TRANSLATIONS['installer'] = {
         'en': 'Sender address', 'fr': "Adresse d'expéditeur",
         'es': 'Dirección del remitente', 'ro': 'Adresă expeditor',
     },
-    'email-moderator': {
-        'en': 'Moderator address', 'fr': 'Adresse du modérateur',
-        'es': 'Dirección del moderador', 'ro': 'Adresă moderator',
-    },
     'config-stripe': {
         'en': 'Stripe keys', 'fr': 'Clés Stripe',
         'es': 'Claves de Stripe', 'ro': 'Chei Stripe',

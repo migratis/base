@@ -104,6 +104,73 @@ Copy `backend/migratis/.env.example` and fill in your values. Key variables:
 
 ---
 
+## Sending email
+
+The app sends mail on a few paths — the two-factor code at login, password
+resets, invitations, support notices. **You do not have to configure anything to
+start**: with no mail settings at all, the console backend prints each message
+to the container log, so a TFA code or reset link is one `docker compose logs
+backend` away. That is the intended local-development setup.
+
+The transport is chosen from what your `.env` carries — there is no
+`EMAIL_BACKEND` variable to set:
+
+| What you fill in | Transport |
+|---|---|
+| nothing | **Console** — mail is printed to the log, never sent |
+| `EMAIL_HOST` (+ user/password) | **SMTP** — a mailbox you already own |
+| both `MAILJET_*` keys | **Mailjet HTTPS API** — beats an SMTP block |
+
+### The simplest real setup: your own SMTP mailbox
+
+No third-party service, no account to open — if you have a domain with email,
+you already have everything. Point the four variables at that mailbox:
+
+```
+EMAIL_HOST=mail.yourdomain.com
+EMAIL_HOST_USER=noreply@yourdomain.com
+EMAIL_HOST_PASSWORD=…
+EMAIL_SENDER=noreply@yourdomain.com
+```
+
+Port 587 with STARTTLS is assumed (`EMAIL_PORT` / `EMAIL_USE_TLS` in
+`settings.py` if yours differs). `EMAIL_SENDER` is the `From:` address; most
+providers reject a `From:` that isn't the authenticated mailbox, so keep the two
+the same unless you know the mailbox is allowed to send as another address.
+
+Two things decide whether this works:
+
+1. **Your host must allow outbound SMTP.** Many VPS and cloud providers block
+   ports 587/465/25 to fight spam, and the symptom is a *timeout*, not a refusal
+   — a login request hangs until `EMAIL_TIMEOUT` (10s) gives up. Check before
+   you debug anything else: `nc -zv mail.yourdomain.com 587` from the host. If
+   it hangs, no SMTP configuration will fix it and you need the API transport
+   below.
+2. **Deliverability.** Mail from a small mailbox lands in spam unless the
+   domain publishes SPF and DKIM records. Your mail provider documents both.
+
+Running your own MTA (Postfix on the host) is the only setup with no external
+account whatsoever, but a fresh IP with no reverse DNS, SPF or DKIM is treated
+as spam by essentially every large receiver. It is not worth it for
+transactional mail — use a mailbox you already have.
+
+### When SMTP is blocked
+
+Set `MAILJET_API_KEY` and `MAILJET_SECRET_KEY` and mail goes out over HTTPS on
+443 instead, which no provider blocks. This is the only reason the dependency
+exists. Anymail sits behind Django's normal `EmailMessage` API, so no call site
+changes; swapping Mailjet for another Anymail provider (SendGrid, Postmark,
+Brevo…) is a one-line change to `EMAIL_BACKEND` in `settings.py`. Whichever you
+pick, `EMAIL_SENDER` must be an address that provider has validated, or it
+rejects the send.
+
+### Error mail
+
+`ADMINS` (`"Name <addr>, Name <addr>"`) receives Django's traceback mail for
+unhandled 500s when `DEBUG=False`. Leave it empty to disable that.
+
+---
+
 ## Enabling / disabling the installer
 
 The installer is controlled **entirely by the backend** with a single setting —

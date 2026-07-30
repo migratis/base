@@ -10,7 +10,7 @@ const STEPS = {
 
 const EMPTY_CONFIG = {
   admin:  { email: '', password: '' },
-  email:  { EMAIL_HOST: '', EMAIL_HOST_USER: '', EMAIL_HOST_PASSWORD: '', EMAIL_SENDER: '', EMAIL_MODERATOR: '' },
+  email:  { EMAIL_HOST: '', EMAIL_HOST_USER: '', EMAIL_HOST_PASSWORD: '', EMAIL_SENDER: '' },
   stripe: { STRIPE_API_KEY: '', STRIPE_SECRET_KEY: '', STRIPE_WEBHOOK_SECRET_KEY: '' },
 };
 
@@ -734,7 +734,6 @@ const InstallerPage = () => {
                   ['EMAIL_HOST_USER', 'smtp-user'],
                   ['EMAIL_HOST_PASSWORD', 'smtp-password'],
                   ['EMAIL_SENDER', 'email-sender'],
-                  ['EMAIL_MODERATOR', 'email-moderator'],
                 ].map(([key, label]) => (
                   <div className="mb-3" key={key}>
                     <label className="form-label">{t(label)}</label>

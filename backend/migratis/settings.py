@@ -199,9 +199,11 @@ FRONTEND_URL = env('FRONTEND_URL')
 BACKEND_URL = env('BACKEND_URL')
 
 EMAIL_USE_TLS = True
-EMAIL_HOST = env('EMAIL_HOST')
-EMAIL_HOST_USER = env('EMAIL_HOST_USER')
-EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')
+# SMTP credentials serve one of three transports (see below), so they carry
+# defaults: a fresh checkout has no mail account and must still boot.
+EMAIL_HOST = env('EMAIL_HOST', default='')
+EMAIL_HOST_USER = env('EMAIL_HOST_USER', default='')
+EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')
 EMAIL_PORT = 587
 # Only governs the SMTP path below. Django defaults it to None, which hands
 # smtplib a blocking socket: an unreachable mail host then stalls on the OS TCP
@@ -209,8 +211,6 @@ EMAIL_PORT = 587
 # POST /user/login — so an unbounded wait there is an unbounded request, and a
 # proxy in front returns 504 long before Python gives up.
 EMAIL_TIMEOUT = 10
-EMAIL_SENDER = env('EMAIL_SENDER')
-EMAIL_MODERATOR = env('EMAIL_MODERATOR')
 
 # --------------------------------------------------------------------------- #
 # Outbound mail transport
@@ -224,9 +224,15 @@ EMAIL_MODERATOR = env('EMAIL_MODERATOR')
 # Anymail keeps Django's EmailMessage API, so every existing call site
 # (sendTFA, password reset, invitations, support) is untouched.
 #
-# Stays on SMTP unless both Mailjet keys are set, so a host whose .env predates
-# this keeps working instead of raising at import. Tests are unaffected either
-# way: Django's test runner swaps in the locmem backend.
+# Three transports, chosen by what the .env actually carries:
+#   both MAILJET_* keys  → Mailjet's HTTPS Send API (or any Anymail provider)
+#   EMAIL_HOST set       → plain SMTP, no third party involved
+#   neither              → the console backend, which prints the mail to the
+#                          container log instead of sending it
+# The console fallback is what makes a fresh checkout work with no mail account
+# at all: nothing raises, nothing hangs on a dead SMTP socket, and the message —
+# TFA code, reset link — is readable in `docker logs`. Tests are unaffected
+# either way: Django's test runner swaps in the locmem backend.
 # --------------------------------------------------------------------------- #
 MAILJET_API_KEY = env('MAILJET_API_KEY', default='')
 MAILJET_SECRET_KEY = env('MAILJET_SECRET_KEY', default='')
@@ -242,8 +248,10 @@ if MAILJET_API_KEY and MAILJET_SECRET_KEY:
         # the SMTP timeout above exists to prevent, just over 443.
         'REQUESTS_TIMEOUT': 10,
     }
-else:
+elif EMAIL_HOST:
     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 FILE_UPLOAD_HANDLERS = (
     'django.core.files.uploadhandler.TemporaryFileUploadHandler',
@@ -251,9 +259,16 @@ FILE_UPLOAD_HANDLERS = (
 
 MIGRATIS_BACKEND_URL = env('MIGRATIS_BACKEND_URL', default='http://host.docker.internal:8000')
 
-ADMINS          = env.list('ADMINS', default=[])
-EMAIL_SENDER    = env('EMAIL_SENDER',    default='')
-EMAIL_MODERATOR = env('EMAIL_MODERATOR', default='')
+# Who receives Django's unhandled-exception mail. Django's own AdminEmailHandler
+# (on the `django.request` logger) is the only reader — a 500 with DEBUG=False
+# mails the traceback here. Empty disables it. Format: "Name <addr>, Name <addr>".
+ADMINS = [
+    (entry.split('<')[0].strip(), entry.split('<')[-1].rstrip('>').strip())
+    for entry in env.list('ADMINS', default=[])
+]
+# The From: address on every outbound mail. Under an API transport it must be a
+# sender the provider has validated, or the send is rejected.
+EMAIL_SENDER = env('EMAIL_SENDER', default='')
 STRIPE_API_KEY  = env('STRIPE_API_KEY')
 STRIPE_SECRET_KEY = env('STRIPE_SECRET_KEY')
 STRIPE_WEBHOOK_SECRET_KEY = env('STRIPE_WEBHOOK_SECRET_KEY')
