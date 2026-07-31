@@ -135,6 +135,67 @@ def ping(request):
     return JsonResponse({'result': 'OK'})
 
 
+@api.get("/status", auth=None)
+def status(request):
+    """Live self-check behind the public /status page.
+
+    Deliberately *not* an uptime history — nothing here is recorded or averaged
+    over time. Every field is measured at the instant of the request, so the
+    page can never claim a health it has not just verified:
+
+    * ``api``      — implicit: this view answered.
+    * ``database`` — a trivial round-trip to Postgres.
+    * ``services`` — one entry per LLM provider that is actually configured (an
+      unset API key means the provider is not offered at all, so it is omitted
+      rather than reported down). ``operational`` unless that provider's
+      circuit breaker is tripped, which is exactly what makes it disappear from
+      the model picker. Empty where the generator module is not installed —
+      it is optional, and a deployment without it has no AI to report on.
+
+    Only labels and states are published — never the breaker reason, which can
+    quote a provider's billing error verbatim.
+    """
+    from django.db import connection
+
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute('SELECT 1')
+            cursor.fetchone()
+        database = 'operational'
+    except Exception:                     # pragma: no cover - infrastructure
+        database = 'unavailable'
+
+    services = []
+    try:
+        # The generator is an optional module; without it there are no AI
+        # providers to report and the platform section stands alone.
+        from migratis.generator import llm
+
+        catalog = llm.providers()
+        for code, provider in catalog.items():
+            if not llm.provider_api_key(code, catalog):
+                continue
+            services.append({
+                'code': code,
+                'label': provider.get('label') or code,
+                'state': ('operational' if llm.provider_available(code, catalog)
+                          else 'unavailable'),
+            })
+    except ImportError:
+        pass
+
+    degraded = database != 'operational' or any(
+        service['state'] != 'operational' for service in services
+    )
+
+    return JsonResponse({
+        'api': 'operational',
+        'database': database,
+        'services': services,
+        'state': 'degraded' if degraded else 'operational',
+        'checked_at': datetime.datetime.now(datetime.timezone.utc).isoformat(),
+    })
+
 @ensure_csrf_cookie
 @api.get("/session", auth=None)
 def session(request):

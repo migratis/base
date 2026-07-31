@@ -19,6 +19,12 @@ const Subscribe = lazyWithRetry(() => import('./subscription/components/Subscrib
 const Contact = lazyWithRetry(() => import('./support/components/Contact'));
 const Tickets = lazyWithRetry(() => import('./support/components/Tickets'));
 const Disclaimer = lazyWithRetry(() => import('./common/components/Disclaimer'));
+const LegalNotice = lazyWithRetry(() => import('./common/components/LegalNotice'));
+const RefundPolicy = lazyWithRetry(() => import('./common/components/RefundPolicy'));
+const Licensing = lazyWithRetry(() => import('./common/components/Licensing'));
+const Security = lazyWithRetry(() => import('./common/components/Security'));
+const Status = lazyWithRetry(() => import('./common/components/Status'));
+const Help = lazyWithRetry(() => import('./common/components/Help'));
 const InstallerPage = lazyWithRetry(() => import('./installer/components/InstallerPage'));
 
 
@@ -66,7 +72,15 @@ const App = () => {
               <Route exact path="/contact" element={<Contact />} />
             </>
           }
+          {/* Legal & information pages — all public, all linked from the footer.
+              Their prose lives in the `legal` / `info` translation namespaces,
+              so a deployment fills in its own identity without touching these. */}
           <Route exact path="/disclaimer" element={<Disclaimer />} />
+          <Route exact path="/legal-notice" element={<LegalNotice />} />
+          <Route exact path="/refund-policy" element={<RefundPolicy />} />
+          <Route exact path="/security" element={<Security />} />
+          <Route exact path="/status" element={<Status />} />
+          <Route exact path="/help" element={<Help />} />
           <Route exact path='/installer' element={<InstallerPage/>} />
           {moduleRoutes.map(({ path, Component }) => (
             <Route key={path} path={path} element={<Component />} />

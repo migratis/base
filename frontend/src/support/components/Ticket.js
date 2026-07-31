@@ -75,25 +75,39 @@ const Ticket = (props) => {
                     </>
                   }
                   <Col className="text-center" sm={12} lg={props.ticket.status === 'c'?12:6}>
-                    { props.ticket.files.length > 0 && props.ticket.files.map(file =>
-                      <Row className="border-top text-small striped" key={file.id}>
-                        <Col sm={12} lg={9}>
-                          {file.filename}
-                        </Col>
-                        <Col sm={11} lg={2}>
-                          {moment(file.cdate).format('DD-MM-y')}                                      
-                        </Col>
-                        <Col sm={1} lg={1}>
-                          <DownloadOutline 
-                            onClick={() => props.handleDownload(file)} 
-                            color={COLOR_LINK} 
-                            title={t('download-file')} 
-                            height="25px" 
-                            width="25px"
-                          />                            
-                        </Col>
-                      </Row>
-                    )}
+                    {/* A `.striped` row is itself a flex row; nesting a Bootstrap
+                        Row/Col grid inside one made its negative gutters fight
+                        the row padding, so the name, the date and the download
+                        icon never lined up in their column. Plain flex items:
+                        name takes the slack and ellipsises, date and action keep
+                        their intrinsic width, all vertically centred. */}
+                    { (props.ticket.files || []).length > 0 &&
+                      <ul className="ticket-attachments">
+                        { props.ticket.files.map(file =>
+                          <li className="ticket-attachment striped" key={file.id}>
+                            <span className="ticket-attachment__name" title={file.filename}>
+                              {file.filename}
+                            </span>
+                            <span className="ticket-attachment__date">
+                              {moment(file.cdate).format('DD-MM-y')}
+                            </span>
+                            <button
+                              type="button"
+                              className="ticket-attachment__action"
+                              onClick={() => props.handleDownload(file)}
+                              aria-label={t('download-file')}
+                            >
+                              <DownloadOutline
+                                color={COLOR_LINK}
+                                title={t('download-file')}
+                                height="25px"
+                                width="25px"
+                              />
+                            </button>
+                          </li>
+                        )}
+                      </ul>
+                    }
                     { props.ticket.status !== 'c' &&
                       <>
                         <div className="text-center">

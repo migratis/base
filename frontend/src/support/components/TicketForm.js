@@ -8,87 +8,72 @@ import SelectField from '../../common/fields/SelectField';
 import TextareaField from '../../common/fields/TextareaField';
 import  { LoaderIndicator } from '../../common/components/LoaderIndicator';
 
+// The "Other topic..." sentinel. It is not a `support.Topic` row — picking it
+// means "none of the seeded topics fits", and the backend stores the free text
+// the user types into `object` instead of a topic FK.
+export const OTHER_TOPIC_VALUE = 0;
+
 const TicketForm = (props) => {
   const { t } = useTranslation('support');
-  const [ topics, setTopics ] = useState([]); 
-  const [ serverErrors, setServerErrors ] = useState({});    
-  const [ disableSubmit, setDisableSubmit ] = useState(false);  
-  const [ other, setOther] = useState(false);
-  const [ topic, setTopic] = useState(props.ticket.topic?{
-    value: props.ticket.topic.id,
-    label: t(props.ticket.topic.label.key)
-  }:props.ticket.object ?{
-    value: 0,
-    label: t("other-topic") + "..."
-  }: null);
+  const otherOption = { value: OTHER_TOPIC_VALUE, label: t("other-topic") + "..." };
+
+  // A ticket carries either a seeded topic or a free-text `object`, never both.
+  const ticketTopicOption = props.ticket?.topic
+    ? { value: props.ticket.topic.id, label: t(props.ticket.topic.label.key) }
+    : props.ticket?.object
+      ? otherOption
+      : null;   // new ticket — nothing preselected, the placeholder shows
+
+  const [ topics, setTopics ] = useState([]);
+  const [ serverErrors, setServerErrors ] = useState({});
+  const [ disableSubmit, setDisableSubmit ] = useState(false);
+  const [ topic, setTopic] = useState(ticketTopicOption);
   const methods = useForm({
     defaultValues: {
-      topic_id: topic?topic:{
-        value: 0,
-        label: t("other-topic") + "..."
-      },
+      topic_id: ticketTopicOption,
       object: props.ticket?.object,
       content: props.ticket?.content
     }
-  }); 
+  });
   const { handleSubmit, reset } = methods;
+
+  // Derived, not stored: the free-text field is visible exactly while the
+  // "Other topic..." sentinel is the current selection.
+  const other = topic?.value === OTHER_TOPIC_VALUE;
 
   useEffect(() => {
     SupportService.getTopics().then(
         (response) => {
           const topic_list = [];
-          response.forEach(element => {
-            topic_list.push({ 
-              value: element.id, 
-              label: t(element.label.key) 
+          // The endpoint is public and answers an error body (an object) rather
+          // than a list when topics cannot be read — never map over that.
+          (Array.isArray(response) ? response : []).forEach(element => {
+            topic_list.push({
+              value: element.id,
+              label: t(element.label.key)
             })
           });
-          topic_list.push({
-            value: 0,
-            label: t("other-topic") + "..."
-          });
+          topic_list.push(otherOption);
           setTopics(topic_list);
-        }   
+        }
     );
-    
-    if (!props.ticket.topic && props.ticket.object) {
-      setTopic({
-        value: 0,
-        label: t("other-topic") + "..."
-      });
-      reset({ topic_id: {
-        value: 0,
-        label: t("other-topic") + "..."
-      }})
-      setOther(true);
-    } else {
-      setTopic(props.ticket.topic);
-      setOther(false);
-    }
-    if (props.ticket) {
-      reset({      
-        topic_id: topic,
-        object: props.ticket.object,
-        content: props.ticket.content
-      });
-    }
 
+    reset({
+      topic_id: ticketTopicOption,
+      object: props.ticket?.object,
+      content: props.ticket?.content
+    });
   }, []);// eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    if (topic?.value === 0) {
-      setOther(true);
-    } else {
-      setOther(false);
-    }
-  }, [topic]);
 
   const onSubmit = async (data) => {
     if (props.ticket.id) {
       data.id = props.ticket.id;
     }
     setDisableSubmit(true);
-    data.topic_id = data.topic_id?.value ?? data.topic_id;
+    // Unselected can only reach here if the required rule is bypassed; fall
+    // back to the sentinel so the backend answers a field error rather than
+    // this crashing on `undefined.value`.
+    data.topic_id = data.topic_id?.value ?? OTHER_TOPIC_VALUE;
     data.language = localStorage.getItem('i18nextLng');
     SupportService.saveTicket(data).then(
       (response) => {

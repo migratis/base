@@ -10,11 +10,22 @@ const getCookies = () => {
   );
 };
 
+// Live self-check behind the /status page — API, database and per-provider AI
+// availability, measured at request time. Public, no session needed.
+const getStatus = () => {
+  return api.get("/status", {})
+    .then( (response) => {
+      if (response.data) return response.data;
+      else return response;
+    }
+  );
+};
+
 const deleteEntity = (app, entity, id) => {
   return api.post(`/${app}/${entity}/delete`, {
     id: id
   },
-  { 
+  {
     headers: {
       'content-type': 'application/json'
     }
@@ -24,7 +35,25 @@ const deleteEntity = (app, entity, id) => {
   }).catch( (error) => {
     if (error.response.status === 422) {
       return error.response.data;
-    } 
+    }
+  });
+};
+
+const deleteAllEntities = (app, entity, active) => {
+  return api.post(`/${app}/${entity}/delete-all`, {
+    active: active
+  },
+  {
+    headers: {
+      'content-type': 'application/json'
+    }
+  }).then( (response) => {
+    if (response.data) return response.data;
+    else return response;
+  }).catch( (error) => {
+    if (error.response.status === 422) {
+      return error.response.data;
+    }
   });
 }; 
 
@@ -81,10 +110,12 @@ const getEntity = (app, entity, id) => {
 
 const CommonService = {
   getCookies,
+  getStatus,
   deleteEntity,
+  deleteAllEntities,
   saveEntity,
   getEntities,
-  getEntity   
+  getEntity
 }
 
 export default CommonService;

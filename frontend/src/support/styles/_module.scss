@@ -4,4 +4,49 @@
 // All design tokens from src/styles/_variables.scss are available here.
 // =============================================================================
 
-// Add support-specific styles below.
+// ── Ticket attachments ───────────────────────────────────────────────────────
+// The uploaded-file list inside a ticket's Discussion panel. Each row reuses
+// `.striped` (already `display:flex; align-items:center`), so the children are
+// plain flex items rather than a nested Bootstrap grid — the grid's negative
+// gutters used to cancel the row padding and left the filename, the date and
+// the download icon unaligned inside their space.
+.ticket-attachments {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  text-align: left;
+}
+
+.ticket-attachment {
+  gap: 12px;
+
+  // Takes the slack. `min-width: 0` is what actually lets a long filename
+  // ellipsise instead of pushing the date and the icon out of the row.
+  &__name {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: $font-size-small;
+  }
+
+  &__date {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    font-size: $font-size-small;
+    color: var(--color-text-muted);
+    font-variant-numeric: tabular-nums;   // dates stay in a straight column
+  }
+
+  &__action {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    padding: 0;
+    border: 0;
+    background: none;
+    line-height: 0;
+    cursor: pointer;
+  }
+}

@@ -96,19 +96,20 @@ export default function SelectField ({
             isLoading={isLoading}
             value={isMulti
               ? (Array.isArray(field.value) ? field.value.map(v => options.find(o => o.value === v) || v).filter(Boolean) : [])
-              // Store the raw value, not the option object. Guard against falsy-but-valid
-              // values (e.g. 0/false) so they still render as the selected option.
-              : (field.value !== '' && field.value != null ? options.find(o => o.value === field.value) || field.value : null)
+              : (field.value ? options.find(o => o.value === field.value) || field.value : null)
             }
             onChange={(selected) => {
               if (isMulti) {
                 field.onChange(selected ? selected.map(o => o.value) : []);
               } else {
-                // Single select: store the raw value (consistent with the multi branch
-                // and the value lookup above), not the whole {value,label} option object —
-                // otherwise the backend receives an object and int/FK fields 422.
-                field.onChange(selected ? selected.value : null);
+                field.onChange(selected);
               }
+              // Same escape hatch as InputField/TextareaField: let the parent
+              // react to the choice (revealing a dependent field, refetching
+              // options…). Single selects hand over the option object, so a
+              // consumer can read both `.value` and `.label`; multi selects
+              // hand over the array, mirroring what goes into the form state.
+              dispatch(isMulti ? (selected || []) : selected);
             }}
           />
         )}

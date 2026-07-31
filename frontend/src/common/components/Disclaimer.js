@@ -1,20 +1,23 @@
-import React from 'react';
-import { useTranslation } from 'react-i18next';
-import DOMPurify from 'dompurify';
-import { PageShell } from './PageShell';
+// Legal disclaimer — the limits of what the platform promises. Publisher and
+// host identity moved to the Legal notice page (/legal-notice), which Article 2
+// of the terms of sale points at; this page is only about liability and
+// warranty, so the two no longer restate each other.
+import LegalPage from './LegalPage';
 
-const Disclaimer = () => {
-  const { t } = useTranslation('legal');
-  return (
-    <PageShell title={ t('legal-disclaimer') }>
-      <h3 className="review-section">
-        <span>{ t('hosting-infos-title') }</span>
-      </h3>
-      <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(t('hosting-infos')) }} />
-      <p className="text-muted">{ t('all-right-reserved') + ' 04/09/2023' }</p>
-    </PageShell>
-  );
-
-};
+const Disclaimer = () => (
+  <LegalPage
+    ns="legal"
+    titleKey="legal-disclaimer"
+    descriptionKey="legal-disclaimer-intro"
+    sections={[
+      'disclaimer-availability',
+      'disclaimer-generated-output',
+      'disclaimer-ai-content',
+      'disclaimer-external-links',
+      'disclaimer-illustrations',
+    ]}
+    updatedKey="legal-updated"
+  />
+);
 
 export default Disclaimer;

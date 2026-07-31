@@ -10,6 +10,7 @@ import {
 } from 'react-icons/io5';
 import DOMPurify from 'dompurify';
 import { cguvDocument, rgpdDocument } from "../tools/legalDocuments";
+import { GENERATOR } from "../../settings";
 
 export const Footer = (props) => {
     const { t, i18n } = useTranslation('layout');
@@ -59,26 +60,53 @@ export const Footer = (props) => {
                         </h5>
                         <br/>
                         <p>{t('text-informations')}</p>
-                        <NavLink className="foot-link" to={props.user ? "/support/ticket" : "/contact"}>
-                            <strong>{props.user ? t('support') : t('contact')}</strong>
-                        </NavLink>
-                        <br/>
-                        <NavLink className="foot-link" to={'/help'}>
-                            <strong>{t('help')}</strong>
-                        </NavLink>
-                        <br/>
-                        <NavLink target="_blank" className="foot-link" to={cguv}>
-                            <strong>{t('terms-of-service')}</strong>
-                        </NavLink> 
-                        <br/>
-                        <NavLink target="_blank" className="foot-link" to={rgpd}>
-                            <strong>{t('privacy-policy')}</strong>
-                        </NavLink> 
-                        <br/>                                              
-                        <NavLink className="foot-link" to={"/disclaimer"}>
-                            <strong>{t('legal-disclaimer')}</strong>
-                        </NavLink>                                                                                  
-                    </Col>                    
+                        {/* Two columns of links inside the pane: getting help on
+                            one side, the legal set on the other. Flat, they ran
+                            to eleven lines and buried the support entry. */}
+                        <div className="footer-links">
+                            <nav className="footer-links-group" aria-label={t('help')}>
+                                <NavLink className="foot-link" to={props.user ? "/support/ticket" : "/contact"}>
+                                    <strong>{props.user ? t('support') : t('contact')}</strong>
+                                </NavLink>
+                                <NavLink className="foot-link" to={'/help'}>
+                                    <strong>{t('help')}</strong>
+                                </NavLink>
+                                <NavLink className="foot-link" to={'/status'}>
+                                    <strong>{t('status')}</strong>
+                                </NavLink>
+                                <NavLink className="foot-link" to={'/security'}>
+                                    <strong>{t('security')}</strong>
+                                </NavLink>
+                            </nav>
+                            <nav className="footer-links-group" aria-label={t('legal')}>
+                                <NavLink className="foot-link" to={"/legal-notice"}>
+                                    <strong>{t('legal-notice')}</strong>
+                                </NavLink>
+                                <NavLink target="_blank" className="foot-link" to={cguv}>
+                                    <strong>{t('terms-of-service')}</strong>
+                                </NavLink>
+                                <NavLink target="_blank" className="foot-link" to={rgpd}>
+                                    <strong>{t('privacy-policy')}</strong>
+                                </NavLink>
+                                <NavLink className="foot-link" to={"/refund-policy"}>
+                                    <strong>{t('refund-policy')}</strong>
+                                </NavLink>
+                                <NavLink className="foot-link" to={"/cookies"}>
+                                    <strong>{t('cookies')}</strong>
+                                </NavLink>
+                                {/* Publishing approved components under the GPL
+                                    only exists because of the generator. */}
+                                { GENERATOR &&
+                                    <NavLink className="foot-link" to={"/licensing"}>
+                                        <strong>{t('licensing')}</strong>
+                                    </NavLink>
+                                }
+                                <NavLink className="foot-link" to={"/disclaimer"}>
+                                    <strong>{t('legal-disclaimer')}</strong>
+                                </NavLink>
+                            </nav>
+                        </div>
+                    </Col>
                 </Row>
                 <br/><br/>
                 <Row>

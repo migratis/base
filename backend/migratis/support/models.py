@@ -15,6 +15,10 @@ class Topic(models.Model):
     label = models.ForeignKey(TranslationKey, on_delete=models.PROTECT)
 
     class Meta:
+        # Insertion order, so the picker keeps the deliberate ordering the seed
+        # migration declares (account/billing first, niche topics last) instead
+        # of whatever order Postgres happens to return.
+        ordering = ['id']
         verbose_name_plural = "Topics"
 
     def __str__(self):
