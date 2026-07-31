@@ -12,6 +12,11 @@ import DOMPurify from 'dompurify';
 import { cguvDocument, rgpdDocument } from "../tools/legalDocuments";
 import { GENERATOR } from "../../settings";
 
+// The published version of the application, shown in the footer's bottom line.
+// A named constant so bumping it is one obvious edit rather than a string
+// buried in the markup.
+const VERSION = 'v1.0';
+
 export const Footer = (props) => {
     const { t, i18n } = useTranslation('layout');
     const cguv = cguvDocument(i18n.language);
@@ -108,14 +113,13 @@ export const Footer = (props) => {
                         </div>
                     </Col>
                 </Row>
-                <br/><br/>
-                <Row>
-                    <Col sm={12} lg={12}>
-                        <div  className="text-center">
-                            v1.2 - {t('all-rights-reserved')}
-                        </div>
-                    </Col>
-                </Row>
+                {/* Its own band rather than two <br/> and a full-width grid
+                    row: it needs a rule above it and room below, and stacked
+                    line breaks gave it neither — the line sat flush against the
+                    bottom edge and read as clipped. */}
+                <div className="footer-bottom">
+                    {VERSION} - {t('all-rights-reserved')}
+                </div>
             </Container>
         </footer>
 

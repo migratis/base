@@ -404,7 +404,7 @@ footer {
   // `.main-content` is already `min-height: 100vh`, so a gap would just expose
   // the body background between the content and the band.
   margin-left: var(--sidebar-collapsed);
-  padding: 48px 0 24px;
+  padding: 48px 0 32px;
   background-color: var(--color-dark);
   color: var(--color-light);
   font-size: $font-size-small;
@@ -436,6 +436,14 @@ footer {
       color: var(--color-white);
     }
   }
+}
+
+.footer-bottom {
+  margin-top: 40px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(250, 249, 245, 0.14);
+  text-align: center;
+  color: rgba(250, 249, 245, 0.66);
 }
 
 .footer-sm {
