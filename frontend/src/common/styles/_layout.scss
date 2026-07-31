@@ -392,3 +392,169 @@ header.sticky-top {
 .justify-between { justify-content: space-between; }
 .gap-2 { gap: 8px; }
 .gap-3 { gap: 16px; }
+
+// ── Footer ────────────────────────────────────────────────────────────────────
+// The footer markup has always assumed a dark surface (its icons are hard-coded
+// white) but never had a stylesheet, so it rendered white-on-white. It is the
+// page's closing band: dark ink, muted text, and the information links laid out
+// as two readable columns rather than eleven stacked lines.
+footer {
+  // Sibling of `.main-content`, which offsets itself for the fixed sidebar —
+  // without the same offset the footer slides underneath it. No top margin:
+  // `.main-content` is already `min-height: 100vh`, so a gap would just expose
+  // the body background between the content and the band.
+  margin-left: var(--sidebar-collapsed);
+  padding: 48px 0 24px;
+  background-color: var(--color-dark);
+  color: var(--color-light);
+  font-size: $font-size-small;
+  transition: margin-left var(--transition-slow);
+
+  @media (max-width: 768px) {
+    margin-left: 0;
+  }
+
+  h5 {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0;
+    color: var(--color-light);
+    font-family: $font-stack-heading;
+    font-size: 0.95rem;
+    letter-spacing: 0.04em;
+  }
+
+  p {
+    color: rgba(250, 249, 245, 0.72);
+  }
+
+  a {
+    color: rgba(250, 249, 245, 0.85);
+
+    &:hover,
+    &:focus-visible {
+      color: var(--color-white);
+    }
+  }
+}
+
+.footer-sm {
+  margin-top: 24px;
+
+  @media (min-width: 992px) {
+    margin-top: 0;
+  }
+}
+
+.footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 32px;
+}
+
+.footer-links-group {
+  display: flex;
+  flex: 1 1 140px;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.foot-link {
+  text-decoration: none;
+
+  strong {
+    font-weight: 500;
+  }
+
+  &:hover strong,
+  &:focus-visible strong {
+    text-decoration: underline;
+  }
+}
+
+// ── Legal & policy pages ──────────────────────────────────────────────────────
+// One shape for every static policy page (see LegalPage.js): a run of titled
+// sections of prose, set at a comfortable reading measure.
+.legal-section + .legal-section {
+  margin-top: 32px;
+}
+
+.legal-section-title {
+  margin-bottom: 12px;
+  font-size: 1.15rem;
+  color: var(--color-text-dark);
+}
+
+.legal-section-body {
+  color: var(--color-text-soft);
+  line-height: 1.65;
+
+  p + p,
+  p + ul,
+  ul + p {
+    margin-top: 12px;
+  }
+
+  ul {
+    margin-bottom: 0;
+    padding-left: 20px;
+  }
+
+  li + li {
+    margin-top: 6px;
+  }
+}
+
+.legal-updated {
+  margin-top: 40px;
+  color: var(--color-text-muted);
+  font-size: $font-size-small;
+}
+
+// ── Status page ───────────────────────────────────────────────────────────────
+// A dot plus a label plus a state, aligned in a column. The dot carries the
+// meaning, so it is never the only carrier — the state is written out too.
+.status-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.status-line {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+
+  & + & {
+    border-top: 1px solid var(--color-border);
+  }
+
+  &__label {
+    flex: 1 1 auto;
+    min-width: 0;
+    color: var(--color-text-dark);
+  }
+
+  &__state {
+    flex: 0 0 auto;
+    color: var(--color-text-soft);
+    font-size: $font-size-small;
+  }
+}
+
+.status-dot {
+  flex: 0 0 auto;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: var(--color-mid-gray);
+
+  &--ok    { background-color: var(--color-success); }
+  &--warn  { background-color: var(--color-orange); }
+  &--down  { background-color: #b3261e; }
+}
+
+.status-unreachable {
+  color: var(--color-text-soft);
+}

@@ -3,6 +3,7 @@ import { useLocation, Outlet } from "react-router-dom";
 import { MenuLeft } from "./MenuLeft";
 import { ToastContainer } from 'react-toastify';
 import { SPCookieConsent } from "./CookieConsent";
+import { Footer } from "./Footer";
 import { BlockedModal } from "../modals/BlockedModal";
 import { useTranslation } from "react-i18next";
 import { IoMenuOutline as MenuIcon } from 'react-icons/io5';
@@ -95,6 +96,10 @@ export const Layout = (props) => {
       <div className="main-content">
         <Outlet context={{assistant, setAssistant, user, setUser}} />
       </div>
+      {/* The closing band, after the content and outside `.main-content` so it
+          spans the full width beside the sidebar. It carries the legal and
+          information links, which have to be reachable from every page. */}
+      <Footer user={user} />
       { location.pathname !== "/cookies" &&
         <SPCookieConsent/>
       }
