@@ -218,6 +218,8 @@ export const UserForm = (props) => {
 					      render={ ({ field: { onChange, value } }) => (
 					        <ReactFlagsSelect
 					          selectButtonClassName={ `bg-white menu-flags-button ${ errors.country || serverErrors.country ? 'onError' : '' }` }
+					          searchable
+					          searchPlaceholder={ t('search-country') }
 					          selected={ country }
 					          onSelect={ code => {
 					            onChange(code);
