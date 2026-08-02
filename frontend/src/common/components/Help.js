@@ -47,13 +47,17 @@ const Help = () => {
         <LegalSection t={t} sectionKey="help-account" />
       </PagePanel>
 
+      {/* Signed-in users get a ticket with history; visitors get the form —
+          and the copy switches with it. Telling a reader with no session to
+          open a support ticket sent them at a door that is not theirs: tickets
+          are a signed-in feature, and the button under that paragraph has
+          always gone to the contact form instead. */}
       <PagePanel title={t('help-contact-title')}>
         <div
           dangerouslySetInnerHTML={{
-            __html: DOMPurify.sanitize(t('help-contact')),
+            __html: DOMPurify.sanitize(t(user ? 'help-contact' : 'help-contact-anonymous')),
           }}
         />
-        {/* Signed-in users get a ticket with history; visitors get the form. */}
         <NavLink className="btn btn-primary" to={user ? '/support/ticket' : '/contact'}>
           {user ? t('help-open-ticket') : t('help-contact-us')}
         </NavLink>
