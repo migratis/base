@@ -10,7 +10,7 @@ import { PageShell, PagePanel } from '../../../common/components/PageShell';
 import { enabledSlots } from '../../../common/shell/collect';
 import { billingSections } from '../../../common/shell/registry';
 
-// Consolidated Account settings hub (/account). Folds the previously scattered
+// Consolidated My Account hub (/account). Folds the previously scattered
 // per-account surfaces into one tabbed page (SCOPE_account_settings §3):
 //   - Profile     → the existing Profile component (identity, password, delete,
 //                   subscription) relocated rather than duplicated.
@@ -24,8 +24,16 @@ import { billingSections } from '../../../common/shell/registry';
 const AccountSettings = () => {
   const { t } = useTranslation('account');
   const [ searchParams, setSearchParams ] = useSearchParams();
-  const active = searchParams.get('tab') || 'profile';
   const hasBilling = enabledSlots(billingSections).length > 0;
+  // A `?tab=` link outlives the tab it points at — a bookmarked `?tab=billing`
+  // survives a deployment switching its monetization modules off. Fall back to
+  // the first tab rather than selecting a key no `<Tab>` claims, which leaves
+  // the pane blank.
+  const available = hasBilling
+    ? ['profile', 'preferences', 'api', 'billing']
+    : ['profile', 'preferences', 'api'];
+  const requested = searchParams.get('tab');
+  const active = available.includes(requested) ? requested : 'profile';
 
   const selectTab = (key) => {
     setSearchParams({ tab: key });

@@ -1422,14 +1422,17 @@ TRANSLATIONS['account'] = {
         'es': 'Facturación',
         'ro': 'Facturare',
     },
-    # Lead-in only: what each of the two pays for is stated by the column that
-    # owns it (`billing-credits-description` / `billing-subscription-description`),
-    # so this line must not restate the rule and drift out of step with it.
+    # Lead-in only, and deliberately neither names the paying options nor counts
+    # them: which sections appear depends on the modules the deployment
+    # activated (credits, subscription, both), and what each one pays for is
+    # stated by the section that owns it (`billing-credits-description` /
+    # `billing-subscription-description`). Naming them here would go stale on a
+    # deployment that runs only one.
     'billing-intro': {
-        'en': 'Credits and a subscription pay for different things, and you can use either or both. Each column below explains what it covers and lists its own invoices.',
-        'fr': "Les crédits et l'abonnement paient des choses différentes, et vous pouvez utiliser l'un, l'autre ou les deux. Chaque colonne ci-dessous explique ce qu'elle couvre et liste ses propres factures.",
-        'es': 'Los créditos y la suscripción pagan cosas distintas, y puedes usar uno, otra o ambos. Cada columna explica a continuación qué cubre y lista sus propias facturas.',
-        'ro': 'Creditele și abonamentul plătesc lucruri diferite și poți folosi oricare dintre ele sau pe amândouă. Fiecare coloană de mai jos explică ce acoperă și își listează propriile facturi.',
+        'en': 'Below is every paying option on your account: what it covers, and its own invoices.',
+        'fr': "Voici chaque option payante de votre compte : ce qu'elle couvre et ses propres factures.",
+        'es': 'A continuación, cada opción de pago de tu cuenta: qué cubre y sus propias facturas.',
+        'ro': 'Mai jos, fiecare opțiune cu plată din contul tău: ce acoperă și propriile facturi.',
     },
     # NOTE: the Billing *blocks* are contributed by the modules that own them
     # (credits/shell.js, subscription/shell.js), so their copy lives in the
