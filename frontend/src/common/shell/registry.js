@@ -44,6 +44,9 @@ export const accountSections = collect(modules, 'accountSections');
 // Blocks a module adds to Account → Billing (credits, subscription, …). The
 // tab itself only exists when at least one module contributes an enabled
 // section, so a deployment that monetizes nothing simply never shows it.
+// Each section gets its own column of the page's grid row, so a contributor
+// must read at half width (a `.billing-column`: title, description, controls,
+// then its own invoices).
 export const billingSections = collect(modules, 'billingSections');
 
 // Where an authenticated session should land ({ path }). Winner-takes-all via

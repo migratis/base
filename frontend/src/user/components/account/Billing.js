@@ -2,20 +2,31 @@ import { useTranslation } from 'react-i18next';
 import { enabledSlots } from '../../../common/shell/collect';
 import { billingSections } from '../../../common/shell/registry';
 
-// Consolidated Billing surface (Account Settings › Billing). The user module
+// Consolidated Billing surface (My Account › Billing). The user module
 // owns the *place*, not the monetization surfaces: each module contributes its
 // own block through the shell registry's `billingSections` slot — credits
 // (credits/shell.js) and plans (subscription/shell.js) today. That keeps this
 // page free of imports and feature flags belonging to modules it does not own,
 // and a deployment shipping neither simply never reaches here (AccountSettings
 // hides the tab).
+//
+// Layout: the sections sit side by side in a two-column grid row, in slot
+// order — credits first, subscription second. The page owns the columns, not
+// the sections, so a deployment with a single enabled module still gets a
+// sensible page (one column, half width on desktop, full width below `md`).
 const Billing = () => {
   const { t } = useTranslation('account');
 
   return (
     <div className="billing">
       <p className="text-muted">{t('billing-intro')}</p>
-      { enabledSlots(billingSections).map(({ id, Component }) => <Component key={id} />) }
+      <div className="row">
+        { enabledSlots(billingSections).map(({ id, Component }) =>
+          <div className="col-12 col-md-6" key={id}>
+            <Component />
+          </div>
+        )}
+      </div>
     </div>
   );
 };

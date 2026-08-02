@@ -643,6 +643,56 @@
   padding: 16px;
   border-radius: var(--border-radius);
   border: 1px solid var(--color-border);
+
+  p:last-child {
+    margin-bottom: 0;
+  }
+}
+
+// The heading rides outside the scrolling box, so a long history scrolls under
+// a title that stays put.
+.invoice-list h6 {
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+// ── Billing columns ───────────────────────────────────────────────────────────
+// One per monetization module on Account → Billing (credits, subscription),
+// laid out side by side by the page's grid row. Each column runs
+// title → description → controls → its own invoices, so the two read as
+// parallel offers rather than as one stacked list.
+.billing-column {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+
+  h5 {
+    font-weight: 600;
+  }
+
+  // The description sets up the column; the controls under it need air.
+  > .text-muted {
+    margin-bottom: 20px;
+  }
+
+  // A flex column stretches its children, which would blow a plain button up to
+  // the full column width. Buttons keep their own size; only the blocks do.
+  > .btn {
+    align-self: flex-start;
+  }
+
+  // The two columns rarely hold the same amount of copy, so the invoice blocks
+  // are pushed to the bottom and line up with each other instead of floating at
+  // whatever height the controls above them happen to end.
+  .invoice-list {
+    margin-top: auto;
+    padding-top: 24px;
+  }
+
+  // Stacked below `md`, the columns need a gutter the grid row does not give.
+  @media (max-width: 768px) {
+    margin-bottom: 32px;
+  }
 }
 
 // ── Toast notifications ────────────────────────────────────────────────────────

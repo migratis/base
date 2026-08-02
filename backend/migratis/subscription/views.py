@@ -1,4 +1,4 @@
-from django.http import JsonResponse, FileResponse
+from django.http import JsonResponse
 from django.core.exceptions import ValidationError
 from django.conf import settings
 from ninja import Router, Form
@@ -10,7 +10,6 @@ from migratis.subscription.decorators import check_access
 from migratis.stripe_payment.services import (
     ensure_customer as _ensure_customer,
     stripe_error_dict as _stripe_error_dict,
-    sync_invoices as _sync_invoices,
 )
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
@@ -100,40 +99,11 @@ def resubscribe(request):
     
     return JsonResponse({"success": "reactivate-successful"})
 
-@router.get('/invoices', response=List[schemas.InvoiceSchema])
-def invoices(request):
-    userId = request.user.id
-    # Pull any invoices Stripe has but we don't (missed/undelivered webhooks —
-    # always the case on a localhost dev box). Best-effort: a Stripe hiccup must
-    # not blank the list, so we still return whatever is already stored.
-    try:
-        _sync_invoices(request.user)
-    except Exception:
-        pass
-    invoices = models.Invoice.objects.select_related(
-        'user',
-        'customer',
-    ).filter(user=userId).order_by('-mdate')
-    return invoices
-
-@router.get('/invoice/download/{id}', response=List[schemas.InvoiceSchema])
-def download(request, id: int):
-    userId = request.user.id
-    try:
-        invoice = models.Invoice.objects.select_related(
-            'user',
-            'customer',
-        ).get(pk=id, user=userId)
-    except models.Invoice.DoesNotExist:
-        return JsonResponse({"detail": formatErrors({"invoice": ["invoice-not-exists"]})}, status=422)
-    #path = '{}/{}'.format(settings.BASE_DIR, invoice.file.name)
-    #with open(invoice.file.path, "rb") as f:
-    #    file = f.read()
-    
-    response =  FileResponse(invoice.file.open('rb'))
-    response['Content-Type'] = 'application/pdf'
-    response['Content-Disposition'] = 'attachment;'
-    return response
+# NOTE: invoice listing and download moved to the shared payment engine
+# (`GET /billing/invoices[?purpose=…]`, `GET /billing/invoice/download/{id}`).
+# Receipts are issued for every paying purpose, so they belong to
+# stripe_payment — that is what lets the credits module list its own without
+# importing this one. See migratis/stripe_payment/views.py.
 
 @router.get('/tax/{id}')
 def getTax(request, id: str):

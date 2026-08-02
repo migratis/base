@@ -1,17 +1,20 @@
+from typing import List
+
 from django.conf import settings
-from django.http import HttpResponse, JsonResponse
+from django.http import FileResponse, HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from ninja import Router
 import stripe
 
 from migratis.api.functions import formatErrors
-from . import registry
+from . import models, registry, schemas
 from .services import (
     _get,
     create_checkout_session,
     grant_for_session,
     process_event,
     stripe_error_dict,
+    sync_invoices,
 )
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
@@ -80,6 +83,46 @@ def verify(request, session_id: str = None):
         'success': bool(applied or payment is not None),
         'purpose': metadata.get('purpose'),
     })
+
+
+@router.get('/invoices', response=List[schemas.InvoiceSchema])
+def invoices(request, purpose: str = None):
+    """The caller's receipts, newest first, optionally narrowed to one paying
+    purpose. Invoices belong to the payment engine, not to either module that
+    generates them: Account → Billing files credits receipts under the credits
+    column and plan receipts under the subscription column, and the credits
+    module reads this without importing subscription."""
+    try:
+        # Pull any invoices Stripe has but we don't (missed/undelivered webhooks
+        # — always the case on a localhost dev box). Best-effort: a Stripe
+        # hiccup must not blank the list.
+        sync_invoices(request.user)
+    except Exception:
+        pass
+
+    stored = models.Invoice.objects.select_related(
+        'user', 'customer',
+    ).filter(user=request.user.id)
+    if purpose:
+        stored = stored.filter(purpose=purpose)
+    return stored.order_by('-mdate')
+
+
+@router.get('/invoice/download/{id}')
+def download_invoice(request, id: int):
+    """Stream one invoice PDF. Scoped to the caller — another user's id is
+    reported as non-existent rather than as forbidden."""
+    try:
+        invoice = models.Invoice.objects.get(pk=id, user=request.user.id)
+    except models.Invoice.DoesNotExist:
+        return JsonResponse(
+            {'detail': formatErrors({'invoice': ['invoice-not-exists']})}, status=422
+        )
+
+    response = FileResponse(invoice.file.open('rb'))
+    response['Content-Type'] = 'application/pdf'
+    response['Content-Disposition'] = 'attachment;'
+    return response
 
 
 @router.post('/webhook', auth=None)

@@ -26,6 +26,13 @@ TRANSLATIONS = {}
 # --------------------------------------------------------------------------- #
 NAMESPACE_LINKS = {}
 
+# common/components/InvoiceList renders under the shared `billing` namespace so
+# either monetization module can list its own receipts. The invoice-line wording
+# was written for the subscription block and stays owned there.
+NAMESPACE_LINKS['billing'] = [
+    'your-invoices', 'download-invoice', 'paid', 'unpaid', 'of', 'trial-period',
+]
+
 
 # ===========================================================================
 # layout
@@ -1415,11 +1422,14 @@ TRANSLATIONS['account'] = {
         'es': 'Facturación',
         'ro': 'Facturare',
     },
+    # Lead-in only: what each of the two pays for is stated by the column that
+    # owns it (`billing-credits-description` / `billing-subscription-description`),
+    # so this line must not restate the rule and drift out of step with it.
     'billing-intro': {
-        'en': 'Subscribe for ongoing access, or buy AI credits as you need them — both power maintaining your app and deploying new versions to your base.',
-        'fr': 'Abonnez-vous pour un accès continu, ou achetez des crédits IA selon vos besoins — les deux permettent de maintenir votre application et de déployer de nouvelles versions vers votre base.',
-        'es': 'Suscríbete para acceso continuo, o compra créditos de IA cuando los necesites — ambos permiten mantener tu aplicación y desplegar nuevas versiones a tu base.',
-        'ro': 'Abonează-te pentru acces continuu sau cumpără credite AI după nevoie — ambele permit întreținerea aplicației și implementarea de noi versiuni în baza ta.',
+        'en': 'Credits and a subscription pay for different things, and you can use either or both. Each column below explains what it covers and lists its own invoices.',
+        'fr': "Les crédits et l'abonnement paient des choses différentes, et vous pouvez utiliser l'un, l'autre ou les deux. Chaque colonne ci-dessous explique ce qu'elle couvre et liste ses propres factures.",
+        'es': 'Los créditos y la suscripción pagan cosas distintas, y puedes usar uno, otra o ambos. Cada columna explica a continuación qué cubre y lista sus propias facturas.',
+        'ro': 'Creditele și abonamentul plătesc lucruri diferite și poți folosi oricare dintre ele sau pe amândouă. Fiecare coloană de mai jos explică ce acoperă și își listează propriile facturi.',
     },
     # NOTE: the Billing *blocks* are contributed by the modules that own them
     # (credits/shell.js, subscription/shell.js), so their copy lives in the
@@ -2140,6 +2150,28 @@ TRANSLATIONS['subscription'] = {
         'es': 'Suscripción',
         'ro': 'Abonament',
     },
+    # What a plan covers, opposite the credits column. Deliberately generic: a
+    # deployment that meters something specific should say so here.
+    'billing-subscription-description': {
+        'en': 'A subscription gives you ongoing access for the period you '
+              'choose, renewed automatically until you cancel. It is billed per '
+              'period and does not replace credits: metered operations are '
+              'still charged in credits as you use them.',
+        'fr': "Un abonnement vous donne un accès continu pour la période "
+              "choisie, renouvelé automatiquement jusqu'à résiliation. Il est "
+              "facturé par période et ne remplace pas les crédits : les "
+              "opérations décomptées restent facturées en crédits au fur et à "
+              "mesure de leur utilisation.",
+        'es': 'Una suscripción te da acceso continuo durante el periodo que '
+              'elijas, renovado automáticamente hasta que la canceles. Se '
+              'factura por periodo y no sustituye a los créditos: las '
+              'operaciones medidas se siguen cobrando en créditos según las '
+              'usas.',
+        'ro': 'Un abonament îți oferă acces continuu pe perioada aleasă, '
+              'reînnoit automat până la anulare. Se facturează per perioadă și '
+              'nu înlocuiește creditele: operațiunile contorizate se taxează '
+              'tot în credite, pe măsură ce le folosești.',
+    },
     'plans': {
         'en': 'Plans',
         'fr': 'Forfaits',
@@ -2529,11 +2561,23 @@ TRANSLATIONS['billing'] = {
         'es': 'Pago realizado con éxito.',
         'ro': 'Plată efectuată cu succes.',
     },
-    'credits': {
-        'en': 'Credits',
-        'fr': 'Crédits',
-        'es': 'Créditos',
-        'ro': 'Credite',
+    # Invoice-line label for a credits purchase. MUST be a distinct key from the
+    # `credits` key (credits ns = 'Credits available: {{remaining}}') — i18n keys
+    # are global, so reusing 'credits' here would render the interpolated balance
+    # template on invoices instead of a purchase label.
+    'credits-purchase': {
+        'en': 'Credit purchase',
+        'fr': 'Achat de crédits',
+        'es': 'Compra de créditos',
+        'ro': 'Achiziție de credite',
+    },
+    # Empty state of common/components/InvoiceList — each Billing column lists
+    # only its own receipts, so one of the two is routinely empty.
+    'no-invoices': {
+        'en': 'No invoices yet.',
+        'fr': 'Aucune facture pour le moment.',
+        'es': 'Todavía no hay facturas.',
+        'ro': 'Încă nicio factură.',
     },
 }
 
@@ -2545,16 +2589,36 @@ TRANSLATIONS['credits'] = {
     # registry's `billingSections` slot — the copy moved off the `account`
     # namespace with the component so the module stays self-contained.
     'billing-credits-title': {
-        'en': 'AI credits',
-        'fr': 'Crédits IA',
-        'es': 'Créditos de IA',
-        'ro': 'Credite AI',
+        'en': 'Credits',
+        'fr': 'Crédits',
+        'es': 'Créditos',
+        'ro': 'Credite',
+    },
+    # What the column is for, opposite the subscription column. Deliberately
+    # generic: a deployment that meters something specific should say so here.
+    'billing-credits-description': {
+        'en': 'Credits are pay-as-you-go: they are consumed by the metered '
+              'operations of the service, and the cost of an operation is shown '
+              'before you confirm it. Credits never expire, and buying them '
+              'does not require a subscription.',
+        'fr': "Les crédits fonctionnent à l'usage : ils sont consommés par les "
+              "opérations décomptées du service, et le coût d'une opération "
+              "vous est indiqué avant confirmation. Les crédits n'expirent pas "
+              "et leur achat ne nécessite aucun abonnement.",
+        'es': 'Los créditos son de pago por uso: los consumen las operaciones '
+              'medidas del servicio, y el coste de una operación se muestra '
+              'antes de confirmarla. Los créditos no caducan y comprarlos no '
+              'requiere suscripción.',
+        'ro': 'Creditele se plătesc la consum: sunt consumate de operațiunile '
+              'contorizate ale serviciului, iar costul unei operațiuni îți este '
+              'afișat înainte de confirmare. Creditele nu expiră, iar '
+              'cumpărarea lor nu necesită abonament.',
     },
     'billing-credits-balance': {
-        'en': 'You have {{credits}} AI credits.',
-        'fr': 'Vous avez {{credits}} crédits IA.',
-        'es': 'Tienes {{credits}} créditos de IA.',
-        'ro': 'Ai {{credits}} credite AI.',
+        'en': 'You have {{credits}} credits.',
+        'fr': 'Vous avez {{credits}} crédits.',
+        'es': 'Tienes {{credits}} créditos.',
+        'ro': 'Ai {{credits}} credite.',
     },
     'billing-buy-credits': {
         'en': 'Buy credits',

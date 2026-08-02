@@ -8,22 +8,15 @@ import SubscriptionService from '../services/subscription.service';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-toastify';
 import moment from 'moment';
-import {
-  IoCardOutline as CardOutline,
-  IoDownloadOutline as DownloadOutline
-} from 'react-icons/io5';
+import { IoCardOutline as CardOutline } from 'react-icons/io5';
 import { useNavigate } from 'react-router-dom';
-import Badge from 'react-bootstrap/Badge';
-import download from 'downloadjs';
-import { COLOR_LINK } from "../../settings";
 
 export const Subscription = (props) => {
   const { t } = useTranslation(['subscription', 'billing']);
   const navigate = useNavigate();
   const [ confirmationModalShow, setConfirmationModalShow ] = useState(false);
-  const [ changeModalShow, setChangeModalShow ] = useState(false);  
+  const [ changeModalShow, setChangeModalShow ] = useState(false);
   const [ disableSubmit, setDisableSubmit ] = useState(false);
-  const [ invoices, setInvoices ] = useState([]);
   const [ subscription, setSubscription ] = useState(props.subscription);
   const [ selectablePlans, setSelectablePlans ] = useState([]);
   const [ planSelected, setPlanSelected ] = useState(null);
@@ -36,12 +29,6 @@ export const Subscription = (props) => {
   useEffect(() => {
     setSubscription(props.subscription);
   }, [props.subscription]);
-
-  // Invoices are always loaded — a user who only bought credits (no
-  // subscription) still needs to see/download their receipts.
-  useEffect(() => {
-    SubscriptionService.getInvoices().then((response) => setInvoices(response));
-  }, []);
 
   // Selectable upgrade/downgrade plans depend on the (async) current plan.
   useEffect(() => {
@@ -111,14 +98,6 @@ export const Subscription = (props) => {
           toast.error(t(response.detail[0].msg));
         }
     });
-  }
-
-  function handleDownload(invoice) {
-    SubscriptionService.download(invoice).then(
-      (response) => {
-        download(new Blob([response]), 'migratis-invoice-' + moment(invoice.mdate).format('DD-MM-y') + '.pdf', "application/pdf");
-      }
-    );
   }
 
   return (
@@ -217,38 +196,9 @@ export const Subscription = (props) => {
         </>
       }
 
-      {/* Invoices are shown regardless of subscription state, so a user who only
-          purchased credits can still download their receipts. */}
-      { invoices.length > 0 &&
-        <>
-          <br/><br/>
-          <h5>{t('your-invoices')}:</h5>
-          <br/><br/>
-          <div className="invoices">
-          { invoices.map(item =>
-            <p key={item.id}>
-              {item.label_key ? t(item.label_key, { ns: item.purpose === 'credits' ? 'billing' : 'subscription' }) : ''}&nbsp;
-              { item.amount === 0 &&
-                <span>
-                  ({t("trial-period")})&nbsp;
-                </span>
-              }
-              {t('of')}&nbsp;
-              {moment(item.mdate).format('DD-MM-y')}&nbsp;
-              {item.amount/100}&euro;
-              &nbsp;&nbsp;
-              <Badge bg={item.status==="paid"?"success":"danger"}>{item.status==="paid"?t('paid'):t('unpaid')}</Badge>&nbsp;&nbsp;
-              { item.status==="paid" &&
-                <button className="link btn btn-white" onClick={() => handleDownload(item)}>
-                  <DownloadOutline color={COLOR_LINK} title={t('download-invoice')} height="25px" width="25px"/>
-                </button>
-              }
-            </p>
-            )
-          }
-          </div>
-        </>
-      }
+      {/* Invoices are no longer listed here: Account → Billing shows credits and
+          subscription side by side, each column listing its own receipts
+          through common/components/InvoiceList. */}
     </div>
   );
 }

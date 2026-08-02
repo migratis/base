@@ -107,7 +107,7 @@ def on_credit_invoice_created(event):
         user=customer.user,
         customer=customer,
         purpose='credits',
-        label_key='credits',
+        label_key='credits-purchase',
         status=data_object['status'],
         stripe_id=data_object['id'],
         amount=data_object.get('amount_due', 0),
@@ -154,7 +154,7 @@ def register():
             'invoice.finalized': on_credit_invoice_finalized,
             'invoice.payment_succeeded': on_credit_invoice_paid,
         },
-        label_key='credits',
+        label_key='credits-purchase',
         # Generated-app module this plugin backs (decision D6). The generator's
         # 'credits' Application-module lands in P4b; declaring it now means the
         # picker will derive it from here with no further edit.

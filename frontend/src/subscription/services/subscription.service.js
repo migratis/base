@@ -37,23 +37,9 @@ const verifyCheckout = (sessionId) => {
     });
 };
   
-const getInvoices = () => {
-  return api.get("/subscription/invoices", {})
-    .then( (response) => {
-      if (response.data) return response.data;
-      else return response;
-    }
-  );
-};
-
-const download = (invoice) => {
-  return api.get("/subscription/invoice/download/" + invoice.id, {})
-    .then( (response) => {
-      if (response.data) return response.data;
-      else return response;
-    }
-  );
-};
+// NOTE: invoice listing / download moved to common/services/invoices.service.js
+// — receipts are issued by the shared payment engine for every paying purpose,
+// so the credits module lists its own without importing this one.
 
 const unsubscribe = () => {
   return api.get("/subscription/unsubscribe", {})
@@ -97,8 +83,6 @@ const SubscriptionService = {
   getPlans,
   startCheckout,
   verifyCheckout,
-  getInvoices,
-  download,
   unsubscribe,
   resubscribe,
   changePlan
