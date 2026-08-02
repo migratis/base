@@ -453,28 +453,33 @@ footer {
   margin: 12px 0 20px;
 }
 
-// The links own the whole band now that the About / Services panes are gone, so
-// each group is a row spanning it rather than a narrow stacked column.
+// The links own the whole band now that the About / Services panes are gone,
+// and they read as four aligned columns filled top-to-bottom.
+//
+// Multi-column rather than a grid: the number of links is not fixed (two of
+// them are generator-only, and the first one changes with the session), and
+// `column-count` balances whatever it is given across the columns by itself —
+// a grid with a fixed row count would leave a ragged short column the moment
+// the total stopped dividing evenly.
 .footer-links {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
+  column-count: 4;
+  column-gap: 32px;
 
-// Each group spans the band edge to edge. `space-between` on a wrapping row
-// would fling the last line's items apart, so the links carry the distribution
-// themselves: they grow to share the width and stay left-aligned when they wrap.
-.footer-links-group {
-  display: flex;
-  flex-flow: row wrap;
-  gap: 10px 28px;
+  @media (max-width: 992px) {
+    column-count: 2;
+  }
 
-  .foot-link {
-    flex: 1 1 auto;
+  @media (max-width: 576px) {
+    column-count: 1;
   }
 }
 
 .foot-link {
+  // A block, so each link is its own line inside a column and the column break
+  // never lands in the middle of one.
+  display: block;
+  break-inside: avoid;
+  margin-bottom: 10px;
   text-decoration: none;
 
   strong {
