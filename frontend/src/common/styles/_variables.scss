@@ -18,6 +18,11 @@ $color-green:        #788c5d;                    // tertiary accent
 
 // ── Semantic colors (using Anthropic palette) ──────────────────────────────────
 $color-primary:       $color-orange;               // buttons, links, primary actions
+// The far end of the brand ramp. Only the full-bleed bands (hero, call to
+// action) reach for it, as the second stop of a gradient that starts at
+// `$color-primary` — it has to be dark enough to carry white text, which is why
+// it is the ink and not the blue accent.
+$color-secondary:     $color-dark;                // gradient partner to primary
 $color-accent:        $color-orange;              // highlights, notifications
 $color-success:       $color-green;               // success states
 $color-bg-body:       $color-light;              // page background
@@ -110,6 +115,7 @@ $content-padding:     24px;
 
   // Semantic
   --color-primary:        #{$color-primary};
+  --color-secondary:      #{$color-secondary};
   --color-accent:         #{$color-accent};
   --color-success:        #{$color-success};
 

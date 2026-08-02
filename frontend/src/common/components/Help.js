@@ -9,7 +9,9 @@ import { NavLink, useOutletContext } from 'react-router-dom';
 import DOMPurify from 'dompurify';
 import { PageShell, PagePanel } from './PageShell';
 import { LegalSection } from './LegalPage';
-import { GENERATOR } from '../../settings';
+// `flag()` — see Footer.js: common/ is synced into the base template, where the
+// generator flag may not be declared at all.
+import { flag } from '../tools/featureFlag';
 
 const Help = () => {
   const { t } = useTranslation('info');
@@ -27,7 +29,7 @@ const Help = () => {
         />
       </PagePanel>
 
-      {GENERATOR && (
+      {flag('GENERATOR') && (
         <PagePanel title={t('help-documentation-title')}>
           <div
             dangerouslySetInnerHTML={{

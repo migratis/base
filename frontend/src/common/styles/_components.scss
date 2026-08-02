@@ -443,6 +443,16 @@
     align-items: center;
   }
 
+  // `.text-white` colours the band, but the global `h1, h2, …` rule sets a
+  // colour of its own, so headings do not inherit it — they came out ink-dark on
+  // the gradient. Restate white for the two bands that are meant to be reversed.
+  .hero-section,
+  .cta-section {
+    h1, h2, h3, h4, h5, h6 {
+      color: inherit;
+    }
+  }
+
   .chapter-section {
     .chapter-icon {
       color: var(--color-primary);

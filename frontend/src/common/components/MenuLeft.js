@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useTranslation } from 'react-i18next';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
@@ -24,6 +24,13 @@ export const MenuLeft = (props) => {
   // Module-contributed sidebar snippets, discovered from each module's
   // shell.js (see common/shell/registry.js). Inline widgets share one section;
   // `section: true` snippets (collapsible groups) get their own.
+  //
+  // Each is rendered inside its own Suspense boundary with a `null` fallback. A
+  // slot is the first thing to ask for its module's i18n namespace, and
+  // react-i18next suspends until that namespace lands; unheld, the suspension
+  // reached the root boundary and blanked the whole page once per module. A
+  // widget that is not ready yet should simply not be there yet — it is a
+  // sidebar entry, not the page.
   const enabledSlots = sidebarSlots.filter((slot) => slot.enabled());
   const inlineSlots = enabledSlots.filter((slot) => !slot.section);
   const sectionSlots = enabledSlots.filter((slot) => slot.section);
@@ -86,21 +93,24 @@ export const MenuLeft = (props) => {
               {inlineSlots.length > 0 && (
                 <div className="sidebar-section">
                   {inlineSlots.map((slot) => (
-                    <slot.Component
-                      key={slot.id}
-                      user={props.user}
-                      onMobileClose={props.onMobileClose}
-                    />
+                    <Suspense fallback={null} key={slot.id}>
+                      <slot.Component
+                        user={props.user}
+                        onMobileClose={props.onMobileClose}
+                      />
+                    </Suspense>
                   ))}
                 </div>
               )}
 
               {sectionSlots.map((slot) => (
                 <div className="sidebar-section" key={slot.id}>
-                  <slot.Component
-                    user={props.user}
-                    onMobileClose={props.onMobileClose}
-                  />
+                  <Suspense fallback={null}>
+                    <slot.Component
+                      user={props.user}
+                      onMobileClose={props.onMobileClose}
+                    />
+                  </Suspense>
                 </div>
               ))}
 

@@ -10,7 +10,11 @@ import {
 } from 'react-icons/io5';
 import DOMPurify from 'dompurify';
 import { cguvDocument, rgpdDocument } from "../tools/legalDocuments";
-import { GENERATOR } from "../../settings";
+// `flag()` rather than an import of GENERATOR: this is common/ code, synced
+// into the base template, where a feature module's flag may not be declared at
+// all — and webpack rejects a static read of an export that does not exist,
+// whether it is named or reached through a namespace. See tools/featureFlag.js.
+import { flag } from "../tools/featureFlag";
 
 // The published version of the application, shown in the footer's bottom line.
 // A named constant so bumping it is one obvious edit rather than a string
@@ -101,7 +105,7 @@ export const Footer = (props) => {
                                 </NavLink>
                                 {/* Publishing approved components under the GPL
                                     only exists because of the generator. */}
-                                { GENERATOR &&
+                                { flag('GENERATOR') &&
                                     <NavLink className="foot-link" to={"/licensing"}>
                                         <strong>{t('licensing')}</strong>
                                     </NavLink>

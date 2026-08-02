@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useLocation, Outlet } from "react-router-dom";
 import { MenuLeft } from "./MenuLeft";
 import { ToastContainer } from 'react-toastify';
 import { SPCookieConsent } from "./CookieConsent";
 import { Footer } from "./Footer";
+import { LoaderIndicator } from "./LoaderIndicator";
 import { BlockedModal } from "../modals/BlockedModal";
 import { useTranslation } from "react-i18next";
 import { IoMenuOutline as MenuIcon } from 'react-icons/io5';
@@ -39,27 +40,35 @@ export const Layout = (props) => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // An expired session is only worth interrupting for on a page that needed the
+  // session. The flag lives in localStorage and used to survive until the next
+  // successful login, so a single 401 walled the *public* site — home, the legal
+  // pages, help — behind a modal a visitor entitled to browse anonymously could
+  // not even close (`backdrop="static"`, no close button). Reading the flag now
+  // consumes it, and only a private page turns it into a prompt.
+  const isPrivate = props.private;
+
   useEffect(() => {
-    const handleSessionExpired = () => {
+    const consumeSessionExpired = () => {
       const storedUser = localStorage.getItem("user");
-      if (!storedUser || storedUser === 'false') {
+      if (storedUser && storedUser !== 'false') return;
+
+      localStorage.removeItem("session_expired");
+      if (isPrivate) {
         setSessionExpiredShow(true);
       }
     };
 
-    window.addEventListener('session-expired', handleSessionExpired);
+    window.addEventListener('session-expired', consumeSessionExpired);
 
     if (localStorage.getItem("session_expired") === "true") {
-      const storedUser = localStorage.getItem("user");
-      if (!storedUser || storedUser === 'false') {
-        setSessionExpiredShow(true);
-      }
+      consumeSessionExpired();
     }
 
     return () => {
-      window.removeEventListener('session-expired', handleSessionExpired);
+      window.removeEventListener('session-expired', consumeSessionExpired);
     };
-  }, []);
+  }, [isPrivate]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -93,8 +102,17 @@ export const Layout = (props) => {
         mobileOpen={mobileSidebarOpen}
         onMobileClose={closeMobileSidebar}
       />
+      {/* The page gets a boundary of its own. Every route is lazy and every
+          page pulls its own i18n namespace, so without one the suspension
+          climbed to the root boundary in index.js and replaced the entire
+          document — sidebar and footer included — with the spinner. Landing on
+          a public page with a session open did that four or five times in a
+          row (one per module namespace), which is what read as a blinking
+          page. Held here, the shell stays put and only the content waits. */}
       <div className="main-content">
-        <Outlet context={{assistant, setAssistant, user, setUser}} />
+        <Suspense fallback={<LoaderIndicator always />}>
+          <Outlet context={{assistant, setAssistant, user, setUser}} />
+        </Suspense>
       </div>
       {/* The closing band, after the content and outside `.main-content` so it
           spans the full width beside the sidebar. It carries the legal and
