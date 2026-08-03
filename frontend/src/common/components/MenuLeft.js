@@ -1,4 +1,4 @@
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useTranslation } from 'react-i18next';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
@@ -35,15 +35,26 @@ export const MenuLeft = (props) => {
   const inlineSlots = enabledSlots.filter((slot) => !slot.section);
   const sectionSlots = enabledSlots.filter((slot) => slot.section);
 
+  // Collapse the labels when the viewport actually narrows past the breakpoint —
+  // and only then. A phone fires `resize` while you scroll (the address bar
+  // collapses, the height changes, the width does not), so reacting to every
+  // resize meant scrolling with the drawer open faded every label out while the
+  // drawer stayed put. The drawer being open also outranks this entirely: it is
+  // the full-width menu, so it must keep its labels whatever the viewport does.
+  const lastWidth = useRef(typeof window !== 'undefined' ? window.innerWidth : 0);
+
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth < 768) {
+      const width = window.innerWidth;
+      const changed = width !== lastWidth.current;
+      lastWidth.current = width;
+      if (changed && width < 768 && !props.mobileOpen) {
         setExpanded(false);
       }
     };
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
-  }, []);
+  }, [props.mobileOpen]);
 
   useEffect(() => {
     if (props.mobileOpen) {

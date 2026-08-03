@@ -93,6 +93,10 @@
   overflow-y: auto;
   overflow-x: hidden;
   padding: 12px 0;
+  // Keep a scroll gesture that starts inside the menu inside the menu. Without
+  // it, reaching the end of this list handed the gesture to the document and
+  // the page slid about underneath the open drawer.
+  overscroll-behavior: contain;
 
   &::-webkit-scrollbar {
     width: 4px;
@@ -466,6 +470,13 @@
 }
 
 // ── Mobile menu toggle button ────────────────────────────────────────────────
+// Two states, both drawn explicitly. The button floats over the drawer it
+// opens, so "closed" has to read against the light page and "open" against the
+// dark panel. It used to have one look plus a `:hover` variant — and a tap
+// leaves `:hover` latched on a touch screen, so after closing the menu the
+// button kept a translucent-white background with its light icon and became
+// invisible on the page. Hover is now a pointer-device nicety only; the
+// contrast comes from the state class.
 .mobile-menu-toggle {
   display: none;
   position: fixed;
@@ -475,23 +486,59 @@
   width: 44px;
   height: 44px;
   background-color: var(--color-dark);
-  border: none;
+  border: 1px solid transparent;
   border-radius: 8px;
   color: var(--color-light);
   cursor: pointer;
   align-items: center;
   justify-content: center;
   box-shadow: var(--shadow-md);
-  transition: all var(--transition-fast);
+  transition: background-color var(--transition-fast),
+              border-color var(--transition-fast);
 
   svg {
     width: 24px;
     height: 24px;
   }
 
-  &:hover {
-    background-color: rgba(255, 255, 255, 0.1);
+  // Open: sitting on the dark drawer, so it needs its own edge to be seen.
+  &.is-open {
+    background-color: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.35);
   }
+
+  @media (hover: hover) {
+    &:hover {
+      background-color: #000;
+    }
+
+    &.is-open:hover {
+      background-color: rgba(255, 255, 255, 0.22);
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-orange);
+    outline-offset: 2px;
+  }
+}
+
+// The drawer is an overlay; the backdrop both dims the page and catches the tap
+// that dismisses it.
+.mobile-sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: $z-sidebar - 1;
+  background-color: rgba(0, 0, 0, 0.45);
+}
+
+// While the drawer is open the document behind it must not scroll — otherwise a
+// swipe over the menu moves the page underneath.
+html.mobile-sidebar-open,
+body.mobile-sidebar-open {
+  overflow: hidden;
+  touch-action: none;
 }
 
 // ── Responsive ───────────────────────────────────────────────────────────────
@@ -500,12 +547,31 @@
     display: flex;
   }
 
+  .mobile-sidebar-backdrop {
+    display: block;
+  }
+
   .sidebar-container {
     transform: translateX(-100%);
     width: 280px;
 
     &.mobile-open {
       transform: translateX(0);
+    }
+
+    // The open drawer IS the expanded menu — its labels never depend on hover
+    // or on the `expanded` flag, both of which a phone can drop mid-gesture.
+    &.mobile-open {
+      .sidebar-label,
+      .ai-label {
+        opacity: 1;
+        transform: translateX(0);
+      }
+
+      .sidebar-header-title {
+        display: block;
+        opacity: 1;
+      }
     }
   }
 

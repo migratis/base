@@ -7,7 +7,7 @@ import { Footer } from "./Footer";
 import { LoaderIndicator } from "./LoaderIndicator";
 import { BlockedModal } from "../modals/BlockedModal";
 import { useTranslation } from "react-i18next";
-import { IoMenuOutline as MenuIcon } from 'react-icons/io5';
+import { IoMenuOutline as MenuIcon, IoCloseOutline as CloseIcon } from 'react-icons/io5';
 import { useShell } from '../shell/ShellContext';
 
 export const Layout = (props) => {
@@ -80,6 +80,18 @@ export const Layout = (props) => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // The drawer is a fixed overlay: while it is open the document behind it must
+  // not scroll. Without this, a swipe over the open menu scrolled the *page*,
+  // which is what made the menu look frozen while the content slid under it.
+  // Both elements: which one actually scrolls the page is the browser's call
+  // (`overflow` on <body> only reaches the viewport while <html> is `visible`),
+  // and locking just one of them left the page free to move on Chrome.
+  useEffect(() => {
+    const roots = [document.documentElement, document.body];
+    roots.forEach((el) => el.classList.toggle('mobile-sidebar-open', mobileSidebarOpen));
+    return () => roots.forEach((el) => el.classList.remove('mobile-sidebar-open'));
+  }, [mobileSidebarOpen]);
+
   const toggleMobileSidebar = () => {
     setMobileSidebarOpen(!mobileSidebarOpen);
   };
@@ -92,11 +104,29 @@ export const Layout = (props) => {
     <>
       <ToastContainer autoClose={2000} />
       
-      <button className="mobile-menu-toggle" onClick={toggleMobileSidebar} aria-label="Toggle menu">
-        <MenuIcon />
+      {/* The button sits on top of the drawer it opens, so it has to say which
+          state it is in. It used to rely on `:hover` alone for its lit look —
+          and a tap leaves `:hover` stuck on a touch device, so closing the menu
+          left a white icon on a white background: the toggle simply vanished
+          until the page was reloaded. Open/closed is now explicit. */}
+      <button
+        className={`mobile-menu-toggle${mobileSidebarOpen ? ' is-open' : ''}`}
+        onClick={toggleMobileSidebar}
+        aria-label={t('toggle-menu')}
+        aria-expanded={mobileSidebarOpen}
+      >
+        {mobileSidebarOpen ? <CloseIcon /> : <MenuIcon />}
       </button>
 
-      <MenuLeft 
+      {mobileSidebarOpen && (
+        <div
+          className="mobile-sidebar-backdrop"
+          onClick={closeMobileSidebar}
+          aria-hidden="true"
+        />
+      )}
+
+      <MenuLeft
         user={user}
         setUser={setUser}
         mobileOpen={mobileSidebarOpen}

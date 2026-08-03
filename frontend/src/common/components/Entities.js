@@ -161,20 +161,17 @@ const Entities = (props) => {
     });
   }
 
+  // Always re-read the saved row from the server. The first record used to be
+  // painted straight from the submitted form data, which is everything the user
+  // typed and nothing the server derived from it — no id, and for an
+  // application no `needs_ai_regeneration`, the flag the "generate with AI"
+  // sparkle hangs off. A user's first application therefore came back without
+  // its sparkle until the page was reloaded by hand.
   const closeAndUpdateEditModal = (data) => {
     setEditModalShow(false);
-    if (entities.length === 0) {
-      setEntities([data]);
-      setNoEntity(false);
-      setCurrentTab(data.active?'active':'inactive');
-      setCount(1);
-      setPages(1);
-      setStart(1);
-      setEnd(1);
-    } else {
-      setCurrentTab(data.active?'active':'inactive');
-      setRefresh(prev => !prev);
-    }
+    setNoEntity(false);
+    setCurrentTab(data.active === false ? 'inactive' : 'active');
+    setRefresh(prev => !prev);
   };
  
   const handleSelectTab = (tab) => {

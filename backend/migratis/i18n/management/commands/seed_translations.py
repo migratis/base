@@ -44,6 +44,14 @@ TRANSLATIONS['layout'] = {
         'es': 'Migratis',
         'ro': 'Migratis',
     },
+    # Accessible name of the floating button that opens and closes the menu on
+    # a narrow screen (Layout.js).
+    'toggle-menu': {
+        'en': 'Open or close the menu',
+        'fr': 'Ouvrir ou fermer le menu',
+        'es': 'Abrir o cerrar el menú',
+        'ro': 'Deschide sau închide meniul',
+    },
     'access-denied': {
         'en': 'Access denied',
         'fr': 'Accès refusé',

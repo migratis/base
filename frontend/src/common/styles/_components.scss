@@ -877,3 +877,145 @@
     grid-template-columns: 1fr;
   }
 }
+
+// ── Workflow step summary ─────────────────────────────────────────────────────
+// The collapsed row of a workflow step (WorkflowStepRow.js). It used to be one
+// non-wrapping flex line holding badges, a button label, source → target, the
+// description and four controls; below roughly 800px they all shrank together —
+// text broke a character per line and the edit and delete buttons were pushed
+// off the right edge with no way to reach them. Three bands instead: a headline
+// (badges + controls), the subject, and the description, each free to wrap.
+.workflow-step-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  .workflow-step-headline {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .workflow-step-badges {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  // The controls never shrink and never wrap — they are the row's only way out.
+  .workflow-step-actions {
+    display: flex;
+    flex-shrink: 0;
+    gap: 4px;
+  }
+
+  .workflow-step-subject {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px;
+    min-width: 0;
+    // Long entity names are the one thing here that can still overrun a phone.
+    overflow-wrap: anywhere;
+  }
+
+  .workflow-step-description {
+    overflow-wrap: anywhere;
+  }
+}
+
+// ── Sandbox bars ──────────────────────────────────────────────────────────────
+// The sandbox is the one page a prospect is most likely to open on a phone from
+// a shared link, and it was the worst-behaved: the banner ran to 1296px and the
+// owner toolbar to 770px on a 613px viewport, so the role picker, the credit
+// chip, "Refresh config" and "Generate code" were all off screen with the page
+// scrolling sideways under them. Both bars wrap.
+.sandbox-topbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 8px 16px;
+
+  .sandbox-topbar-title {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .sandbox-topbar-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 16px;
+    margin-left: auto;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  // A role option carries its description ("moderator — Curator who publishes
+  // recipes, …"), and a select is as wide as its widest option unless it is
+  // told otherwise. `min-width: 0` on the row is what lets it be told: without
+  // it the flex item refuses to shrink below its content and the select — the
+  // single widest thing on this bar — pushed the page 400px sideways.
+  .sandbox-view-as {
+    min-width: 0;
+    max-width: 100%;
+
+    // The label shares the row, so the select takes what is left of it rather
+    // than the whole of it — `max-width: 100%` alone still overran by the width
+    // of the label.
+    .form-select {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+  }
+
+  .form-select {
+    width: auto;
+    max-width: 100%;
+    text-overflow: ellipsis;
+  }
+}
+
+.sandbox-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+
+  .sandbox-toolbar-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .sandbox-toolbar-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-left: auto;
+  }
+}
+
+// The entity tab strip is as wide as the application has entities. Rather than
+// stack a dozen tabs down the page, let the strip scroll on its own.
+.sandbox-page {
+  .nav-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
+
+    .nav-link {
+      white-space: nowrap;
+    }
+  }
+}
