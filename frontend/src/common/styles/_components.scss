@@ -1019,3 +1019,100 @@
     }
   }
 }
+
+// ── Custom component panels ───────────────────────────────────────────────────
+// The moderation page (CustomComponents.js). Its panel header carried a
+// monospace component name, a rename control, up to two badges and two buttons
+// on one `justify-content-between` line: on a phone the two sides squeezed each
+// other until "Show code" broke across two lines and the header read as broken.
+// Bands that wrap, with the actions held at their natural size.
+.component-panel-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+
+  .component-panel-identity {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    // A generated component name is one long unbroken token (and may carry the
+    // per-owner `A<id>_` prefix on top).
+    overflow-wrap: anywhere;
+  }
+
+  .component-panel-actions {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 8px;
+
+    .btn {
+      white-space: nowrap;
+    }
+  }
+}
+
+.component-rename {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  min-width: 0;
+
+  // Was a hard 280px, which no phone has to spare.
+  .component-rename-input {
+    flex: 1 1 12rem;
+    min-width: 0;
+    font-size: 13px;
+  }
+}
+
+// Generated source has long lines and a line-number gutter — the one thing here
+// that cannot be made to fit. It scrolls inside its own box instead of dragging
+// the page sideways.
+.component-code {
+  max-width: 100%;
+  overflow-x: auto;
+
+  pre {
+    max-width: none;
+  }
+}
+
+.component-app-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+
+  .component-app-identity {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    text-align: left;
+  }
+
+  .component-app-badges {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 4px;
+    min-width: 0;
+  }
+}
+
+.component-app-search {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  .form-control {
+    flex: 1 1 16rem;
+    min-width: 0;
+    max-width: 360px;
+  }
+}
