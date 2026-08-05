@@ -11,6 +11,7 @@ import { toast } from 'react-toastify';
 import { useLocation } from 'react-router-dom';
 import MigratisPagination from '../../common/components/Pagination';
 import { PageShell, PagePanel } from './PageShell';
+import { LoaderIndicator } from './LoaderIndicator';
 import { ITEMS_PER_PAGE as pageSize } from '../../settings';
 import Badge from 'react-bootstrap/Badge';
 import { Tabs, Tab } from 'react-bootstrap';
@@ -188,10 +189,30 @@ const Entities = (props) => {
     var status = null;
     var searchTerm = "";
     if (props.activeTabs) status = currentTab;
+    // Every exit from the request must clear `wait`, because `wait` gates the
+    // whole body: a path that returns without clearing it leaves the page
+    // permanently blank, which is indistinguishable from an application that
+    // has no entities and hides the failure completely.
+    const stopWaitingWithNothing = () => {
+      setEntities([]);
+      setCount(0);
+      setPages(0);
+      setWait(false);
+    };
+
     CommonService.getEntities(props.app, props.entity, status, searchTerm, page, extraParams, entityPageSize).then(
       (data) => {
-        if (!data.items) return;
+        // Not a page of results — an error payload, or a session that expired
+        // into a `detail`. The shared axios helpers resolve on an error
+        // response rather than rejecting, so this is the shape a failure
+        // arrives in.
+        if (!data?.items) {
+          stopWaitingWithNothing();
+          return;
+        }
         if (noEntity && currentTab && data.items.length === 0 && currentTab === 'active') {
+          // Deliberately still waiting: switching the tab re-runs this effect,
+          // and that second request is the one that settles the page.
           setCurrentTab('inactive');
           return;
         }
@@ -203,7 +224,7 @@ const Entities = (props) => {
         setEnd(data.items.length > 0 ? Math.min(((page - 1) * entityPageSize + 1) + data.items.length - 1, data.count) : 1);
         setWait(false);
       }
-    );
+    ).catch(() => stopWaitingWithNothing());
   }, [refresh, currentTab, page, extraParamsKey, entityPageSize]);// eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -259,6 +280,15 @@ const Entities = (props) => {
     >
       {props.renderFilter && props.renderFilter()}
       <div>
+        { wait &&
+          // While the first page is in flight the body renders nothing, and
+          // "nothing" reads as "this application has no entities". The GETs go
+          // through the tracked axios helpers, so the standard indicator has a
+          // promise behind it and needs no `always`.
+          <div data-testid="entities-loading">
+            <LoaderIndicator />
+          </div>
+        }
         { !wait &&
           <>
             { noEntity ?
