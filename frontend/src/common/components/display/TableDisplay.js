@@ -1,11 +1,11 @@
-import { Fragment } from 'react';
 import Table from 'react-bootstrap/Table';
 import {
   IoSettingsOutline as EditIcon,
   IoTrashOutline as TrashIcon,
 } from 'react-icons/io5';
 import InteractionRowActions from '../InteractionRowActions';
-import EmbeddedChildren, { getEmbeddedSections } from './EmbeddedChildren';
+import GeoValue from '../../fields/GeoValue';
+import { isGeoField } from '../../fields/geoSummary';
 
 const TableDisplay = ({
   entity,
@@ -22,14 +22,6 @@ const TableDisplay = ({
   sortDir = 'asc',
   onSort,
   sortableFields = [],
-  // Embedded children (sandbox merged tabs): generated lists pass the child
-  // descriptors ({entity, fk_field, fields}) plus their fetched rows
-  // ({Child: [{id, data}]}) so line items render under each parent record.
-  embeddedChildren = [],
-  embeddedRecords = {},
-  // Interactive embeds: a per-record renderer that mounts each embed child's
-  // own scoped CRUD container. When present it replaces the read-only rows.
-  renderEmbedded,
 }) => {
   if (!records || records.length === 0) {
     return null;
@@ -71,41 +63,6 @@ const TableDisplay = ({
   // column to entities (e.g. catalogs) with no admin workflow.
   const hasInteractions =
     Array.isArray(config?.interactions) && config.interactions.length > 0 && !!onInteraction;
-
-  const hasEmbedded = !!renderEmbedded
-    || (Array.isArray(embeddedChildren) && embeddedChildren.length > 0);
-
-  // Inline rows for embedded children — one compact sub-table per child
-  // entity, filtered to the current parent record via its FK. Returns null
-  // when the parent has no child rows at all (no empty grey band).
-  const renderEmbeddedRows = (record, totalCols) => {
-    // Interactive embeds own their layout + empty state — always render.
-    if (renderEmbedded) {
-      return (
-        <tr>
-          <td colSpan={totalCols} className="bg-light p-2">
-            {renderEmbedded(record)}
-          </td>
-        </tr>
-      );
-    }
-    // Suppress the grey band entirely when this parent has no child rows.
-    if (getEmbeddedSections(record, embeddedChildren, embeddedRecords).length === 0) {
-      return null;
-    }
-    return (
-      <tr>
-        <td colSpan={totalCols} className="bg-light p-2">
-          <EmbeddedChildren
-            record={record}
-            embeddedChildren={embeddedChildren}
-            embeddedRecords={embeddedRecords}
-            t={t}
-          />
-        </td>
-      </tr>
-    );
-  };
 
   const resolveRelLabel = (fieldName, value) => {
     if (!value) return '—';
@@ -168,6 +125,11 @@ const TableDisplay = ({
     const str = formatValue(field, value);
     const renderAs = fieldsConfig[field.name]?.render_as;
     const raw = value != null ? String(value).trim() : '';
+    // A geo cell reads as a summary — the stored GeoJSON is not a value a user
+    // can read, and this display has no map to draw it on.
+    if (isGeoField(field, fieldsConfig[field.name])) {
+      return <GeoValue value={value} t={t} />;
+    }
     if (renderAs === 'image' && raw.startsWith('data:')) {
       return <img src={raw} alt="" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 3 }} />;
     }
@@ -224,8 +186,7 @@ const TableDisplay = ({
         </thead>
         <tbody>
           {records.map((record) => (
-            <Fragment key={record.id}>
-            <tr className="align-middle">
+            <tr key={record.id} className="align-middle">
               <td>
                 <div className="d-flex gap-1">
                   {onEdit && (
@@ -266,11 +227,6 @@ const TableDisplay = ({
                 </td>
               )}
             </tr>
-            {hasEmbedded && renderEmbeddedRows(
-              record,
-              1 + displayColumns.length + (hasInteractions ? 1 : 0),
-            )}
-            </Fragment>
           ))}
         </tbody>
       </Table>

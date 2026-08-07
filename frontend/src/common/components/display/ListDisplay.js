@@ -3,7 +3,8 @@ import {
   IoTrashOutline as TrashIcon,
 } from 'react-icons/io5';
 import InteractionRowActions from '../InteractionRowActions';
-import EmbeddedChildren from './EmbeddedChildren';
+import GeoValue from '../../fields/GeoValue';
+import { isGeoField } from '../../fields/geoSummary';
 
 const ListDisplay = ({
   entity,
@@ -16,11 +17,6 @@ const ListDisplay = ({
   viewAs,
   getRoleRank,
   t,
-  embeddedChildren = [],
-  embeddedRecords = {},
-  // Interactive embeds — see CardsDisplay. A per-record renderer mounts each
-  // embed child's own scoped CRUD container in place of the read-only table.
-  renderEmbedded,
 }) => {
   if (!records || records.length === 0) {
     return null;
@@ -78,6 +74,10 @@ const ListDisplay = ({
   const renderValue = (field, value) => {
     const renderAs = fieldsConfig?.[field.name]?.render_as;
     const raw = value != null ? String(value).trim() : '';
+    // See TableDisplay — a geo value reads as a summary, never as its GeoJSON.
+    if (isGeoField(field, fieldsConfig?.[field.name])) {
+      return <GeoValue value={value} t={t} />;
+    }
     if (renderAs === 'color' || _isHexColor(raw)) {
       return (
         <span className="d-inline-flex align-items-center gap-1">
@@ -92,8 +92,11 @@ const ListDisplay = ({
   return (
     <div className="list-display">
       {records.map((record) => (
-        <div key={record.id} className="border-bottom py-2 px-1">
-          <div className="d-flex align-items-center" style={{ minHeight: '48px' }}>
+        <div
+          key={record.id}
+          className="d-flex align-items-center border-bottom py-2 px-1"
+          style={{ minHeight: '48px' }}
+        >
           <div className="flex-grow-1 me-3" style={{ overflow: 'hidden' }}>
             <div style={{ fontWeight: '500', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {primaryField ? renderValue(primaryField, record.data[primaryField.name]) : tval('unnamed-record', 'Unnamed')}
@@ -130,15 +133,6 @@ const ListDisplay = ({
               </span>
             )}
           </div>
-          </div>
-          {renderEmbedded ? renderEmbedded(record) : (
-            <EmbeddedChildren
-              record={record}
-              embeddedChildren={embeddedChildren}
-              embeddedRecords={embeddedRecords}
-              t={t}
-            />
-          )}
         </div>
       ))}
     </div>

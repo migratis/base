@@ -14,7 +14,8 @@ import {
   IoImageOutline as ImagePlaceholderIcon,
 } from 'react-icons/io5';
 import InteractionRowActions from '../InteractionRowActions';
-import EmbeddedChildren from './EmbeddedChildren';
+import GeoValue from '../../fields/GeoValue';
+import { isGeoField } from '../../fields/geoSummary';
 
 const CardsDisplay = ({
   entity,
@@ -27,12 +28,6 @@ const CardsDisplay = ({
   viewAs,
   getRoleRank,
   t,
-  embeddedChildren = [],
-  embeddedRecords = {},
-  // Interactive embeds: generated apps pass a per-record renderer that mounts
-  // each embed child's own CRUD container, scoped to the row. When present it
-  // replaces the read-only EmbeddedChildren sub-table.
-  renderEmbedded,
 }) => {
   const [expandedRecord, setExpandedRecord] = useState(null);
 
@@ -132,6 +127,10 @@ const CardsDisplay = ({
   const renderValue = (field, value) => {
     const renderAs = fieldsConfig[field.name]?.render_as;
     const raw = value != null ? String(value).trim() : '';
+    // See TableDisplay — a geo value reads as a summary, never as its GeoJSON.
+    if (isGeoField(field, fieldsConfig[field.name])) {
+      return <GeoValue value={value} t={t} />;
+    }
     if (renderAs === 'color' || _isHexColor(raw)) {
       return (
         <span className="d-inline-flex align-items-center gap-1">
@@ -264,14 +263,6 @@ const CardsDisplay = ({
                   </div>
                 );
               })}
-              {renderEmbedded ? renderEmbedded(record) : (
-                <EmbeddedChildren
-                  record={record}
-                  embeddedChildren={embeddedChildren}
-                  embeddedRecords={embeddedRecords}
-                  t={t}
-                />
-              )}
               <InteractionRowActions
                 interactions={config?.interactions}
                 recordData={record?.data}
