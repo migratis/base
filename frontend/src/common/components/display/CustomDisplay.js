@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { getVisibleInteractions } from '../interactionVisibility';
 import { sanitizeHtml } from '../../fields/sanitizeHtml';
+import MapView from '../../fields/MapView';
 
 class CustomDisplayErrorBoundary extends React.Component {
   constructor(props) {
@@ -41,13 +42,19 @@ function compileDisplay(componentName, code) {
     const src = code.replace(/\\n/g, '\n').replace(/\\t/g, '\t').replace(/\\r/g, '');
     // `sanitizeHtml` is injected into scope so AI code may safely render
     // sanitized rich text via dangerouslySetInnerHTML without an import.
+    // `MapView` is injected for the same reason one level up: an entity with a
+    // geo field is routed to a custom_display by the blocking hub rule, and a
+    // custom_display has no imports and no Leaflet global — so without this
+    // reference there is no way for generated code to draw a map at all. App 2
+    // hand-rolled `L.map(...)` behind a `typeof L` guard and drew nothing,
+    // forever, while promising an interactive OpenStreetMap.
     // "use strict" (§7a) makes an implicit-global assignment inside the component
     // (e.g. `img = r.data.image`) throw here — the same class ESLint no-undef
     // rejects at CRA build time — instead of silently creating a global, closing
     // the sandbox-vs-installed-app fidelity gap.
     // eslint-disable-next-line no-new-func
-    const factory = new Function('React', 'sanitizeHtml', `"use strict";\n${src}; return ${componentName};`);
-    return factory(React, sanitizeHtml);
+    const factory = new Function('React', 'sanitizeHtml', 'MapView', `"use strict";\n${src}; return ${componentName};`);
+    return factory(React, sanitizeHtml, MapView);
   } catch (err) {
     console.warn(`[CustomDisplay] Failed to compile ${componentName}:`, err);
     return null;
