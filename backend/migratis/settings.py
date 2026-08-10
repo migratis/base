@@ -283,6 +283,19 @@ CREDIT_TIERS = [
 ]
 CREDITS_CURRENCY = 'eur'
 
+# ── Road routing (optional `routing` module) ────────────────────────────────────
+# A self-hosted routing engine that has ingested the OSM road network. Empty URL
+# = the feature is off: `geo` fields in route mode keep working and the traced
+# line is stored exactly as drawn, with no error anywhere.
+#
+# Installing the module cannot start the engine — the installer has no Docker
+# socket and must not be given one. The operator brings the service up by hand
+# (`docker compose --profile routing up -d`) and points this at it; the install
+# response says so with `routing_service_required`.
+ROUTING_ENGINE     = env('ROUTING_ENGINE', default='valhalla')
+ROUTING_ENGINE_URL = env('ROUTING_ENGINE_URL', default='')
+ROUTING_ENGINE_TIMEOUT = int(env('ROUTING_ENGINE_TIMEOUT', default='20'))
+
 CRONJOBS = []
 
 # Subscription gate — False means check_access() enforces subscription

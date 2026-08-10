@@ -135,6 +135,40 @@ td.step_mode_size {
   height: 480px;
 }
 
+// Road-following routes (the optional `routing` module). The editor renders as
+// a child of MapContainer, which puts non-Leaflet children inside the map's own
+// div — so the overlay positions against the map with no portal. These rules
+// live here, beside the other leaflet layout fixes, rather than in a
+// routing/styles module: a base install without the routing module must not
+// have to import a stylesheet that is not there.
+.route-overlay {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 500;                       // above the panes, below our own overlays
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  pointer-events: none;               // never steal a click meant for the map
+
+  span {
+    padding: 2px 8px;
+    border-radius: var(--border-radius);
+    font-size: $font-size-small;
+    background: var(--color-surface, #fff);
+    border: 1px solid var(--color-border);
+  }
+
+  // The line is straight and does not follow roads. This must read as a
+  // warning, not as decoration: a straight line that says nothing is the bug
+  // the routing module exists to remove.
+  .route-badge {
+    background: var(--color-warning-bg, #fff3cd);
+    border-color: var(--color-warning, #ffc107);
+  }
+}
+
 // Leaflet panes/controls stack very high by default; keep them under our
 // overlays (datepicker popper is 1100, tooltip is on top).
 .leaflet-pane,

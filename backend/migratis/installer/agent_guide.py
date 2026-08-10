@@ -44,7 +44,8 @@ PROCEDURE = [
                 "\"config\": {...}}; or the raw ZIP bytes as the request body "
                 "(with ?config=<json> on the query string).",
         "config": "Optional install-time config: {\"admin\": {\"email\": ..., "
-                  "\"password\": ...}, \"email\": {...}, \"stripe\": {...}}. Admin "
+                  "\"password\": ...}, \"email\": {...}, \"stripe\": {...}, "
+                  "\"routing\": {\"ROUTING_ENGINE_URL\": ...}}. Admin "
                   "creation is deferred until the user tables exist. Omit it "
                   "entirely for a bare install.",
         "purpose": "Apply the package: writes app source + settings patch + "
@@ -64,6 +65,17 @@ PROCEDURE = [
         "purpose": "Poll until the newly installed module appears, rather than "
                    "assuming success from the 200.",
     },
+    {
+        "step": 4, "name": "services", "method": None, "path": None,
+        "purpose": "Some modules need a service the installer cannot start — it "
+                   "runs inside the api container and has no Docker socket (and "
+                   "must not be given one). If the response carries "
+                   "\"routing_service_required\", the road-routing code is live "
+                   "but no engine is: report its `steps` to your principal. Until "
+                   "someone runs them, route fields store the line exactly as "
+                   "traced instead of following roads — the app works, it is just "
+                   "not doing the thing that was asked for.",
+    },
 ]
 
 UPGRADES = {
@@ -76,7 +88,8 @@ UPGRADES = {
 }
 
 RESPONSES = {
-    "200": "Applied. Read migrate_deferred / restart_required and act per step 2.",
+    "200": "Applied. Read migrate_deferred / restart_required and act per step 2; "
+           "read routing_service_required and act per step 4.",
     "422": "The package failed pre-flight Python compile validation. Fix the "
            "generation; do not retry the same bytes.",
     "409": "(upgrade-package) destructive changes pending — resend with confirm.",

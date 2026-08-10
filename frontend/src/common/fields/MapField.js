@@ -15,6 +15,8 @@ import {
 // Side-effect: fixes Leaflet's default marker icon + loads the map stylesheets
 // and Geoman (map.pm). Must be imported before any map renders.
 import '../tools/mapSetup';
+import { routeSnappers } from '../shell/registry';
+import { firstEnabled } from '../shell/collect';
 
 // -----------------------------------------------------------------------------
 // Constants
@@ -147,6 +149,19 @@ function GeomanEditor({ geoMode, onShape }) {
 // -----------------------------------------------------------------------------
 // MapField
 // -----------------------------------------------------------------------------
+// The route layer as it has always been: trace a polyline with Geoman and store
+// exactly what was traced. Extracted so it can be handed to a contributed
+// waypoint editor as the thing to fall back to when no engine is configured —
+// the editor decides, because only it knows whether one is (§5 row 1).
+function TracedRoute({ geo, onShape, readOnly }) {
+  return (
+    <>
+      {geo && geo.type === 'LineString' && <Polyline positions={lineToLatLngs(geo)} />}
+      {!readOnly && <GeomanEditor geoMode="route" onShape={onShape} />}
+    </>
+  );
+}
+
 const MapField = ({
   name,
   label,
@@ -155,6 +170,11 @@ const MapField = ({
   disabled = false,
   readOnly = false,
   geoMode = 'point',
+  // Which road network a route follows (bicycle / auto / pedestrian). A
+  // property of what the entity models, fixed at design time rather than
+  // offered to whoever fills the form in (SCOPE_road_routing.md D4). Ignored
+  // for every mode but 'route', and ignored entirely with no routing module.
+  routeProfile = 'bicycle',
 }) => {
   const mode = GEO_MODES.includes(geoMode) ? geoMode : 'point';
   const ro = disabled || readOnly;
@@ -192,6 +212,11 @@ const MapField = ({
   }, [setGeo]);
 
   const center = useMemo(() => geoCenter(geo) || DEFAULT_CENTER, [geo]);
+
+  // Whichever module contributed a road-following editor, if any. Resolved at
+  // build time from the shell registry, so with no routing module installed
+  // this is undefined and the field behaves exactly as it always has.
+  const snapper = useMemo(() => firstEnabled(routeSnappers), []);
 
   return (
     <div className="migratis-field map-field">
@@ -235,10 +260,17 @@ const MapField = ({
         )}
 
         {mode === 'route' && (
-          <>
-            {geo && geo.type === 'LineString' && <Polyline positions={lineToLatLngs(geo)} />}
-            {!ro && <GeomanEditor geoMode="route" onShape={onShape} />}
-          </>
+          snapper && snapper.Editor ? (
+            <snapper.Editor
+              geo={geo}
+              setGeo={setGeo}
+              readOnly={ro}
+              profile={routeProfile}
+              fallback={<TracedRoute geo={geo} onShape={onShape} readOnly={ro} />}
+            />
+          ) : (
+            <TracedRoute geo={geo} onShape={onShape} readOnly={ro} />
+          )
         )}
       </MapContainer>
 

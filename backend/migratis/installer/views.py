@@ -72,7 +72,8 @@ MIGRATIS_TFA_COOKIE     = 'tfa_verified'
 MIGRATIS_TFA_TRUST_DAYS = 7
 
 _FRAMEWORK_MODULES = frozenset([
-    'user', 'i18n', 'cookie', 'support', 'subscription', 'stripe_payment', 'generator', 'installer',
+    'user', 'i18n', 'cookie', 'support', 'subscription', 'stripe_payment', 'credits',
+    'routing', 'generator', 'installer',
 ])
 
 # Framework routers that modules may activate in api/views.py. Each tuple is
@@ -85,6 +86,8 @@ _FRAMEWORK_ROUTERS = [
     ('support',      'support_router',      'migratis.support.views',      '/support/'),
     ('subscription', 'subscription_router', 'migratis.subscription.views', '/subscription/'),
     ('stripe_payment', 'stripe_payment_router', 'migratis.stripe_payment.views', '/billing/'),
+    ('credits',      'credits_router',      'migratis.credits.views',      '/credits/'),
+    ('routing',      'routing_router',      'migratis.routing.views',      '/routing/'),
 ]
 
 
@@ -1312,6 +1315,7 @@ def _apply_upgrade(zip_bytes: bytes, backend_root: Path, confirm: bool) -> dict:
         'seed_skipped':         True,
         'translations_command': f'docker exec backend-base-api-1 python /backend/manage.py seed_{module}',
         'restart_required':     not _backend_autoreloads(),
+        **_routing_service_notice(backend_root),
     }
 
 
@@ -1456,8 +1460,9 @@ def _apply_package(zip_bytes: bytes, config: dict = None) -> dict:
             additions_file.write_text(json.dumps(additions, indent=2, ensure_ascii=False))
 
         # ── 6. Feature flags + frontend language (fast, before the copy) ───
-        # Turn on USER/SUBSCRIPTION/SUPPORT/COOKIE so module routes/links render,
-        # and point the frontend default language at the app's main_language.
+        # Turn on the feature flags for the framework apps the module activates
+        # (_FRONTEND_FLAGS) so module routes/links render, and point the frontend
+        # default language at the app's main_language.
         frontend_ok = frontend_root.exists()
         if frontend_ok:
             _sync_frontend_flags(backend_root, frontend_root)
@@ -1523,6 +1528,50 @@ def _apply_package(zip_bytes: bytes, config: dict = None) -> dict:
         # Dev autoreloader restarts the worker (and runs the deferred migrate) on
         # its own when api/views.py is rewritten; only production needs a manual one.
         'restart_required': not _backend_autoreloads(),
+        **_routing_service_notice(backend_root),
+    }
+
+
+def _routing_service_notice(backend_root: Path) -> dict:
+    """Say out loud that installing the module did not start the engine.
+
+    This is the one step in the activation chain that does NOT follow from
+    ticking the module. The installer is Django code running inside the api
+    container: it writes files, patches settings, runs migrate and seed. It has
+    no Docker socket — and must not be given one, because mounting the docker
+    socket into a web-facing container is host root for anyone who reaches that
+    endpoint. So an install with `routing` selected activates all of the code
+    and none of the service.
+
+    Returning `restart_required` already has exactly this shape — the code is in
+    place, a human must do one thing — and this is the same honesty. Silence
+    here would produce an installed app whose routes are quietly straight lines,
+    which is the failure the whole routing module exists to remove.
+
+    Returns {} when routing is not installed, or when an engine URL is already
+    configured and nothing is owed.
+    """
+    if 'routing' not in _installed_framework_apps(backend_root):
+        return {}
+    if (getattr(settings, 'ROUTING_ENGINE_URL', '') or '').strip():
+        return {}
+    return {
+        'routing_service_required': {
+            'reason': 'routing-engine-not-configured',
+            'message': (
+                'The routing module is installed, but no routing engine is '
+                'configured — route fields will store the line exactly as '
+                'traced. Start the engine and point ROUTING_ENGINE_URL at it; '
+                'the installer cannot start a container.'
+            ),
+            'steps': [
+                'docker compose --profile routing up -d',
+                'Build the tiles once from an OSM extract (minutes to hours, '
+                'and the real disk/RAM spike).',
+                'Set ROUTING_ENGINE_URL in backend/migratis/.env '
+                '(e.g. http://routing:8002) and restart the backend.',
+            ],
+        }
     }
 
 
@@ -1608,6 +1657,8 @@ _FRONTEND_FLAGS = [
     ('SUBSCRIPTION', 'subscription'),
     ('SUPPORT',      'support'),
     ('COOKIE',       'cookie'),
+    ('CREDITS',      'credits'),
+    ('ROUTING',      'routing'),
 ]
 
 _LANG_NAMES = {
@@ -1783,6 +1834,16 @@ def _apply_install_config(backend_root: Path, frontend_root: Path, config: dict)
     env_updates.update(config.get('email') or {})
     stripe = config.get('stripe') or {}
     env_updates.update({k: v for k, v in stripe.items() if k != 'STRIPE_API_KEY'})
+    # Road routing: the address of the engine the operator runs. Same shape as
+    # the Stripe keys — a value the installer can only write down, never
+    # provide. Empty (or absent) leaves the feature off, which is the correct
+    # state for a host with no engine: route fields still work and store the
+    # line exactly as traced.
+    routing = config.get('routing') or {}
+    if routing.get('ROUTING_ENGINE_URL') is not None:
+        env_updates['ROUTING_ENGINE_URL'] = routing['ROUTING_ENGINE_URL']
+    if routing.get('ROUTING_ENGINE'):
+        env_updates['ROUTING_ENGINE'] = routing['ROUTING_ENGINE']
     _update_env(backend_root, env_updates)
 
     if frontend_root.exists():

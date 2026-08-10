@@ -59,6 +59,15 @@ export const landingRoutes = collect(modules, 'landingRoutes');
 // the "read the docs" hint entirely when nothing is contributed.
 export const tokenDocs = collect(modules, 'tokenDocs');
 
+// The waypoint-editing layer a module contributes to `MapField` in
+// geo_mode='route' ({ Editor }). Winner-takes-all: `common/` owns the map field
+// but must never import a feature module, so the routing module registers its
+// editor here and MapField renders a layer it has never heard of. With no
+// contributor — base without the routing module, or any Jest run, where
+// require.context does not exist — the field traces routes exactly as it always
+// did, which is precisely the §5-row-1 behaviour.
+export const routeSnappers = collect(modules, 'routeSnappers');
+
 // Context providers a module needs mounted at the app root (e.g. the user
 // module's AuthProvider). Rendered by ShellRoot, outermost-first by `order`.
 export const shellProviders = collect(modules, 'providers');

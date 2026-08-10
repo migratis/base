@@ -9,6 +9,12 @@ export const USER = false;
 export const COOKIE = false;
 export const MIGRATIS = false;
 export const CREDITS = true;
+// Road-following routes for `geo` fields in route mode (`routing` module).
+// Flipped by the installer to match INSTALLED_APPS. The flag only says the UI
+// may offer waypoint editing; whether it does is measured at runtime against
+// GET /routing/availability, because a host can install the module and run no
+// engine.
+export const ROUTING = false;
 export const TRIAL = false;
 // The installer is driven by the backend INSTALLER setting (migratis/.env).
 // The /installer route is always registered; the page asks the backend whether

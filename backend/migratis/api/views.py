@@ -14,6 +14,7 @@ from migratis.cookie.views import router as cookie_router
 # from migratis.subscription.views import router as subscription_router
 # from migratis.stripe_payment.views import router as stripe_payment_router
 # from migratis.credits.views import router as credits_router
+# from migratis.routing.views import router as routing_router
 # from migratis.generator.views import router as generator_router
 from migratis.api.functions import formatErrors as _formatErrors
 from migratis.installer.views import router as installer_router
@@ -83,6 +84,7 @@ api.add_router("/cookie/",  cookie_router)
 # api.add_router("/subscription/", subscription_router)
 # api.add_router("/billing/", stripe_payment_router)
 # api.add_router("/credits/", credits_router)
+# api.add_router("/routing/", routing_router)
 # api.add_router("/generator/", generator_router)
 # The installer is mounted only when enabled (INSTALLER setting), so its
 # endpoints are not reachable on deployments that ship without it.
@@ -91,7 +93,8 @@ if django_settings.INSTALLER:
 
 # ── Auto-mount routers for installed apps ─────────────────────────────────
 _FRAMEWORK_APPS = frozenset([
-    'user', 'i18n', 'cookie', 'support', 'subscription', 'credits', 'generator', 'installer',
+    'user', 'i18n', 'cookie', 'support', 'subscription', 'credits', 'routing',
+    'generator', 'installer',
 ])
 for _app in django_settings.INSTALLED_APPS:
     if '.' not in _app and _app not in _FRAMEWORK_APPS:
@@ -145,6 +148,12 @@ def status(request):
 
     * ``api``      — implicit: this view answered.
     * ``database`` — a trivial round-trip to Postgres.
+    * ``routing`` — the road-routing engine, when one is configured. A host
+      that configured none is not a host with a broken engine, so the row is
+      omitted entirely rather than reported down (same rule as an LLM provider
+      with no API key). Present-and-unavailable is the state that matters: the
+      module is installed, the map still works, and every route it draws is a
+      straight line until the engine comes back.
     * ``services`` — one entry per LLM provider that is actually configured (an
       unset API key means the provider is not offered at all, so it is omitted
       rather than reported down). ``operational`` unless that provider's
@@ -184,17 +193,35 @@ def status(request):
     except ImportError:
         pass
 
+    routing = None
+    try:
+        # Optional module, and optional even when installed — see the docstring.
+        # Only the state is published, never the engine's own error, which
+        # quotes internal hostnames.
+        from migratis.routing.services import engine_state
+
+        routing_state, routing_engine = engine_state()
+        if routing_state != 'not_configured':
+            routing = {'engine': routing_engine, 'state': routing_state}
+    except Exception:                     # pragma: no cover - optional module
+        pass
+
     degraded = database != 'operational' or any(
         service['state'] != 'operational' for service in services
     )
+    if routing is not None and routing['state'] != 'operational':
+        degraded = True
 
-    return JsonResponse({
+    payload = {
         'api': 'operational',
         'database': database,
         'services': services,
         'state': 'degraded' if degraded else 'operational',
         'checked_at': datetime.datetime.now(datetime.timezone.utc).isoformat(),
-    })
+    }
+    if routing is not None:
+        payload['routing'] = routing
+    return JsonResponse(payload)
 
 @ensure_csrf_cookie
 @api.get("/session", auth=None)
