@@ -31,6 +31,17 @@ export const StatusLine = ({ label, state, t }) => (
   </li>
 );
 
+// A measured count, not a health verdict — so it deliberately does NOT go
+// through `StatusLine`, whose right-hand column is an operational/unavailable
+// word. "3 queued" is a number; calling it "operational" would be noise.
+export const CountLine = ({ label, value }) => (
+  <li className="status-line">
+    <span className="status-dot status-dot--unknown" />
+    <span className="status-line__label">{label}</span>
+    <span className="status-line__state">{value}</span>
+  </li>
+);
+
 const Status = () => {
   const { t } = useTranslation('info');
   const [report, setReport] = useState(null);
@@ -81,6 +92,20 @@ const Status = () => {
                     t={t}
                   />
                 ))}
+              </ul>
+            </PagePanel>
+          )}
+
+          {/* Long AI calls run off the request, so a queue that is not
+              draining is invisible in every other signal here: the API
+              answers, the database answers, the providers are up, and every
+              user is still waiting. */}
+          {report.ai_jobs && (
+            <PagePanel title={t('status-ai-jobs')}>
+              <p className="text-muted">{t('status-ai-jobs-note')}</p>
+              <ul className="status-list">
+                <CountLine label={t('status-ai-jobs-running')} value={report.ai_jobs.running} />
+                <CountLine label={t('status-ai-jobs-queued')} value={report.ai_jobs.queued} />
               </ul>
             </PagePanel>
           )}
