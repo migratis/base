@@ -1,3 +1,9 @@
+# Development stack. Like the database, the routing engine (`base-routing`) is
+# NOT declared here: dev and production resolve to the same compose project, so
+# a service named in both files would be one container that either stack could
+# stop — and `docker compose down -v` on dev would destroy a tile build measured
+# in hours. Production declares it; dev reaches it over the shared network at
+# http://base-routing:8002, which is what ROUTING_ENGINE_URL should point at.
 services:
   base-api_dev:
     build: 
@@ -13,42 +19,6 @@ services:
     networks:
       static-network:
         ipv4_address: 172.21.0.4
-  # Road-following routes for `geo` fields in route mode (the optional `routing`
-  # module). Declared always, started only when asked:
-  #     docker compose --profile routing up -d
-  # A country-sized OSM extract must not become a mandatory dependency of every
-  # install merely because the compose file mentions it — the same argument as
-  # base-db's "postgres" profile above.
-  #
-  # The installer CANNOT start this. It is Django code running inside base-api
-  # with no Docker socket, and must not be given one: mounting the docker socket
-  # into a web-facing container is host root for anyone who reaches that
-  # endpoint. So an install with `routing` selected activates all of the code and
-  # none of the service, and says so in its response (`routing_service_required`).
-  #
-  # The first start BUILDS THE TILES from the extract below — minutes to hours,
-  # and the real disk/RAM spike. Point `tile_urls` at the region you actually
-  # need (see https://download.geofabrik.de/), then set ROUTING_ENGINE_URL in
-  # migratis/.env to http://base-routing:8002 and restart the backend.
-  base-routing:
-    image: ghcr.io/valhalla/valhalla:latest
-    container_name: base-routing
-    profiles: ["routing"]
-    environment:
-      - tile_urls=${ROUTING_TILE_URLS:-https://download.geofabrik.de/europe/monaco-latest.osm.pbf}
-      - serve_tiles=True
-      - build_elevation=False
-    volumes:
-      - valhalla_tiles:/custom_files
-    # No `ports:` — the browser never speaks to the engine. MapField posts
-    # waypoints to Django and Django calls this over the compose network.
-    expose:
-      - "8002"
-    networks:
-      static-network:
-        # .2 base-db · .3 base-api · .4 base-api_dev — .7 is free in both files.
-        ipv4_address: 172.21.0.7
-
 networks:
   static-network:
     driver: bridge
@@ -57,4 +27,3 @@ networks:
         - subnet: 172.21.0.0/16
 volumes:
   pgdata: {}
-  valhalla_tiles: {}
