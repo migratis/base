@@ -1,5 +1,6 @@
 import axiosInstance from '../../common/tools/axios';
 import { ROUTE_OUTCOME } from './routeOutcome';
+import { sandboxAuthConfig } from './sandboxToken';
 
 /**
  * Talking to `migratis.routing`.
@@ -11,7 +12,7 @@ import { ROUTE_OUTCOME } from './routeOutcome';
  * The one rule this module exists to enforce is that **a failure is never read
  * as a snap**. A caller that mistakes an unreachable engine for a result stores
  * the user's traced line as though it followed roads — which is exactly the bug
- * SCOPE_road_routing.md was written to fix, so the outcomes are named and the
+ * SCOPE_road_routing.md@8914275 was written to fix, so the outcomes are named and the
  * geometry is only ever present on `SNAPPED`.
  */
 
@@ -55,6 +56,12 @@ function outcomeFor(response) {
       engineReason: (response.data && response.data.engine_reason) || '',
     };
   }
+  // Everything else — including a refused caller (403) and a spent per-caller
+  // allowance (429) — is UNAVAILABLE, and deliberately so. Those are capacity
+  // answers, not route answers: telling the user no route exists would send
+  // them to move a waypoint that was never the problem
+  // (SCOPE_routing_sandbox_external.md@c170e1a §5.4). The backend's own key is carried
+  // through so the reason survives into the badge.
   return { outcome: ROUTE_OUTCOME.UNAVAILABLE, key: key || 'routing-engine-unavailable' };
 }
 
@@ -72,7 +79,14 @@ export async function snapRoute(waypoints, profile) {
 
   let response;
   try {
-    response = await axiosInstance.post('routing/snap', { waypoints, profile });
+    // The sandbox token rides as a header, added here rather than by the caller
+    // so a future caller cannot forget it — on migratis a snap without one is
+    // refused, and the line would quietly go straight (§6).
+    response = await axiosInstance.post(
+      'routing/snap',
+      { waypoints, profile },
+      sandboxAuthConfig()
+    );
   } catch (err) {
     response = responseOf(err);
     if (!response) {

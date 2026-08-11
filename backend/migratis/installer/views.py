@@ -1241,6 +1241,11 @@ def _apply_upgrade(zip_bytes: bytes, backend_root: Path, confirm: bool) -> dict:
 
         manifest_file = patches_dir / f'{module}_manifest.json'
         manifest_file.write_text(json.dumps(manifest, indent=2, ensure_ascii=False))
+
+        # The map declaration travels on every upgrade too: an owner who
+        # changed which region their users are in would otherwise keep the
+        # tile_urls of the install, and rediscover it when a route fails.
+        _apply_routing_tile_urls(backend_root, manifest, None)
         if 'frontend/app_additions.json' in names:
             additions = json.loads(zf.read('frontend/app_additions.json'))
             (patches_dir / f'{module}_additions.json').write_text(
@@ -1315,7 +1320,7 @@ def _apply_upgrade(zip_bytes: bytes, backend_root: Path, confirm: bool) -> dict:
         'seed_skipped':         True,
         'translations_command': f'docker exec backend-base-api-1 python /backend/manage.py seed_{module}',
         'restart_required':     not _backend_autoreloads(),
-        **_routing_service_notice(backend_root),
+        **_routing_service_notice(backend_root, manifest),
     }
 
 
@@ -1449,6 +1454,14 @@ def _apply_package(zip_bytes: bytes, config: dict = None) -> dict:
         # creds to defer (user tables don't exist until migrate runs).
         admin = _apply_install_config(backend_root, frontend_root, config)
 
+        # ── 3b. The map the application declared ──────────────────────────
+        # Read from the manifest rather than from `config`, so both install
+        # paths get it: the wizard downloads the package from Migratis, and the
+        # agent lane already holds the ZIP and never makes a Migratis round trip.
+        # `config['routing']['ROUTING_TILE_URLS']` still wins when a caller
+        # supplies one — the host operator is allowed to overrule the designer.
+        _apply_routing_tile_urls(backend_root, manifest, config)
+
         # ── 4. Default language (backend patch) ────────────────────────────
         _write_language_patch(backend_root)
 
@@ -1528,11 +1541,103 @@ def _apply_package(zip_bytes: bytes, config: dict = None) -> dict:
         # Dev autoreloader restarts the worker (and runs the deferred migrate) on
         # its own when api/views.py is rewritten; only production needs a manual one.
         'restart_required': not _backend_autoreloads(),
-        **_routing_service_notice(backend_root),
+        **_routing_service_notice(backend_root, manifest),
     }
 
 
-def _routing_service_notice(backend_root: Path) -> dict:
+# The one place a value chosen on migratis.ai becomes a line in a compose file.
+# Every token must be an absolute http(s) URL and nothing else: the string is
+# handed to a shell-driven entrypoint on this host, so anything carrying
+# whitespace-separated surprises, quotes, `$`, backticks or `;` is discarded
+# whole rather than sanitised. Migratis resolves these from its own catalog and
+# never composes one from an identifier; this is the receiving end of the same
+# rule, because a receiving end that trusts its sender is not a boundary.
+_TILE_URL_RE = re.compile(r'^https?://[A-Za-z0-9._~:/?&=%+-]+$')
+
+
+def _safe_tile_urls(raw: str) -> str:
+    """The space-separated `tile_urls` value, or '' if anything is off."""
+    tokens = (raw or '').split()
+    if not tokens or len(tokens) > 16:
+        return ''
+    for token in tokens:
+        if not _TILE_URL_RE.match(token) or '..' in token:
+            return ''
+    return ' '.join(tokens)
+
+
+def _compose_env_path(backend_root: Path) -> Path:
+    """The `.env` **Compose** reads — not the one Django reads.
+
+    There are two, they sit one directory apart, and confusing them is the
+    single most likely way to make this feature look broken while every file on
+    disk says it should work:
+
+    * ``backend/migratis/.env`` is the *Django settings* env. ``read_env()``
+      resolves it relative to settings.py, and the backend process reads it.
+      Compose variable substitution never looks at it.
+    * ``backend/.env`` is what *Compose* reads, because the build scripts copy
+      the compose file into ``backend/`` and run compose from there. Writing
+      ``ROUTING_TILE_URLS`` into the first one and expecting ``tile_urls=${...}``
+      to see it is the bug this function exists to prevent.
+
+    The file may not exist yet — no install has ever needed it — and creating it
+    disturbs nothing: the only other substitutions in the compose files
+    (``DB_NAME``/``DB_USER``/``DB_PASSWORD``) all carry defaults and are absent
+    from it either way. It is gitignored, like the Dockerfile and requirements
+    beside it.
+    """
+    return backend_root / '.env'
+
+
+def _apply_routing_tile_urls(backend_root: Path, manifest: dict, config: dict = None) -> str:
+    """Write the map the application declared where Compose will find it.
+
+    Returns the value written (or the one already in force), '' when there is
+    nothing to write. Never starts anything: a file write is not a container
+    start, which is what keeps this on the right side of the boundary the
+    installer must not cross.
+
+    Precedence is deliberate — a value the caller supplied wins over the
+    manifest. The designer knows what the application is about; the host
+    operator knows what their host can build, and they are the one who has to
+    live with an extract measured in hours.
+    """
+    supplied = ((config or {}).get('routing') or {}).get('ROUTING_TILE_URLS')
+    raw = supplied if supplied is not None else (manifest or {}).get('routing_tile_urls')
+    value = _safe_tile_urls(raw or '')
+    if not value:
+        return ''
+    _upsert_env_file(_compose_env_path(backend_root), {'ROUTING_TILE_URLS': value})
+    return value
+
+
+def _upsert_env_file(env_path: Path, updates: dict) -> None:
+    """Upsert keys into an arbitrary env file, preserving other lines and order.
+
+    The sibling of ``_update_env``, which is hard-wired to the Django env file.
+    Kept separate rather than parameterised so neither call site can quietly
+    start writing to the other file (see ``_compose_env_path``).
+    """
+    updates = {k: v for k, v in (updates or {}).items() if v not in (None, '')}
+    if not updates:
+        return
+    lines = env_path.read_text().splitlines() if env_path.exists() else []
+    remaining = dict(updates)
+    out = []
+    for line in lines:
+        key = line.split('=', 1)[0].strip() if '=' in line else ''
+        if key in remaining:
+            out.append(f'{key}={remaining.pop(key)}')
+        else:
+            out.append(line)
+    for key, val in remaining.items():
+        out.append(f'{key}={val}')
+    env_path.write_text('\n'.join(out) + '\n')
+    _chown_to_owner(env_path, env_path.parent)
+
+
+def _routing_service_notice(backend_root: Path, manifest: dict = None) -> dict:
     """Say out loud that installing the module did not start the engine.
 
     This is the one step in the activation chain that does NOT follow from
@@ -1548,6 +1653,13 @@ def _routing_service_notice(backend_root: Path) -> dict:
     here would produce an installed app whose routes are quietly straight lines,
     which is the failure the whole routing module exists to remove.
 
+    **The notice quotes the concrete value.** It used to say "build the tiles
+    from an OSM extract" and link to geofabrik.de, which left the reader to guess
+    a region for an application someone else designed — and the default they got
+    by guessing nothing was Monaco. The application now declares the map it
+    needs, so the step stops meaning "go find an extract" and starts meaning
+    "run this".
+
     Returns {} when routing is not installed, or when an engine URL is already
     configured and nothing is owed.
     """
@@ -1555,6 +1667,34 @@ def _routing_service_notice(backend_root: Path) -> dict:
         return {}
     if (getattr(settings, 'ROUTING_ENGINE_URL', '') or '').strip():
         return {}
+
+    tile_urls = _safe_tile_urls((manifest or {}).get('routing_tile_urls') or '')
+    extracts = [str(s) for s in ((manifest or {}).get('routing_extracts') or [])]
+    env_path = _compose_env_path(backend_root)
+
+    if tile_urls:
+        coverage = (
+            f'The application declares its map coverage as '
+            f'{", ".join(extracts) or "the extract below"}, which has been '
+            f'written to {env_path} as ROUTING_TILE_URLS. That is the file '
+            f'Compose reads — not backend/migratis/.env, which is the Django '
+            f'settings env and is invisible to variable substitution. Override '
+            f'it there by hand if your host needs different coverage.'
+        )
+        tile_step = f'ROUTING_TILE_URLS={tile_urls}'
+    else:
+        coverage = (
+            'The application declares no map coverage, so the engine will build '
+            'the framework default (Monaco) — about a minute, and wrong for '
+            'almost every real application. Choose the region your users are in '
+            f'at https://download.geofabrik.de/ and set ROUTING_TILE_URLS in '
+            f'{env_path}, which is the file Compose reads — not '
+            f'backend/migratis/.env, which is the Django settings env and is '
+            f'invisible to variable substitution.'
+        )
+        tile_step = ('Set ROUTING_TILE_URLS to the .pbf extract(s) you need, '
+                     'space-separated.')
+
     return {
         'routing_service_required': {
             'reason': 'routing-engine-not-configured',
@@ -1562,14 +1702,19 @@ def _routing_service_notice(backend_root: Path) -> dict:
                 'The routing module is installed, but no routing engine is '
                 'configured — route fields will store the line exactly as '
                 'traced. Start the engine and point ROUTING_ENGINE_URL at it; '
-                'the installer cannot start a container.'
+                'the installer cannot start a container. ' + coverage
             ),
+            'tile_urls':        tile_urls,
+            'tile_urls_file':   str(env_path),
+            'routing_extracts': extracts,
             'steps': [
+                tile_step,
                 'docker compose --profile routing up -d',
-                'Build the tiles once from an OSM extract (minutes to hours, '
-                'and the real disk/RAM spike).',
+                'The first start BUILDS THE TILES from that extract — minutes to '
+                'hours, and the real disk/RAM spike. A bigger extract costs more '
+                'of both.',
                 'Set ROUTING_ENGINE_URL in backend/migratis/.env '
-                '(e.g. http://routing:8002) and restart the backend.',
+                '(e.g. http://base-routing:8002) and restart the backend.',
             ],
         }
     }

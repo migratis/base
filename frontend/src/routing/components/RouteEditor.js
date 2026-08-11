@@ -4,6 +4,7 @@ import { Marker, Polyline, useMapEvents } from 'react-leaflet';
 
 import { fetchAvailability, snapRoute } from '../services/routing.service';
 import { ROUTE_OUTCOME } from '../services/routeOutcome';
+import { sandboxToken } from '../services/sandboxToken';
 
 /**
  * The waypoint-editing layer for a `geo` field in geo_mode='route'.
@@ -18,7 +19,7 @@ import { ROUTE_OUTCOME } from '../services/routeOutcome';
  *    vertices; nobody can drag waypoint 3 of that. So the markers are the
  *    waypoints (a handful) and the drawn line is the snapped geometry — the two
  *    are stored together, the waypoints riding as a `routing` foreign member on
- *    the geometry (SCOPE_road_routing.md §4).
+ *    the geometry (SCOPE_road_routing.md@8914275 §4).
  *
  * 2. **Degrade with a name.** Installing a Django app cannot start a routing
  *    container, so an engine that is absent, down, or unable to route is the
@@ -93,6 +94,12 @@ const RouteEditor = ({ geo, setGeo, readOnly = false, profile = 'bicycle', fallb
     });
     return () => { alive = false; };
   }, []);
+
+  // Whether this map is a *preview* of an application that has not shipped yet
+  // (SCOPE_routing_sandbox_external.md@c170e1a §7). Only a design sandbox has a token in
+  // its URL, so this is false everywhere in a generated application — where the
+  // note would be not just unnecessary but wrong: that IS the deployed app.
+  const isPreview = useMemo(() => Boolean(sandboxToken()), []);
 
   const stored = useMemo(() => waypointsOf(geo), [geo]);
   const waypoints = stored.length ? stored : pending;
@@ -199,6 +206,20 @@ const RouteEditor = ({ geo, setGeo, readOnly = false, profile = 'bicycle', fallb
           {snapping && (
             <span className="route-snapping" data-testid="route-snapping">
               {t('route-snapping', 'Following roads…')}
+            </span>
+          )}
+
+          {/* The mirror image of the problem this module solves: the preview
+              over-promises. It routes worldwide against an external engine; the
+              deployed application routes only inside the map extract its owner
+              builds. Not fixable in the engine — it is inherent to the two
+              worlds — so it is fixed by saying it, here and in the webdoc,
+              rather than being discovered when a user's route fails. */}
+          {isPreview && (
+            <span className="route-preview-scope" data-testid="route-preview-scope">
+              {t('route-preview-worldwide',
+                 'Preview routes worldwide — your deployed application will route '
+                 + 'only within the map extract you choose for it.')}
             </span>
           )}
         </div>

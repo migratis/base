@@ -167,6 +167,18 @@ td.step_mode_size {
     background: var(--color-warning-bg, #fff3cd);
     border-color: var(--color-warning, #ffc107);
   }
+
+  // The preview routes worldwide and the deployed application will not. A
+  // standing fact about where you are, not an event — so it is quieter than the
+  // badges above and wraps rather than pushing the map's own controls around.
+  // Shown only on a design sandbox; a generated application never renders it.
+  .route-preview-scope {
+    max-width: 22rem;
+    text-align: right;
+    opacity: 0.85;
+    font-size: $font-size-small;
+    background: var(--color-surface-muted, #f8f9fa);
+  }
 }
 
 // Leaflet panes/controls stack very high by default; keep them under our

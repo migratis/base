@@ -973,6 +973,36 @@ const InstallerPage = () => {
             </span>
           </div>
 
+          {/* Road routing: installed as code, not as a service. The installer
+              has no Docker socket and must not be given one, so an install with
+              `routing` selected activates all of the code and none of the
+              engine. Silence here is what produces an application whose routes
+              are quietly straight lines — the exact failure the module exists to
+              remove — and the response has always carried this; nothing rendered
+              it, so nobody read it.
+
+              The steps and the message come from the backend as prose rather
+              than i18n keys because they quote concrete values: the tile_urls
+              this application declared, and the file to put them in. */}
+          {result.routing_service_required && (
+            <div className="alert alert-info" data-testid="routing-service-required">
+              <strong>{t('almost-done')}</strong>{' '}
+              {result.routing_service_required.message}
+              {result.routing_service_required.tile_urls && (
+                <pre className="mb-2 mt-2 small bg-white p-2 rounded">
+                  {result.routing_service_required.tile_urls_file}
+                  {'\n'}
+                  ROUTING_TILE_URLS={result.routing_service_required.tile_urls}
+                </pre>
+              )}
+              <ol className="mb-0 mt-2 small">
+                {(result.routing_service_required.steps || []).map((step) => (
+                  <li key={step}>{step}</li>
+                ))}
+              </ol>
+            </div>
+          )}
+
           {/* Manual steps left for the user. Each is shown only when its side
               actually needs it: the backend restart when the server doesn't
               autoreload (production), and `npm run build` when the frontend is a

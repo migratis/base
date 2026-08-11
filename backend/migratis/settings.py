@@ -292,9 +292,44 @@ CREDITS_CURRENCY = 'eur'
 # socket and must not be given one. The operator brings the service up by hand
 # (`docker compose --profile routing up -d`) and points this at it; the install
 # response says so with `routing_service_required`.
+#
+# **Your application routes against your engine, and calls nobody else.** The
+# design sandbox at migratis.ai is the other world: it has no tile set of its
+# own and calls an external service (openrouteservice) so that a `route` field
+# can be *tried* before it is shipped. Neither ever calls the other, and no end
+# user of this application has coordinates sent anywhere — including to Migratis
+# (SCOPE_routing_sandbox_external.md D3′/§4).
+#
+# The adapter for that external service ships in `routing/engines.py` because
+# the module is one codebase in both places. It is inert here: `ors` is not
+# selected below, and even if it were it would need an API key of yours before
+# it did anything. Set `ROUTING_ENGINE=ors` + `ROUTING_ENGINE_KEY=…` only if you
+# would rather rent an engine than run one.
 ROUTING_ENGINE     = env('ROUTING_ENGINE', default='valhalla')
 ROUTING_ENGINE_URL = env('ROUTING_ENGINE_URL', default='')
+ROUTING_ENGINE_KEY = env('ROUTING_ENGINE_KEY', default='')
 ROUTING_ENGINE_TIMEOUT = int(env('ROUTING_ENGINE_TIMEOUT', default='20'))
+
+# **`POST /routing/snap` stays open here, and is gated on migratis.ai.** That is
+# the one place the two deployments deliberately disagree, and it is a setting
+# rather than a fork of the code (SCOPE_routing_sandbox_external.md §6).
+#
+# The reasoning that opened the endpoint still holds in an installed app: a
+# generated app may let an anonymous role create records, so a login-gated snap
+# would mean the map editor works for the owner and silently draws straight
+# lines for everyone else. The engine being called is yours, free and stateless,
+# so there is no quota for a stranger to exhaust — and the exposure stays bounded
+# the way it always was: the engine URL comes from here and never from a request
+# (no SSRF), waypoints are capped and range-checked before any network call,
+# nothing is written and nothing is charged.
+#
+# On migratis.ai neither of those is true any more: a generated app calls its own
+# engine now, so the only legitimate caller of that copy is its own sandbox, and
+# that copy stands in front of somebody else's metered quota. It names an
+# authorizer here and sets a per-caller ceiling; this file names neither, and the
+# endpoint behaves exactly as it did before that scope.
+ROUTING_SNAP_AUTHORIZER = env('ROUTING_SNAP_AUTHORIZER', default='')
+ROUTING_SNAP_RATE_PER_MINUTE = int(env('ROUTING_SNAP_RATE_PER_MINUTE', default='0'))
 
 CRONJOBS = []
 
