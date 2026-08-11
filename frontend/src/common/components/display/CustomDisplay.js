@@ -36,10 +36,23 @@ class CustomDisplayErrorBoundary extends React.Component {
   }
 }
 
+// Un-double-escape a body that survived one JSON encoding too many — the whole
+// component on ONE line, its newlines still the two characters `\` `n`.
+// A body that already has real newlines is real source, and every `\n` left in
+// it is the CODE's own escape: rewriting those turns `join('\n')` into a quote,
+// a line break and a quote, which no JS engine accepts ("string literal
+// contains an unescaped line break" — prod app 3's A3_StageMapDisplay, refused
+// by the very step meant to rescue it). Mirrors the backend's
+// `component_code.normalise_component_code`, so a component is linted and
+// compiled from the same source.
+function normalizeComponentCode(code) {
+  if (/\n/.test(code)) return code;
+  return code.replace(/\\n/g, '\n').replace(/\\t/g, '\t').replace(/\\r/g, '');
+}
+
 function compileDisplay(componentName, code) {
   try {
-    // Normalize literal escape sequences the AI sometimes emits in JSON strings
-    const src = code.replace(/\\n/g, '\n').replace(/\\t/g, '\t').replace(/\\r/g, '');
+    const src = normalizeComponentCode(code);
     // `sanitizeHtml` is injected into scope so AI code may safely render
     // sanitized rich text via dangerouslySetInnerHTML without an import.
     // `MapView` is injected for the same reason one level up: an entity with a
