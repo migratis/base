@@ -1617,6 +1617,12 @@ TRANSLATIONS['account'] = {
 }
 
 
+# A prune may not remove more than this share of a namespace without --force.
+# Catches a half-edited source file before it empties a screen, in the manner of
+# refresh_llm_pricing's MAX_SWING.
+MAX_PRUNE_SHARE = 0.25
+
+
 class Command(BaseCommand):
     help = 'Seed all translation namespaces into the i18n database.'
 
@@ -1631,6 +1637,21 @@ class Command(BaseCommand):
             type=str,
             default=None,
             help='Seed only a specific namespace (e.g. --ns generator).',
+        )
+        parser.add_argument(
+            '--prune',
+            action='store_true',
+            help='Report keys this file no longer declares (add --apply to remove them).',
+        )
+        parser.add_argument(
+            '--apply',
+            action='store_true',
+            help='With --prune: actually unlink/delete, instead of reporting.',
+        )
+        parser.add_argument(
+            '--force',
+            action='store_true',
+            help='With --prune --apply: proceed past the share guard.',
         )
 
     def handle(self, *args, **options):
@@ -1712,6 +1733,92 @@ class Command(BaseCommand):
             '  Texts skipped:  ' + str(total_skipped) + ' (run with --update to overwrite)\n' +
             '  Keys linked:    ' + str(total_linked)
         ))
+
+        # ------------------------------------------------------------------ #
+        # 3. Prune — the other half of seeding, and the dangerous half
+        # ------------------------------------------------------------------ #
+        if options['prune']:
+            self._prune(only_ns, apply=options['apply'], force=options['force'])
+
+    # ---------------------------------------------------------------------- #
+    # Prune
+    # ---------------------------------------------------------------------- #
+    def _prune(self, only_ns, *, apply=False, force=False):
+        """Retire keys this file no longer declares.
+
+        Seeding is additive, so a key that was renamed six months ago is still in
+        the database, still served by `GET /i18n/…`, and still sitting in the
+        admin looking like something a translator should maintain. Nothing ever
+        told those apart from the live set.
+
+        Three rules hold this down, and each of them exists because the obvious
+        implementation is destructive:
+
+        * **Only namespaces this file declares.** A generated application seeds
+          its own namespace with its own `seed_<module>` command, into these same
+          tables. Walking every namespace would delete an installed app's entire
+          vocabulary on the first run — the same byte-copy destructiveness that
+          keeps this file out of the base sync — and the owner would have no way
+          to tell what happened. An undeclared namespace is not reported either:
+          reporting it invites someone to clean it up by hand.
+        * **Unlink first; delete only what is left with no namespace at all.** A
+          key can belong to several namespaces, and dropping it from one is
+          retiring a label from one screen, not deleting it from the product.
+        * **Report by default; `--apply` writes.** A half-edited source file
+          looks exactly like a deliberate cleanup, and the difference is several
+          hundred rows users can see. The share guard below is the sibling of
+          `refresh_llm_pricing`'s MAX_SWING and `refresh_routing_regions`'
+          retire share.
+        """
+        namespaces = sorted(set(TRANSLATIONS) | set(NAMESPACE_LINKS))
+        if only_ns:
+            namespaces = [only_ns]
+
+        total_unlinked = total_deleted = 0
+        for ns_name in namespaces:
+            declared = set(TRANSLATIONS.get(ns_name, {})) | set(NAMESPACE_LINKS.get(ns_name, []))
+            ns_obj = TranslationNameSpace.objects.filter(ns=ns_name).first()
+            if ns_obj is None:
+                continue
+
+            stored = list(TranslationKey.objects.filter(ns=ns_obj))
+            orphans = [k for k in stored if k.key not in declared]
+            if not orphans:
+                continue
+
+            share = len(orphans) / len(stored)
+            self.stdout.write(self.style.WARNING(
+                f"  '{ns_name}': {len(orphans)} of {len(stored)} keys are no longer "
+                f"declared ({share:.0%})"))
+            for key_obj in orphans:
+                self.stdout.write(f'    - {key_obj.key}')
+
+            if not apply:
+                continue
+            if share > MAX_PRUNE_SHARE and not force:
+                self.stdout.write(self.style.ERROR(
+                    f"  Refused: pruning would remove {share:.0%} of '{ns_name}', over "
+                    f'the {MAX_PRUNE_SHARE:.0%} guard. A half-edited source file looks '
+                    f'exactly like this. Re-run with --force if the cleanup is real.'))
+                continue
+
+            for key_obj in orphans:
+                key_obj.ns.remove(ns_obj)
+                total_unlinked += 1
+                if not key_obj.ns.exists():
+                    # No namespace left anywhere: nothing serves it and nothing
+                    # can. Its texts go with it (FK cascade).
+                    key_obj.delete()
+                    total_deleted += 1
+
+        if apply:
+            self.stdout.write(self.style.SUCCESS(
+                f'Pruned.\n'
+                f'  Keys unlinked:  {total_unlinked}\n'
+                f'  Keys deleted:   {total_deleted} (those left in no namespace at all)'))
+        else:
+            self.stdout.write('Prune report only — re-run with --apply to remove them.')
+
 
 
 # ===========================================================================
