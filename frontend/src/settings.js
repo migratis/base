@@ -6,7 +6,7 @@ export const SUPPORT = false;
 export const CONTACT = false;
 export const SUBSCRIPTION = false;
 export const USER = false;
-export const COOKIE = false;
+export const COOKIE = true;
 export const MIGRATIS = false;
 export const CREDITS = true;
 // Road-following routes for `geo` fields in route mode (`routing` module).

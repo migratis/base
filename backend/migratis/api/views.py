@@ -7,7 +7,7 @@ from django.shortcuts import render
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.conf import settings as django_settings
 # ── Activated by generated app settings_patch.py ──────────────────────────
-from migratis.user.views import router as user_router
+# from migratis.user.views import router as user_router
 from migratis.i18n.views import router as i18n_router
 from migratis.cookie.views import router as cookie_router
 # from migratis.support.views import router as support_router
@@ -77,7 +77,7 @@ except (ImportError, RuntimeError):
     pass
 
 # ── Activated by generated app settings_patch.py ──────────────────────────
-api.add_router("/user/", user_router)
+# api.add_router("/user/", user_router)
 api.add_router("/i18n/",    i18n_router)
 api.add_router("/cookie/",  cookie_router)
 # api.add_router("/support/", support_router)
