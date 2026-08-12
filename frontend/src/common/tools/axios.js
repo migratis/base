@@ -54,6 +54,20 @@ customAxios.interceptors.request.use(
   }
 );
 
+// Endpoints that report their own refusals where the user is looking, so the
+// generic toast would name the wrong thing on top of a message that is already
+// right. `routing/snap` is refused per *caller*, not per record: the editor
+// keeps the traced line and badges it "not a road route", and "access denied"
+// beside that suggests the user was barred from their own record. The status is
+// still returned to the caller untouched — this silences the toast, not the
+// outcome.
+const SILENT_403 = [/routing\/snap$/];
+
+const silent403 = (err) => {
+  const url = (err && (err.config?.url || err.response?.config?.url)) || '';
+  return SILENT_403.some((pattern) => pattern.test(url));
+};
+
 customAxios.interceptors.response.use(
   (response) => {
     return response;
@@ -79,7 +93,7 @@ customAxios.interceptors.response.use(
       }
     }
 
-    if (err && err.response && err.response.status === 403) {
+    if (err && err.response && err.response.status === 403 && !silent403(err)) {
       toast.error(i18n.t('access-denied'));
     }
     
@@ -89,10 +103,14 @@ customAxios.interceptors.response.use(
   }
 );
 
-const get = param => trackPromise(customAxios.get(param));
-const post = (param, body) => trackPromise(customAxios.post(param, body));
-const put = (param, body) => trackPromise(customAxios.put(param, body));
-const del = param => trackPromise(customAxios.delete(param));
+// The third argument is axios' per-request config, and it is forwarded rather
+// than dropped: a caller that adds a header here — `routing.service` adds the
+// sandbox token — otherwise sends a request without it and reads the refusal as
+// the service being down.
+const get = (param, config) => trackPromise(customAxios.get(param, config));
+const post = (param, body, config) => trackPromise(customAxios.post(param, body, config));
+const put = (param, body, config) => trackPromise(customAxios.put(param, body, config));
+const del = (param, config) => trackPromise(customAxios.delete(param, config));
 
  const api = {
   get,
