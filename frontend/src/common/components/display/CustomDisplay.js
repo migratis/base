@@ -66,12 +66,12 @@ function compileDisplay(componentName, code) {
     // (e.g. `img = r.data.image`) throw here — the same class ESLint no-undef
     // rejects at CRA build time — instead of silently creating a global, closing
     // the sandbox-vs-installed-app fidelity gap.
-    // eslint-disable-next-line no-new-func
     // `exportData` is the fourth injected name, and the only one that writes
     // anything: it takes rows the component already has and hands the browser
     // a file. It reaches no network — the compile scope never gets one — so a
     // component can offer an export without being able to send anything
     // anywhere.
+    // eslint-disable-next-line no-new-func
     const factory = new Function(
       'React', 'sanitizeHtml', 'MapView', 'exportData',
       `"use strict";\n${src}; return ${componentName};`,

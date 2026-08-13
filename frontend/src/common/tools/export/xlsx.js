@@ -35,9 +35,11 @@ const STYLE_DATETIME = 3;
 // so a value carrying one has to lose it or the file will not open.
 // Built from escapes rather than written as a literal so this source file
 // itself stays free of the control characters it is describing.
-const _INVALID_XML = new RegExp(
-  '[\\u0000-\\u0008\\u000B\\u000C\\u000E-\\u001F\\uFFFE\\uFFFF]', 'g',
-);
+// The disable is on the pattern itself, and naming these IS the point: the rule
+// exists to catch a control character matched by ACCIDENT, which is the opposite
+// of a writer whose job is to strip them.
+// eslint-disable-next-line no-control-regex
+const _INVALID_XML = new RegExp('[\\u0000-\\u0008\\u000B\\u000C\\u000E-\\u001F\\uFFFE\\uFFFF]', 'g');
 
 function xmlEscape(value) {
   return String(value)
