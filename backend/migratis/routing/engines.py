@@ -290,7 +290,15 @@ class ORSEngine:
     # A hosted service's address is a constant, not something an operator should
     # have to look up. `ROUTING_ENGINE_URL` still overrides it — for a
     # self-hosted ORS, or a staging host.
-    DEFAULT_BASE_URL = 'https://api.openrouteservice.org'
+    #
+    # HeiGIT deprecated `api.openrouteservice.org` on 2026-04-28 in favour of
+    # `api.heigit.org/<service>/<version>` (one structure for all their APIs)
+    # and **shuts the old host down on 2026-08-24**. It is the same service and
+    # the same key; only the host and the `/openrouteservice` segment moved, so
+    # the per-request paths below (`/v2/directions/…`, `/v2/health`) are
+    # unchanged. Announcement:
+    # https://ask.openrouteservice.org/t/deprecating-api-openrouteservice-org-in-favour-of-api-heigit-org/7912
+    DEFAULT_BASE_URL = 'https://api.heigit.org/openrouteservice'
     NEEDS_API_KEY = True
 
     COSTINGS = {
