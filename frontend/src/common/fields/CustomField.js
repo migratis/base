@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { useFormContext } from 'react-hook-form';
 import InputField from './InputField';
+import MapView from './MapView';
 import { sanitizeHtml } from './sanitizeHtml';
 
 // ── ErrorBoundary ─────────────────────────────────────────────────────────────
@@ -38,9 +39,17 @@ function compileComponent(componentName, code) {
   try {
     // `sanitizeHtml` is injected into scope so AI code may safely render
     // sanitized rich text via dangerouslySetInnerHTML without an import.
+    // `MapView` for the parallel reason on the display side: without it there
+    // is no way to write a custom geo FIELD renderer at all, so the only
+    // map-shaped component in reach was the entity's display renderer — which
+    // is what app 3's refresh put in the `route` field slot, where it threw on
+    // the missing reference and degraded to a text box. A display renderer in a
+    // field slot is still wrong (it is handed {value, onChange}, not
+    // {records, entityConfig}) and is repaired away server-side; this is what
+    // makes the honest version writable.
     // eslint-disable-next-line no-new-func
-    const factory = new Function('React', 'sanitizeHtml', `${code}; return ${componentName};`);
-    return factory(React, sanitizeHtml);
+    const factory = new Function('React', 'sanitizeHtml', 'MapView', `${code}; return ${componentName};`);
+    return factory(React, sanitizeHtml, MapView);
   } catch (err) {
     console.warn(`[CustomField] Failed to compile ${componentName}:`, err);
     return null;
