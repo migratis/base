@@ -12,6 +12,9 @@ import { useLocation } from 'react-router-dom';
 import MigratisPagination from '../../common/components/Pagination';
 import { PageShell, PagePanel } from './PageShell';
 import { LoaderIndicator } from './LoaderIndicator';
+import ExportButton from './ExportButton';
+import useTableExport from '../hooks/useTableExport';
+import { buildRows, exportFilename } from '../tools/export';
 import { ITEMS_PER_PAGE as pageSize } from '../../settings';
 import Badge from 'react-bootstrap/Badge';
 import { Tabs, Tab } from 'react-bootstrap';
@@ -117,6 +120,45 @@ const Entities = (props) => {
   const handleRefresh = useCallback(() => {
     setRefresh(prev => !prev);
   }, []);
+
+  // --- Export ----------------------------------------------------------- //
+  // Opt-in, and opt-in by passing the COLUMNS: this component renders rows
+  // through a caller-supplied `renderRow`, so it does not know what an item's
+  // fields are called or what they should be labelled — only the caller does.
+  // Opt-in rather than on-by-default because `Entities` is mounted by support
+  // tickets and invoice lists too, and growing an export on every page of the
+  // application is not a change any of those callers asked for.
+  //
+  // `[{key, label, type}]` — `type` is a field_type ('integer', 'date', …) and
+  // is what puts a real number or a real date in the spreadsheet instead of a
+  // string that looks like one.
+  const exportFetchPage = useCallback((page_, pageSize) => {
+    const status = props.activeTabs ? currentTab : null;
+    return CommonService
+      .getEntities(props.app, props.entity, status, '', page_, extraParams, pageSize)
+      .then((data) => ({
+        items: data?.items || [],
+        count: data?.count || 0,
+        // This endpoint answers `{items, count}`; the page count is derived.
+        pages: Math.max(1, Math.ceil((data?.count || 0) / pageSize)),
+      }));
+  }, [props.app, props.entity, props.activeTabs, currentTab, extraParams]);
+
+  const exportGetSpec = useCallback((records) => {
+    const columns = props.exportColumns || [];
+    return {
+      columns,
+      rows: buildRows(records, columns, { t }),
+      title: t(`${props.entity}s`),
+      filename: exportFilename({ app: props.app, entity: props.entity }),
+      meta: { app: props.app, entity: t(`${props.entity}s`), exportedAt: new Date() },
+      t,
+    };
+  }, [props.exportColumns, props.app, props.entity, t]);
+
+  const { run: runExport, busy: exportBusy } = useTableExport({
+    fetchPage: exportFetchPage, getSpec: exportGetSpec,
+  });
 
   const saveEntity = (data, relations=[]) => {
     setDisableSubmit(true);
@@ -257,11 +299,21 @@ const Entities = (props) => {
       <div>
         {count > 1 && <> <Badge>{start}</Badge> {t('count-to')} <Badge>{end}</Badge> {t('count-of')} </> } <Badge>{count}</Badge>
       </div>
-      {count > 0 && props.bulkDelete && (
-        <Button variant="outline-danger" size="sm" onClick={() => handleDeleteAll(active)}>
-          {t('delete-all')}
-        </Button>
-      )}
+      <div className="d-flex align-items-center gap-2">
+        {count > 0 && props.exportColumns && (
+          <ExportButton
+            onExport={runExport}
+            busy={exportBusy}
+            formats={props.exportFormats || ['xlsx', 'csv']}
+            t={t}
+          />
+        )}
+        {count > 0 && props.bulkDelete && (
+          <Button variant="outline-danger" size="sm" onClick={() => handleDeleteAll(active)}>
+            {t('delete-all')}
+          </Button>
+        )}
+      </div>
     </div>
   );
 

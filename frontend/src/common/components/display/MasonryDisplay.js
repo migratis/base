@@ -4,7 +4,7 @@ import {
   IoTrashOutline as TrashIcon,
 } from 'react-icons/io5';
 import InteractionRowActions from '../InteractionRowActions';
-import EmbeddedChildren from './EmbeddedChildren';
+import { relationLabels } from '../../tools/export/values';
 
 const MasonryDisplay = ({
   entity,
@@ -17,10 +17,6 @@ const MasonryDisplay = ({
   viewAs,
   getRoleRank,
   t,
-  embeddedChildren = [],
-  embeddedRecords = {},
-  // Interactive embeds — see CardsDisplay.
-  renderEmbedded,
 }) => {
   if (!records || records.length === 0) {
     return null;
@@ -111,18 +107,8 @@ const MasonryDisplay = ({
 
   const primaryField = getPrimaryField();
 
-  const resolveRelLabel = (fieldName, value) => {
-    if (!value) return [];
-    const opts = relOptions[fieldName] || [];
-    if (Array.isArray(value)) {
-      return value.map((id) => {
-        const opt = opts.find((o) => o.value === id);
-        return opt ? opt.label : `#${id}`;
-      });
-    }
-    const opt = opts.find((o) => o.value === value);
-    return opt ? [opt.label] : [`#${value}`];
-  };
+  const resolveRelLabel = (fieldName, value) =>
+    relationLabels(value, relOptions[fieldName] || []);
 
   return (
     <div className="migratis-masonry" style={{
@@ -188,14 +174,6 @@ const MasonryDisplay = ({
               onInteraction={onInteraction}
               className="d-flex flex-wrap gap-1 mt-2"
             />
-            {renderEmbedded ? renderEmbedded(record) : (
-              <EmbeddedChildren
-                record={record}
-                embeddedChildren={embeddedChildren}
-                embeddedRecords={embeddedRecords}
-                t={t}
-              />
-            )}
           </div>
           <div className="d-flex justify-content-end gap-2 p-2" style={{ position: 'absolute', bottom: 0, right: 0 }}>
             {onEdit && (

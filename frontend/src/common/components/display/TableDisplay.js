@@ -6,6 +6,7 @@ import {
 import InteractionRowActions from '../InteractionRowActions';
 import GeoValue from '../../fields/GeoValue';
 import { isGeoField } from '../../fields/geoSummary';
+import { formatCellValue, relationLabels, EMPTY } from '../../tools/export/values';
 
 const TableDisplay = ({
   entity,
@@ -65,59 +66,15 @@ const TableDisplay = ({
     Array.isArray(config?.interactions) && config.interactions.length > 0 && !!onInteraction;
 
   const resolveRelLabel = (fieldName, value) => {
-    if (!value) return '—';
-    const opts = relOptions[fieldName] || [];
-    if (Array.isArray(value)) {
-      return value.map((id) => {
-        const opt = opts.find((o) => o.value === id);
-        return opt ? opt.label : `#${id}`;
-      }).join(', ') || '—';
-    }
-    const opt = opts.find((o) => o.value === value);
-    return opt ? opt.label : `#${value}`;
+    const labels = relationLabels(value, relOptions[fieldName] || []);
+    return labels.length ? labels.join(', ') : EMPTY;
   };
 
-  const _SCALE_LABELS = {
-    nm2: 'nm²', um2: 'μm²', mm2: 'mm²', cm2: 'cm²', dm2: 'dm²',
-    m2: 'm²', dam2: 'dam²', hm2: 'hm²', km2: 'km²',
-  };
-
-  const formatValue = (field, value) => {
-    if (value === null || value === undefined) return '—';
-    // Handle {label, value} objects from select fields
-    if (typeof value === 'object' && value !== null) {
-      return value.label || value.value || '—';
-    }
-    const renderAs = fieldsConfig[field.name]?.render_as;
-    // Shape field — show computed surface instead of raw JSON
-    if (renderAs === 'shape' || (typeof value === 'string' && value.startsWith('{"shape"'))) {
-      try {
-        const parsed = JSON.parse(value);
-        const n = parseFloat(parsed.surface) || 0;
-        if (n === 0) return '—';
-        const label = _SCALE_LABELS[parsed.scale] || parsed.scale || '';
-        const formatted = n < 0.01
-          ? n.toExponential(3)
-          : n % 1 === 0 ? n.toString() : parseFloat(n.toFixed(4)).toString();
-        return `${formatted} ${label}`;
-      } catch { /* fall through */ }
-    }
-    if (field.field_type === 'boolean') {
-      return value ? tval('true', 'Yes') : tval('false', 'No');
-    }
-    // Date/datetime — strip time portion unless render_as is explicitly 'datetime' or 'time'
-    if (field.field_type === 'date' || field.field_type === 'datetime') {
-      if (!value) return '—';
-      if (renderAs === 'time') return String(value).slice(11, 16);
-      if (renderAs === 'datetime') {
-        const d = new Date(value);
-        return isNaN(d) ? String(value) : d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      }
-      const d = new Date(value);
-      return isNaN(d) ? String(value).slice(0, 10) : d.toLocaleDateString();
-    }
-    return String(value);
-  };
+  // The canonical reading of a cell lives in common/tools/export/values.js, so
+  // this table, the other row displays and the export cannot drift into
+  // separate opinions about the same stored value.
+  const formatValue = (field, value) =>
+    formatCellValue(field, value, { fieldConfig: fieldsConfig[field.name], t });
 
   const _isHexColor = (v) => typeof v === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(v.trim());
 

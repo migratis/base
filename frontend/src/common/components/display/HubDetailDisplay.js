@@ -7,6 +7,7 @@ import {
   IoImageOutline as ImagePlaceholderIcon,
 } from 'react-icons/io5';
 import InteractionRowActions from '../InteractionRowActions';
+import { relationLabels } from '../../tools/export/values';
 
 /**
  * HubDetailDisplay — the deterministic "unified hub" composite
@@ -101,15 +102,8 @@ const HubDetailDisplay = ({
     return String(value);
   };
 
-  const resolveRelLabel = (fieldName, value) => {
-    if (!value) return null;
-    const opts = relOptions[fieldName] || [];
-    const list = Array.isArray(value) ? value : [value];
-    return list.map((id) => {
-      const opt = opts.find((o) => o.value === id);
-      return opt ? opt.label : `#${id}`;
-    });
-  };
+  const resolveRelLabel = (fieldName, value) =>
+    relationLabels(value, relOptions[fieldName] || []);
 
   const _PRIMARY_NAMES = ['name', 'label', 'title', 'code', 'reference', 'ref', 'number', 'slug'];
   const displayLabelFields = config?.display_label_fields || [];

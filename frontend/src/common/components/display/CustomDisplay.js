@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { getVisibleInteractions } from '../interactionVisibility';
 import { sanitizeHtml } from '../../fields/sanitizeHtml';
 import MapView from '../../fields/MapView';
+import { exportData } from '../../tools/export';
 
 class CustomDisplayErrorBoundary extends React.Component {
   constructor(props) {
@@ -66,8 +67,16 @@ function compileDisplay(componentName, code) {
     // rejects at CRA build time — instead of silently creating a global, closing
     // the sandbox-vs-installed-app fidelity gap.
     // eslint-disable-next-line no-new-func
-    const factory = new Function('React', 'sanitizeHtml', 'MapView', `"use strict";\n${src}; return ${componentName};`);
-    return factory(React, sanitizeHtml, MapView);
+    // `exportData` is the fourth injected name, and the only one that writes
+    // anything: it takes rows the component already has and hands the browser
+    // a file. It reaches no network — the compile scope never gets one — so a
+    // component can offer an export without being able to send anything
+    // anywhere.
+    const factory = new Function(
+      'React', 'sanitizeHtml', 'MapView', 'exportData',
+      `"use strict";\n${src}; return ${componentName};`,
+    );
+    return factory(React, sanitizeHtml, MapView, exportData);
   } catch (err) {
     console.warn(`[CustomDisplay] Failed to compile ${componentName}:`, err);
     return null;

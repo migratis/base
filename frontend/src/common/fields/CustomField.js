@@ -3,6 +3,7 @@ import { useFormContext } from 'react-hook-form';
 import InputField from './InputField';
 import MapView from './MapView';
 import { sanitizeHtml } from './sanitizeHtml';
+import { exportData } from '../tools/export';
 
 // ── ErrorBoundary ─────────────────────────────────────────────────────────────
 
@@ -47,9 +48,16 @@ function compileComponent(componentName, code) {
     // field slot is still wrong (it is handed {value, onChange}, not
     // {records, entityConfig}) and is repaired away server-side; this is what
     // makes the honest version writable.
+    // `exportData` is the fourth, and the only one that WRITES anything: it
+    // takes rows the component already has and hands the browser a file. It
+    // reaches no network — the compile scope never gets one — so a component
+    // can offer an export without being able to send anything anywhere.
     // eslint-disable-next-line no-new-func
-    const factory = new Function('React', 'sanitizeHtml', 'MapView', `${code}; return ${componentName};`);
-    return factory(React, sanitizeHtml, MapView);
+    const factory = new Function(
+      'React', 'sanitizeHtml', 'MapView', 'exportData',
+      `${code}; return ${componentName};`,
+    );
+    return factory(React, sanitizeHtml, MapView, exportData);
   } catch (err) {
     console.warn(`[CustomField] Failed to compile ${componentName}:`, err);
     return null;

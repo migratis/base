@@ -5,6 +5,7 @@ import {
 import InteractionRowActions from '../InteractionRowActions';
 import GeoValue from '../../fields/GeoValue';
 import { isGeoField } from '../../fields/geoSummary';
+import { formatCellValue } from '../../tools/export/values';
 
 const ListDisplay = ({
   entity,
@@ -46,27 +47,14 @@ const ListDisplay = ({
 
   const secondaryFields = getSecondaryFields();
 
+  // The reading is shared (common/tools/export/values.js); the 40-character
+  // fit is this display's own, because a list row is narrow and a cell's
+  // MEANING is not the place to decide that.
   const formatValue = (field, value) => {
-    if (value === null || value === undefined) return '—';
-    // Handle {label, value} objects from select fields
-    if (typeof value === 'object' && value !== null) {
-      return value.label || value.value || '—';
-    }
-    if (field.field_type === 'boolean') {
-      return value ? tval('true', 'Yes') : tval('false', 'No');
-    }
-    if (field.field_type === 'date' || field.field_type === 'datetime') {
-      const renderAs = fieldsConfig?.[field.name]?.render_as;
-      if (renderAs === 'time') return String(value).slice(11, 16);
-      if (renderAs === 'datetime') {
-        const d = new Date(value);
-        return isNaN(d) ? String(value) : d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      }
-      const d = new Date(value);
-      return isNaN(d) ? String(value).slice(0, 10) : d.toLocaleDateString();
-    }
-    const truncated = String(value);
-    return truncated.length > 40 ? `${truncated.substring(0, 40)}...` : truncated;
+    const text = formatCellValue(field, value, {
+      fieldConfig: fieldsConfig?.[field.name], t,
+    });
+    return text.length > 40 ? `${text.substring(0, 40)}...` : text;
   };
 
   const _isHexColor = (v) => typeof v === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(v.trim());

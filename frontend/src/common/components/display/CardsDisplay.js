@@ -16,6 +16,7 @@ import {
 import InteractionRowActions from '../InteractionRowActions';
 import GeoValue from '../../fields/GeoValue';
 import { isGeoField } from '../../fields/geoSummary';
+import { relationLabels } from '../../tools/export/values';
 
 const CardsDisplay = ({
   entity,
@@ -156,18 +157,8 @@ const CardsDisplay = ({
 
   const primaryField = getPrimaryField();
 
-  const resolveRelLabel = (fieldName, value) => {
-    if (!value) return null;
-    const opts = relOptions[fieldName] || [];
-    if (Array.isArray(value)) {
-      return value.map((id) => {
-        const opt = opts.find((o) => o.value === id);
-        return opt ? opt.label : `#${id}`;
-      });
-    }
-    const opt = opts.find((o) => o.value === value);
-    return opt ? [opt.label] : [`#${value}`];
-  };
+  const resolveRelLabel = (fieldName, value) =>
+    relationLabels(value, relOptions[fieldName] || []);
 
   return (
     <div className="d-flex flex-wrap gap-3">
