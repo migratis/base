@@ -68,6 +68,16 @@ export const tokenDocs = collect(modules, 'tokenDocs');
 // did, which is precisely the §5-row-1 behaviour.
 export const routeSnappers = collect(modules, 'routeSnappers');
 
+// The "fill this form from an external source" control a module contributes to
+// a create form ({ Control }). Winner-takes-all, for the same reason as
+// `routeSnappers` one slot up: `common/` owns the form and must never import a
+// feature module, so the datasource module registers its control here and the
+// form renders something it has never heard of. With no contributor — base
+// without the module, or any Jest run, where require.context does not exist —
+// the form is exactly today's plain form, which is the intended degradation
+// (SCOPE_external_data_sources.md@d2de531 §10 item 1).
+export const formLookups = collect(modules, 'formLookups');
+
 // Context providers a module needs mounted at the app root (e.g. the user
 // module's AuthProvider). Rendered by ShellRoot, outermost-first by `order`.
 export const shellProviders = collect(modules, 'providers');

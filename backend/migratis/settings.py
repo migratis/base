@@ -66,6 +66,8 @@ INSTALLED_APPS = [
     # 'migratis.subscription.apps.SubscriptionConfig',
     # 'migratis.stripe_payment.apps.StripePaymentConfig',
     # 'migratis.credits.apps.CreditsConfig',
+    # 'migratis.routing.apps.RoutingConfig',
+    # 'migratis.datasource.apps.DataSourceConfig',
 ]
 
 # django.contrib.postgres requires a live PostgreSQL backend — exclude for SQLite.
@@ -330,6 +332,39 @@ ROUTING_ENGINE_TIMEOUT = int(env('ROUTING_ENGINE_TIMEOUT', default='20'))
 # endpoint behaves exactly as it did before that scope.
 ROUTING_SNAP_AUTHORIZER = env('ROUTING_SNAP_AUTHORIZER', default='')
 ROUTING_SNAP_RATE_PER_MINUTE = int(env('ROUTING_SNAP_RATE_PER_MINUTE', default='0'))
+
+# ── External data sources (optional `datasource` module) ────────────────────────
+# An application may READ from an external API: a lookup fills a form, and the
+# ordinary write path still writes the row. Nothing here is on unless the
+# installed application declared a source — `DATASOURCE_DECLARATIONS` is written
+# by the generated app's settings_patch.py and names the `datasources.json` that
+# travelled in its package. With it unset, the module is present and inert.
+#
+# **Your application calls the source, and calls nobody else.** The design
+# sandbox at migratis.ai is the other world: it runs the lookup through Migratis
+# with the designer's own key so a source can be *tried* before it is shipped.
+# Neither ever calls the other, and nothing about this application's end users
+# reaches Migratis — the same shape as routing above, and the sentence that
+# matters most in both.
+DATASOURCE_DECLARATIONS = env('DATASOURCE_DECLARATIONS', default='')
+
+# **No authorizer and no host policy here, and that is the right posture.** An
+# installed app calls its own owner's key against its own owner's quota, and may
+# let an anonymous role create records — gating the lookup would mean it works
+# for the owner and silently does nothing for everyone else. migratis.ai names
+# both, because its copy stands in front of a designer's metered key behind a
+# public sandbox link. A setting, never a fork of the module.
+DATASOURCE_AUTHORIZER   = env('DATASOURCE_AUTHORIZER', default='')
+DATASOURCE_HOST_POLICY  = env('DATASOURCE_HOST_POLICY', default='')
+DATASOURCE_DENIED_HOSTS = env('DATASOURCE_DENIED_HOSTS', default='')
+
+# The per-caller ceiling is off by default for the same reason routing's is; the
+# per-application daily ceiling and the breaker window are not, because a source
+# answering 401 all morning is a row on the operator's bill every time.
+DATASOURCE_RATE_PER_MINUTE = int(env('DATASOURCE_RATE_PER_MINUTE', default='0'))
+DATASOURCE_DAILY_PER_APPLICATION = int(
+    env('DATASOURCE_DAILY_PER_APPLICATION', default='2000'))
+DATASOURCE_BREAKER_SECONDS = int(env('DATASOURCE_BREAKER_SECONDS', default='300'))
 
 CRONJOBS = []
 

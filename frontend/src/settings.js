@@ -15,6 +15,12 @@ export const CREDITS = true;
 // GET /routing/availability, because a host can install the module and run no
 // engine.
 export const ROUTING = false;
+// External data sources (`datasource` module) — a lookup that fills a form from
+// an external API. Flipped by the installer to match INSTALLED_APPS. The flag
+// only says the module is installed; whether a button appears is decided per
+// entity by the declarations the application actually carries, so an app with no
+// source shows exactly the plain form.
+export const DATASOURCE = false;
 export const TRIAL = false;
 // The installer is driven by the backend INSTALLER setting (migratis/.env).
 // The /installer route is always registered; the page asks the backend whether

@@ -1246,6 +1246,9 @@ def _apply_upgrade(zip_bytes: bytes, backend_root: Path, confirm: bool) -> dict:
         # changed which region their users are in would otherwise keep the
         # tile_urls of the install, and rediscover it when a route fails.
         _apply_routing_tile_urls(backend_root, manifest, None)
+        # The declaration travels on every upgrade too; a newly added
+        # source must be able to name its key without a reinstall.
+        _apply_datasource_keys(backend_root, manifest, None)
         if 'frontend/app_additions.json' in names:
             additions = json.loads(zf.read('frontend/app_additions.json'))
             (patches_dir / f'{module}_additions.json').write_text(
@@ -1321,6 +1324,7 @@ def _apply_upgrade(zip_bytes: bytes, backend_root: Path, confirm: bool) -> dict:
         'translations_command': f'docker exec backend-base-api-1 python /backend/manage.py seed_{module}',
         'restart_required':     not _backend_autoreloads(),
         **_routing_service_notice(backend_root, manifest),
+        **_datasource_key_notice(backend_root, manifest),
     }
 
 
@@ -1461,6 +1465,7 @@ def _apply_package(zip_bytes: bytes, config: dict = None) -> dict:
         # `config['routing']['ROUTING_TILE_URLS']` still wins when a caller
         # supplies one — the host operator is allowed to overrule the designer.
         _apply_routing_tile_urls(backend_root, manifest, config)
+        _apply_datasource_keys(backend_root, manifest, config)
 
         # ── 4. Default language (backend patch) ────────────────────────────
         _write_language_patch(backend_root)
@@ -1542,6 +1547,7 @@ def _apply_package(zip_bytes: bytes, config: dict = None) -> dict:
         # its own when api/views.py is rewritten; only production needs a manual one.
         'restart_required': not _backend_autoreloads(),
         **_routing_service_notice(backend_root, manifest),
+        **_datasource_key_notice(backend_root, manifest),
     }
 
 
@@ -1720,6 +1726,81 @@ def _routing_service_notice(backend_root: Path, manifest: dict = None) -> dict:
     }
 
 
+def _apply_datasource_keys(backend_root: Path, manifest: dict, config: dict = None) -> list:
+    """Write the external-source keys the host operator supplied, and return the
+    names still unset.
+
+    SCOPE_external_data_sources.md@d2de531 §8.2 P6. The manifest carries the
+    **declaration** — slug, url, paths, provides, auth mode and auth *name* — and
+    never a secret: a key never leaves the deployment that holds it or the
+    application that owns it (D12). So what arrives here is a list of env var
+    NAMES, and the value is the operator's to supply.
+
+    **Which `.env`** is the trap `_apply_routing_tile_urls` documents one
+    function up, with the opposite answer, and for the reason that decides it:
+    *whoever does the reading owns the file.* `ROUTING_TILE_URLS` goes to
+    `backend/.env` because **Compose** substitutes it into the routing service.
+    A data-source key is read by the **Django process** through
+    `settings_patch.py`, so it goes to `backend/migratis/.env`, which is the
+    file `read_env()` resolves. Writing it to the Compose env would leave every
+    lookup answering `datasource-refused` with a key sitting on disk one
+    directory away.
+    """
+    names = list((manifest or {}).get('datasource_keys') or [])
+    if not names:
+        return []
+    supplied = (config or {}).get('datasource') or {}
+    updates = {name: supplied[name] for name in names
+               if isinstance(supplied.get(name), str) and supplied[name].strip()}
+    if updates:
+        _update_env(backend_root, updates)
+    env_path = backend_root / 'migratis' / '.env'
+    present = set()
+    if env_path.exists():
+        for line in env_path.read_text().splitlines():
+            key, _, value = line.partition('=')
+            if value.strip():
+                present.add(key.strip())
+    return [name for name in names if name not in present]
+
+
+def _datasource_key_notice(backend_root: Path, manifest: dict = None) -> dict:
+    """Say out loud which keys the application still needs.
+
+    The `routing_service_required` shape exactly, and for the same reason: the
+    install activated all of the code and none of the access, and silence here
+    produces an application whose lookup button answers `datasource-refused`
+    forever with the explanation nowhere.
+
+    Returns {} when nothing is missing, so a fully-configured install says
+    nothing.
+    """
+    missing = _apply_datasource_keys(backend_root, manifest, None)
+    if not missing:
+        return {}
+    return {
+        'datasource_key_required': {
+            'reason': 'datasource-credential-missing',
+            'message': (
+                'This application reads from an external API that needs a key. '
+                'Migratis never receives or ships one — a key belongs to the '
+                'deployment that holds it. Set the variable(s) below and restart '
+                'the backend; until then the lookup button will report that the '
+                'source refused the request.'
+            ),
+            'settings': missing,
+            'settings_file': str(backend_root / 'migratis' / '.env'),
+            'steps': [
+                'Obtain a key from each provider (see the source\'s documentation '
+                'link on the Data sources page).',
+                'Add each NAME=value line to backend/migratis/.env — the file '
+                'Django reads, not the Compose one beside it.',
+                'Restart the backend.',
+            ],
+        }
+    }
+
+
 def _installed_framework_apps(backend_root: Path) -> set:
     """
     Return the set of framework router keys whose Django app is currently active
@@ -1804,6 +1885,7 @@ _FRONTEND_FLAGS = [
     ('COOKIE',       'cookie'),
     ('CREDITS',      'credits'),
     ('ROUTING',      'routing'),
+    ('DATASOURCE',   'datasource'),
 ]
 
 _LANG_NAMES = {

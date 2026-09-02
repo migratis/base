@@ -15,6 +15,7 @@ from migratis.cookie.views import router as cookie_router
 # from migratis.stripe_payment.views import router as stripe_payment_router
 # from migratis.credits.views import router as credits_router
 # from migratis.routing.views import router as routing_router
+# from migratis.datasource.views import router as datasource_router
 # from migratis.generator.views import router as generator_router
 from migratis.api.functions import formatErrors as _formatErrors
 from migratis.installer.views import router as installer_router
@@ -85,6 +86,7 @@ api.add_router("/cookie/",  cookie_router)
 # api.add_router("/billing/", stripe_payment_router)
 # api.add_router("/credits/", credits_router)
 # api.add_router("/routing/", routing_router)
+# api.add_router("/datasource/", datasource_router)
 # api.add_router("/generator/", generator_router)
 # The installer is mounted only when enabled (INSTALLER setting), so its
 # endpoints are not reachable on deployments that ship without it.
@@ -94,7 +96,7 @@ if django_settings.INSTALLER:
 # ── Auto-mount routers for installed apps ─────────────────────────────────
 _FRAMEWORK_APPS = frozenset([
     'user', 'i18n', 'cookie', 'support', 'subscription', 'credits', 'routing',
-    'generator', 'installer',
+    'datasource', 'generator', 'installer',
 ])
 for _app in django_settings.INSTALLED_APPS:
     if '.' not in _app and _app not in _FRAMEWORK_APPS:
