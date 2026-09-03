@@ -221,6 +221,33 @@ class RequestBuildingTests(TestCase):
             if forbidden != 'Authorization':
                 self.assertNotIn(forbidden, headers)
 
+    def test_a_bearer_token_travels_with_its_scheme(self):
+        """The catalogue's TMDB adapter documented `Authorization: Bearer <token>`
+        in its own changelog and nothing produced it — a pasted v4 read token went
+        out bare, which is not a credentials scheme, and the source answered 401
+        forever. The scheme belongs to the declaration, not to the secret."""
+        _url, _q, headers = client.build_request(
+            adapter(auth_mode='bearer', auth_name='Authorization'),
+            path='/search', credential='eyJhbGci')
+        self.assertEqual(headers['Authorization'], 'Bearer eyJhbGci')
+
+    def test_a_token_already_carrying_the_scheme_is_not_prefixed_twice(self):
+        """`Bearer Bearer …` is the shape of an owner who typed the workaround
+        before the mode existed. Their stored key keeps working."""
+        for stored in ('Bearer eyJhbGci', 'bearer eyJhbGci', '  Bearer   eyJhbGci  '):
+            _url, _q, headers = client.build_request(
+                adapter(auth_mode='bearer', auth_name='Authorization'),
+                path='/search', credential=stored)
+            self.assertEqual(headers['Authorization'], 'Bearer eyJhbGci')
+
+    def test_header_mode_is_unchanged_and_sends_the_value_verbatim(self):
+        """`X-Api-Key: <value>` is a legitimate declaration and must not acquire
+        a scheme it never asked for."""
+        _url, _q, headers = client.build_request(
+            adapter(auth_mode='header', auth_name='X-Api-Key'),
+            path='/search', credential='K')
+        self.assertEqual(headers['X-Api-Key'], 'K')
+
     def test_the_user_agent_names_the_software_and_nothing_about_the_caller(self):
         _url, _q, headers = client.build_request(adapter(), path='/search')
         self.assertEqual(headers['User-Agent'], client.USER_AGENT)

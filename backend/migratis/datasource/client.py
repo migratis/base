@@ -134,9 +134,27 @@ def build_request(adapter, *, path, params=None, credential=''):
     if credential and name:
         if mode == 'header':
             headers[name] = credential
+        elif mode == 'bearer':
+            headers[name] = _bearer(credential)
         elif mode == 'query':
             query[name] = credential
     return url, query, headers
+
+
+def _bearer(credential):
+    """`Bearer <token>` — and exactly one `Bearer`.
+
+    The scheme belongs to the declaration, so the owner stores a token. But
+    before this mode existed the only way to make TMDB work was to type the
+    prefix into the secret box, and those keys are stored: prefixing them again
+    would break the very people who found the workaround. Written this way round
+    — normalise what is there rather than trust it — because `bearer eyJ…` and a
+    stray space are the same intent.
+    """
+    token = (credential or '').strip()
+    if token.lower().startswith('bearer '):
+        token = token[len('bearer '):].strip()
+    return f'Bearer {token}'
 
 
 def fetch_json(adapter, *, path, params=None, credential=''):
