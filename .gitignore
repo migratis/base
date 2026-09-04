@@ -51,3 +51,8 @@ backend/docker-compose.yml
 backend/Dockerfile
 backend/docker-entrypoint.sh
 backend/requirements.txt
+
+# Agent scratch — an agent reaches Migratis over the bearer API, so anything it
+# leaves in the checkout is its own working notes, never part of the framework.
+.agent-guide*.json
+.agent-work/
