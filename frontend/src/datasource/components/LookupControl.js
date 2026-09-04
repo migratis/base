@@ -31,7 +31,7 @@ import {
  * input. Nothing here sets innerHTML, and nothing here reaches a prompt.
  */
 const LookupControl = ({ sources = [], sandboxToken = '', entityName = '',
-                         viewAs = null, viewAsId = '1',
+                         viewAs = null, viewAsId = '1', fillable = null,
                          transport: injected, t = (k) => k, disabled = false }) => {
   const { setValue, getValues } = useFormContext();
   // The control picks its own transport, so the HOST imports nothing from this
@@ -89,7 +89,15 @@ const LookupControl = ({ sources = [], sandboxToken = '', entityName = '',
       if (!outcome.ok) { setFailure(outcome); return; }
       values = outcome.values;
     }
+    // On an existing record the form has fields the user may not touch —
+    // `read_only_after_create`, and anything the config marks uneditable. The
+    // control renders above them and must not write past a rule the form is
+    // stating on screen, so the host names what it is letting the user edit.
+    // `null` is "no restriction", which is the create form and every earlier
+    // caller.
+    const allowed = Array.isArray(fillable) ? new Set(fillable) : null;
     Object.entries(values || {}).forEach(([field, value]) => {
+      if (allowed && !allowed.has(field)) return;
       // `shouldDirty`/`shouldValidate` so the form behaves as if the user typed
       // it — which they may now edit freely, because a suggestion is a
       // suggestion.

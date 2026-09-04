@@ -1,7 +1,28 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useFormContext } from 'react-hook-form';
 import { Form, InputGroup, Badge } from 'react-bootstrap';
 import { IoClose } from 'react-icons/io5';
+
+/**
+ * Whatever the column holds, as a list of tags.
+ *
+ * `render_as: 'tags'` is a display choice over an ordinary `string` field, so
+ * nothing guarantees the stored value is a list: an external lookup fills it
+ * with a comma-joined string (OMDb's `"Genre": "Action, Adventure, Sci-Fi"`,
+ * and the mapper joins a `[]` path with `, ` by design), and so do a seeded
+ * row, an agent write, and every row that predates someone switching this
+ * field from `input` to `tags`. A reader that assumes the list crashes the
+ * whole form on all four.
+ *
+ * A string is split on commas because that is the shape every one of those
+ * producers writes. Anything with no honest reading — a number, an object —
+ * is no tags at all rather than a fabricated one; the user adds their own.
+ */
+const toTags = (value) => {
+  if (Array.isArray(value)) return value;
+  if (typeof value !== 'string') return [];
+  return value.split(',').map((tag) => tag.trim()).filter(Boolean);
+};
 
 const TagsField = ({
   name,
@@ -15,7 +36,18 @@ const TagsField = ({
   const { watch, setValue } = useFormContext();
   const [inputValue, setInputValue] = useState('');
 
-  const value = watch(name) || [];
+  const raw = watch(name);
+  const value = toTags(raw);
+
+  // The render is only half of it. Showing the string as tags while the form
+  // still submits the string would leave one column holding two shapes — prod
+  // app 6's `"197.8"` in a decimal, in a different column type. Normalise the
+  // value the form actually carries, once, as soon as it is seen.
+  useEffect(() => {
+    if (raw !== undefined && !Array.isArray(raw)) {
+      setValue(name, toTags(raw), { shouldDirty: false });
+    }
+  }, [raw, name, setValue]);
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && inputValue.trim()) {
