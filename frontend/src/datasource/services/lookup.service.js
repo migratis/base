@@ -54,15 +54,44 @@ export function readOutcome(response) {
            candidates: [] };
 }
 
-/** The design sandbox's transport. */
-export function sandboxLookup(token, entityName) {
+/**
+ * `url` with the claimed preview role on it, the way every other sandbox
+ * request carries it (`sandbox.service`'s `_withViewAs`, which this module may
+ * not import — `datasource` never reaches into `generator`, so the host hands
+ * the claim down as a prop and this serialises it).
+ *
+ * The lookup's gate is the entity's own **write** role (D5), so a request that
+ * states no claim is resolved as `public` and refused with `forbidden-role`
+ * naming the very role the designer is previewing as. Both hops need it: the
+ * PICK is a second request against the same gate.
+ *
+ * Persona '1' is the default and adds nothing, keeping the URL a legacy flow
+ * would have produced.
+ */
+const _withViewAs = (url, viewAs, viewAsId) => {
+  if (!viewAs) return url;
+  const sep = url.includes('?') ? '&' : '?';
+  let out = `${url}${sep}view_as=${encodeURIComponent(viewAs)}`;
+  const persona = String(viewAsId == null ? '1' : viewAsId);
+  if (persona !== '1') out += `&view_as_id=${encodeURIComponent(persona)}`;
+  return out;
+};
+
+/**
+ * The design sandbox's transport.
+ *
+ * `viewAs` is the *claimed* preview role and belongs to the sandbox alone —
+ * `appLookup` below deliberately has no counterpart, because a generated
+ * application authenticates its user and a claim there would be an escalation.
+ */
+export function sandboxLookup(token, entityName, viewAs = null, viewAsId = '1') {
+  const url = (suffix) => _withViewAs(
+    `/generator/sandbox/${token}/${entityName}/${suffix}`, viewAs, viewAsId);
   return {
     search: async (sourceId, q) => readOutcome(
-      await api.post(`/generator/sandbox/${token}/${entityName}/lookup`,
-                     { source: sourceId, q })),
+      await api.post(url('lookup'), { source: sourceId, q })),
     detail: async (sourceId, id) => readOutcome(
-      await api.post(`/generator/sandbox/${token}/${entityName}/lookup-detail`,
-                     { source: sourceId, id })),
+      await api.post(url('lookup-detail'), { source: sourceId, id })),
   };
 }
 

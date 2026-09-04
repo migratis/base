@@ -31,16 +31,22 @@ import {
  * input. Nothing here sets innerHTML, and nothing here reaches a prompt.
  */
 const LookupControl = ({ sources = [], sandboxToken = '', entityName = '',
+                         viewAs = null, viewAsId = '1',
                          transport: injected, t = (k) => k, disabled = false }) => {
   const { setValue, getValues } = useFormContext();
   // The control picks its own transport, so the HOST imports nothing from this
   // module — not even a service. `common/` and the sandbox form reach all of
   // this through the registry contribution and nothing else (§10 item 1).
   // `transport` stays injectable for tests.
+  // The claimed preview role travels with the request (D5: the gate is the
+  // entity's own WRITE role). It arrives as a prop rather than being read from
+  // the sandbox service, because `datasource` never imports `generator` — the
+  // same reason this control is reached through a registry slot at all.
   const transport = useMemo(
-    () => injected || (sandboxToken ? sandboxLookup(sandboxToken, entityName)
-                                    : appLookup(entityName)),
-    [injected, sandboxToken, entityName],
+    () => injected || (sandboxToken
+      ? sandboxLookup(sandboxToken, entityName, viewAs, viewAsId)
+      : appLookup(entityName)),
+    [injected, sandboxToken, entityName, viewAs, viewAsId],
   );
   const [openSource, setOpenSource] = useState(null);
   const [query, setQuery]           = useState('');
