@@ -33,8 +33,10 @@ import base64
 import hmac
 import io
 import json
+import keyword
 import os
 import re
+import unicodedata
 import shutil
 import subprocess
 import zipfile
@@ -215,8 +217,31 @@ def _get_installed_modules(backend_root: Path) -> list:
 
 def _module_name(name: str) -> str:
     """Mirror Migratis' generator module-name derivation so installed apps can be
-    matched against the remote app list (which doesn't expose the module name)."""
-    return (name or '').lower().replace(' ', '_').replace('-', '_')
+    matched against the remote app list (which doesn't expose the module name).
+
+    A copy of `migratis.generator.module_naming.module_name` — two repos share no
+    code, so this is a copy on purpose, and it has to move whenever that one
+    does. What it produces must be a **Python identifier**: the value is a
+    directory, an `INSTALLED_APPS` entry, an import path and a Django
+    `app_label`. It only swapped spaces and hyphens, so an application called
+    "My Films & Series Vault" generated `my_films_&_series_vault` and the
+    package pre-flight below rejected its own `apps.py` (ticket #7).
+
+    Accented letters are kept deliberately: PEP 3131 makes them valid, so they
+    were never broken, and renaming them would rename an installed module.
+    """
+    text = unicodedata.normalize('NFKC', (name or '').strip().lower())
+    # "May this character appear in an identifier" — the right question at every
+    # position. A digit may; it just may not start one, handled once below.
+    slug = re.sub(r'_+', '_',
+                  ''.join(c if ('_' + c).isidentifier() else '_' for c in text)).strip('_')
+    if not slug:
+        return 'generated_app'
+    if not slug[0].isidentifier():
+        slug = f'app_{slug}'
+    if keyword.iskeyword(slug) or keyword.issoftkeyword(slug):
+        slug = f'{slug}_app'
+    return slug
 
 
 def _rebuild_registry(backend_root: Path, frontend_root: Path):
