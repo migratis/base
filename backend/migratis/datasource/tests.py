@@ -194,7 +194,7 @@ class PinnedHTTPAdapterTests(TestCase):
         pinned = client.PinnedHTTPAdapter('api.example.com')
         pool_kw = pinned.poolmanager.connection_pool_kw
         self.assertEqual(pool_kw['assert_hostname'], 'api.example.com')
-        self.assertEqual(pool_kw['conn_kw']['server_hostname'], 'api.example.com')
+        self.assertEqual(pool_kw['server_hostname'], 'api.example.com')
 
     def test_the_url_is_rewritten_to_the_validated_address(self):
         self.assertEqual(client._pinned_url('https://api.example.com/3/search', '1.2.3.4'),

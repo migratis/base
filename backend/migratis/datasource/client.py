@@ -90,6 +90,13 @@ class PinnedHTTPAdapter(HTTPAdapter):
     and `server_hostname` keeps SNI correct, so a pinned connection is exactly as
     authenticated as an unpinned one. Without both, pinning would trade an SSRF
     for a TLS hole, which is not a trade.
+
+    **Both travel as top-level pool kwargs**, because `PoolManager` keys its pool
+    by a fixed tuple of names and every kwarg handed to it has to be one of them.
+    `server_hostname` is; a `conn_kw` dict carrying it is not — it reads
+    perfectly and raises `PoolKey.__new__() got an unexpected keyword argument
+    'key_conn_kw'` the first time a pool is actually requested, which is inside
+    the first real call and nowhere near a declaration the owner can fix.
     """
 
     def __init__(self, hostname, **kwargs):
@@ -98,9 +105,7 @@ class PinnedHTTPAdapter(HTTPAdapter):
 
     def init_poolmanager(self, *args, **kwargs):
         kwargs['assert_hostname'] = self._pinned_hostname
-        conn_kw = dict(kwargs.get('conn_kw') or {})
-        conn_kw['server_hostname'] = self._pinned_hostname
-        kwargs['conn_kw'] = conn_kw
+        kwargs['server_hostname'] = self._pinned_hostname
         return super().init_poolmanager(*args, **kwargs)
 
 
