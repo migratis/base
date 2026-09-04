@@ -2,15 +2,29 @@
 
 Lets the `user` module (and any other framework code) integrate with the
 optional `subscription` app without importing it at module-load time. Every
-helper returns a safe default when subscriptions are disabled (NO_SUBSCRIPTION)
-and lazily delegates to `subscription` only when enforcement is enabled — so
+helper returns a safe default when subscriptions are unavailable and lazily
+delegates to `subscription` only when there is something to delegate to — so
 `user` runs standalone, with no `subscription` in INSTALLED_APPS.
+
+**The question is whether the app is installed, not whether a flag is set.**
+This asked `settings.NO_SUBSCRIPTION`, which defaults to `False` — so on a base
+install with `subscription` commented out of INSTALLED_APPS (the shipped state)
+every helper here would go ahead and import it, and the deferred import chain
+reaches `stripe_payment.models.Customer`, a model in an app that is not
+installed. `apps.is_installed` cannot get out of step with INSTALLED_APPS the
+way an operator-set flag can, and it needs nobody to remember anything.
+
+`NO_SUBSCRIPTION` survives as the deliberate override: installed, but off.
 """
+from django.apps import apps
 from django.conf import settings
 
 
 def _disabled():
-    return settings.NO_SUBSCRIPTION
+    """No subscription app to talk to, or one that has been switched off."""
+    if not apps.is_installed('migratis.subscription'):
+        return True
+    return getattr(settings, 'NO_SUBSCRIPTION', False)
 
 
 def has_trial(user):

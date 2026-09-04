@@ -15,15 +15,24 @@ from django.core.mail import EmailMessage
 from django.conf import settings
 from smtplib import SMTPException, SMTPRecipientsRefused
 import logging
-from typing import List
-from django.utils.dateparse import parse_datetime, parse_date
 from ninja import Form, Router
-from ninja.pagination import RouterPaginated
 from migratis.api.functions import formatErrors
 from migratis.i18n.views import t
-from migratis.subscription.decorators import check_access
-from migratis.subscription.views import hasTrial, hasAccess, doUnsubscribe, saveCustomer, stripeErrorDict
-from migratis.subscription.models import Subscription
+# NOT `migratis.subscription.*`. In THIS repo the subscription and
+# stripe_payment apps are optional and ship commented out of INSTALLED_APPS, so
+# a module-level import of them crashes the whole backend at boot the moment the
+# installer un-comments the user router in api/views.py: the chain reaches
+# `stripe_payment.models.Customer`, a model in an app that is not installed, and
+# Django raises. That blocked every generated app using the framework `user`
+# module.
+#
+# migratis' own copy of this file DOES import subscription directly, because
+# there it is always installed. **That divergence is deliberate and must
+# survive the next port** — this coupling arrived by porting migratis' file
+# wholesale over base's decoupled one (f061a61), which is why `api/billing.py`
+# and `api/decorators.py` existed, unused, while the backend would not start.
+from migratis.api.decorators import check_access
+from migratis.api import billing
 from . import models, schemas
 from pprint import pprint
 
@@ -36,80 +45,21 @@ TFA_COOKIE_DURATION = 7  # days
 
 router = Router()
 
-# --------------------------------------------------------------------------- #
-# Personal Access Token management (the agent-lane credential).
+# NOTE: the Personal Access Token endpoints are NOT here on purpose.
 #
-# A dedicated RouterPaginated sub-router so `/tokens/list` returns the
-# `{items, count}` shape the frontend `Entities` component expects. Every query
-# is scoped to `request.user` — a user only ever sees or revokes their own
-# tokens (IDOR guard). Free to manage for any authenticated user; the agent-lane
-# entitlement gate lives at generation time, not here, so a user can mint the
-# credential they need to evaluate the product (SCOPE_account_settings §5).
-# The raw secret is returned exactly once, at create time.
-# --------------------------------------------------------------------------- #
-tokens_router = RouterPaginated()
-
-
-@tokens_router.get('/list', response=List[schemas.TokenSchemaOut])
-def list_tokens(request):
-    return models.PersonalAccessToken.objects.filter(
-        user=request.user
-    ).order_by('-cdate')
-
-
-@tokens_router.post('/create')
-def create_token(request, name: Form[str] = "", expires_at: Form[str] = ""):
-    expires = None
-    if expires_at:
-        expires = parse_datetime(expires_at)
-        if expires is None:
-            d = parse_date(expires_at)
-            if d is not None:
-                expires = timezone.make_aware(
-                    timezone.datetime(d.year, d.month, d.day)
-                )
-        if expires is None:
-            return JsonResponse(
-                {"detail": formatErrors({"expires_at": ["invalid-date"]})},
-                status=422,
-            )
-        if timezone.is_naive(expires):
-            expires = timezone.make_aware(expires)
-        if expires <= timezone.now():
-            return JsonResponse(
-                {"detail": formatErrors({"expires_at": ["expiry-in-past"]})},
-                status=422,
-            )
-    obj, raw = models.PersonalAccessToken.issue(
-        request.user, name=name.strip(), expires_at=expires,
-    )
-    # The raw secret is shown here and never again.
-    return JsonResponse({
-        "id": obj.id,
-        "name": obj.name,
-        "token": raw,
-        "masked_prefix": obj.masked_prefix,
-        "expires_at": obj.expires_at.isoformat() if obj.expires_at else None,
-    })
-
-
-@tokens_router.post('/{token_id}/revoke')
-def revoke_token(request, token_id: int):
-    try:
-        obj = models.PersonalAccessToken.objects.get(
-            pk=token_id, user=request.user,
-        )
-    except models.PersonalAccessToken.DoesNotExist:
-        return JsonResponse(
-            {"detail": formatErrors({"token": ["token-not-found"]})},
-            status=422,
-        )
-    obj.active = False
-    obj.save(update_fields=['active'])
-    return JsonResponse({"detail": [{"success": ["token-revoked"]}]})
-
-
-router.add_router('/tokens', tokens_router)
+# `PersonalAccessToken` is Migratis' *agent-lane* credential — a bearer token an
+# agent uses to drive the generator API on migratis.ai. A generated application
+# has no agent lane, so the model, its schema and its migration do not exist in
+# this repo, and the router that was ported here with the rest of this file
+# referenced all three: `AttributeError: module 'migratis.user.schemas' has no
+# attribute 'TokenSchemaOut'` at import time, which is the whole backend failing
+# to boot the moment the installer un-commented the user router.
+#
+# Same cause as the subscription imports above: migratis' copy of this file was
+# ported wholesale over base's. **If you port that file again, drop this block
+# again** — or port `PersonalAccessToken`, its schema and a migration with it,
+# and be able to say what an installed app would do with a credential for an API
+# it does not have.
 
 
 def sendTFA(user):
@@ -202,13 +152,9 @@ def getProfile(request):
     try:
         userId = request.user.id
         user = models.User.objects.get(pk=userId)
-        trial = hasTrial(user)
+        trial = billing.has_trial(user)
         user.trial = trial
-        try:
-            subscription = Subscription.objects.get(user=userId, access=True)
-            user.subscription = subscription
-        except Subscription.DoesNotExist:
-            user.subscription = None
+        user.subscription = billing.active_subscription(userId)
     except(TypeError, ValueError, OverflowError, models.User.DoesNotExist):
         user = None
     if user is not None:
@@ -222,13 +168,9 @@ def getProfileWithToken(request, uidb64: str, token: str):
         user = models.User.objects.get(pk=uid)    
         if user is not None and not account_pass_token.check_token(user, token):
             return JsonResponse({"detail": formatErrors({"error": ["invitation-outdated-token"]})}, status=422)     
-        trial = hasTrial(user)
+        trial = billing.has_trial(user)
         user.trial = trial
-        try:
-            subscription = Subscription.objects.get(user=user, access=True)
-            user.subscription = subscription
-        except Subscription.DoesNotExist:
-            user.subscription = None
+        user.subscription = billing.active_subscription(user)
     except(TypeError, ValueError, OverflowError, models.User.DoesNotExist):
         user = None
     if user is not None:
@@ -242,11 +184,11 @@ def update(request, profile: Form[schemas.UserSchemaUpdateIn]):
         user = models.User.objects.get(pk=userId)
         for attr, value in profile.dict().items():
             setattr(user, attr, value)
-        savedCustomer, error = saveCustomer(user)
+        savedCustomer, error = billing.save_customer(user)
         if savedCustomer:
             user.save()
         else:
-           return JsonResponse({"detail": formatErrors(stripeErrorDict(error))}, status=422)
+           return JsonResponse({"detail": formatErrors(billing.stripe_error_dict(error))}, status=422)
         return JsonResponse({"detail": [{"success": ["update-successful"]}]})
     except ValidationError as e:
         return JsonResponse({"detail": formatErrors(e.message_dict)}, status=422)
@@ -256,8 +198,8 @@ def delete(request):
     userId = request.user.id            
     try:        
         user = models.User.objects.get(pk=userId)                    
-        if hasAccess(user):
-            response = doUnsubscribe(user.id)            
+        if billing.has_access(user):
+            response = billing.do_unsubscribe(user.id)            
     except Exception as e:
         pass
     try:
@@ -277,12 +219,12 @@ def invitation(request, user: Form[schemas.UserSchemaInvitation]):
         delattr(user, 'email')
         for attr, value in user.dict().items():
             setattr(token_user, attr, value)
-        savedCustomer, error = saveCustomer(token_user)
+        savedCustomer, error = billing.save_customer(token_user)
         if savedCustomer:
             token_user.is_active = True
             token_user.save()
         else:
-           return JsonResponse({"detail": formatErrors(stripeErrorDict(error))}, status=422)
+           return JsonResponse({"detail": formatErrors(billing.stripe_error_dict(error))}, status=422)
         return JsonResponse({"detail": [{"success": ["invitation-successfull"]}]})
     except ValidationError as e:
         if (user.id is not None): user.delete()
@@ -296,10 +238,10 @@ def register(request, user: Form[schemas.UserSchemaIn]):
         user.save()
         # saveCustomer returns a (saved, error) TUPLE — truth-testing the tuple
         # itself can never fail (PoC #20 continuation): unpack it.
-        savedCustomer, error = saveCustomer(user)
+        savedCustomer, error = billing.save_customer(user)
         if not savedCustomer:
             user.delete()
-            return JsonResponse({"detail": formatErrors(stripeErrorDict(error))}, status=422)
+            return JsonResponse({"detail": formatErrors(billing.stripe_error_dict(error))}, status=422)
         return JsonResponse({"detail": [{"success": ["registration-success"]}]})
     except ValidationError as e:
         if (user.id is not None): user.delete()
@@ -340,12 +282,9 @@ def login(request, email: Form[str], password: Form[str], remember_device: Form[
         if tfa_cookie:
             django_login(request, result, backend='django.contrib.auth.backends.ModelBackend')
             user = models.User.objects.get(pk=result.id)
-            user.trial = hasTrial(user)
-            try:
-                subscription = Subscription.objects.get(user=user, access=True)
-                user.subscription = subscription.status
-            except Subscription.DoesNotExist:
-                user.subscription = None
+            user.trial = billing.has_trial(user)
+            subscription = billing.active_subscription(user)
+            user.subscription = subscription.status if subscription else None
             response = JsonResponse({ 
                 "user": {
                     "id": user.id,
@@ -424,12 +363,9 @@ def tfaVerify(request, email: Form[str], code: Form[str], remember_device: Form[
     user.save()
     
     user = models.User.objects.get(pk=user.id)
-    user.trial = hasTrial(user)
-    try:
-        subscription = Subscription.objects.get(user=user, access=True)
-        user.subscription = subscription.status
-    except Subscription.DoesNotExist:
-        user.subscription = None
+    user.trial = billing.has_trial(user)
+    subscription = billing.active_subscription(user)
+    user.subscription = subscription.status if subscription else None
     
     response = JsonResponse({ 
         "user": {
