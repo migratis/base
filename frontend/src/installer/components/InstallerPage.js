@@ -351,11 +351,13 @@ const InstallerPage = () => {
       .finally(() => setLoading(false));
   };
 
-  const handleUninstall = (module) => {
-    if (!window.confirm(t('confirm-uninstall', { module }))) return;
+  // `force` is only ever reached from the refusal panel below, which is the
+  // only place that knows what would be destroyed.
+  const handleUninstall = (module, force = false) => {
+    if (!force && !window.confirm(t('confirm-uninstall', { module }))) return;
     setUninstalling(module);
     setUninstallResult(null);
-    InstallerService.uninstall(module)
+    InstallerService.uninstall(module, force)
       .then((data) => {
         if (IS_DEV && data?.frontend_ok) {
           // Dev server: the removed module's files were deleted from the mounted
@@ -373,9 +375,23 @@ const InstallerPage = () => {
         }
       })
       .catch((err) => {
-        const detail = err?.response?.data?.detail;
+        const body = err?.response?.data;
+        const detail = body?.detail;
         const msg = detail?.[0]?.uninstall?.[0] || detail?.[0]?.module?.[0] || 'uninstall-failed';
-        setUninstallResult({ success: false, error: msg });
+        // A refusal is not a failure, and it carries what a bare error code
+        // cannot: what is still there, and what to do about it. Rendering it as
+        // `${t('error-label')}: uninstall-would-orphan-data` would be the
+        // support ticket this refusal exists to prevent.
+        setUninstallResult({
+          success: false,
+          error: msg,
+          module: body?.module || module,
+          tables: body?.tables,
+          migrationRows: body?.migration_rows,
+          migrateOutput: body?.migrate_output,
+          remedy: body?.remedy,
+          canForce: msg === 'uninstall-would-orphan-data',
+        });
       })
       .finally(() => setUninstalling(null));
   };
@@ -503,7 +519,42 @@ const InstallerPage = () => {
                     </div>
                   )}
                 </>
-              : `${t('error-label')}: ${t(uninstallResult.error)}`}
+              : <>
+                  {`${t('error-label')}: ${t(uninstallResult.error)}`}
+                  {uninstallResult.canForce && (
+                    <div className="mt-2">
+                      <div className="small">{t('uninstall-orphan-explanation')}</div>
+                      {uninstallResult.tables?.length > 0 && (
+                        <div className="small mt-1">
+                          <strong>{t('uninstall-orphan-tables')}:</strong>{' '}
+                          {uninstallResult.tables.join(', ')}
+                        </div>
+                      )}
+                      {uninstallResult.migrationRows?.length > 0 && (
+                        <div className="small">
+                          <strong>{t('uninstall-orphan-migrations')}:</strong>{' '}
+                          {uninstallResult.migrationRows.join(', ')}
+                        </div>
+                      )}
+                      {uninstallResult.migrateOutput && (
+                        <pre className="bg-light p-2 mt-2 small mb-0"
+                             style={{ maxHeight: 120, overflow: 'auto' }}>
+                          {uninstallResult.migrateOutput}
+                        </pre>
+                      )}
+                      <button
+                        className="btn btn-sm btn-outline-danger mt-2"
+                        disabled={!!uninstalling}
+                        onClick={() => {
+                          if (!window.confirm(
+                            t('confirm-force-uninstall', { module: uninstallResult.module }))) return;
+                          handleUninstall(uninstallResult.module, true);
+                        }}>
+                        {t('force-uninstall')}
+                      </button>
+                    </div>
+                  )}
+                </>}
           </div>
           <button
             className="btn btn-secondary"

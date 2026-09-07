@@ -616,6 +616,58 @@ TRANSLATIONS['installer'] = {
         'es': 'Luego reinicie el backend:',
         'ro': 'Apoi reporniți backendul:',
     },
+    'uninstall-would-orphan-data': {
+        'en': 'Nothing was removed: reverting the migrations failed and the module '
+              'still holds data.',
+        'fr': "Rien n'a été supprimé : l'annulation des migrations a échoué et le "
+              "module contient encore des données.",
+        'es': 'No se eliminó nada: revertir las migraciones falló y el módulo todavía '
+              'contiene datos.',
+        'ro': 'Nu s-a șters nimic: revenirea migrărilor a eșuat, iar modulul încă '
+              'conține date.',
+    },
+    'uninstall-orphan-explanation': {
+        'en': 'Deleting the files now would leave these behind with nothing on disk '
+              'that mentions them, and the next install would fail because the tables '
+              'already exist. Repair the migration graph and retry, or force the '
+              'removal — which saves a backup under backups/ first, then drops them.',
+        'fr': "Supprimer les fichiers maintenant les laisserait en place sans que rien "
+              "sur le disque n'y fasse référence, et la prochaine installation "
+              "échouerait car les tables existent déjà. Réparez le graphe de migrations "
+              "puis réessayez, ou forcez la suppression — une sauvegarde est alors "
+              "enregistrée dans backups/ avant l'effacement.",
+        'es': 'Eliminar los archivos ahora los dejaría sin nada en el disco que los '
+              'mencione, y la próxima instalación fallaría porque las tablas ya '
+              'existen. Repare el grafo de migraciones y vuelva a intentarlo, o fuerce '
+              'la eliminación: primero se guarda una copia en backups/ y luego se '
+              'eliminan.',
+        'ro': 'Ștergerea fișierelor acum le-ar lăsa în urmă fără nimic pe disc care să '
+              'le menționeze, iar următoarea instalare ar eșua pentru că tabelele '
+              'există deja. Reparați graful de migrări și reîncercați, sau forțați '
+              'ștergerea — se salvează mai întâi o copie în backups/, apoi se șterg.',
+    },
+    'uninstall-orphan-tables': {
+        'en': 'Tables still present', 'fr': 'Tables encore présentes',
+        'es': 'Tablas aún presentes', 'ro': 'Tabele încă prezente',
+    },
+    'uninstall-orphan-migrations': {
+        'en': 'Migrations still recorded', 'fr': 'Migrations encore enregistrées',
+        'es': 'Migraciones aún registradas', 'ro': 'Migrări încă înregistrate',
+    },
+    'force-uninstall': {
+        'en': 'Back up and force removal', 'fr': 'Sauvegarder et forcer la suppression',
+        'es': 'Copiar y forzar la eliminación', 'ro': 'Salvează și forțează ștergerea',
+    },
+    'confirm-force-uninstall': {
+        'en': 'This deletes the data of "{{module}}" permanently. A backup is written '
+              'to backups/ first. Continue?',
+        'fr': "Ceci supprime définitivement les données de « {{module}} ». Une "
+              "sauvegarde est d'abord écrite dans backups/. Continuer ?",
+        'es': 'Esto elimina permanentemente los datos de «{{module}}». Primero se '
+              'escribe una copia en backups/. ¿Continuar?',
+        'ro': 'Aceasta șterge definitiv datele modulului „{{module}}". Mai întâi se '
+              'scrie o copie în backups/. Continuați?',
+    },
     'error-label': {
         'en': 'Error', 'fr': 'Erreur', 'es': 'Error', 'ro': 'Eroare',
     },

@@ -891,14 +891,41 @@ def installer_list_installed(request):
 # --------------------------------------------------------------------------- #
 
 @router.post('/uninstall/{module}', auth=None)
-def installer_uninstall(request, module: str):
+def installer_uninstall(request, module: str, force: bool = False):
+    """Remove an installed module.
+
+    `force` is only ever needed after a refusal, and the refusal says so: it
+    backs the module's data up and then drops the tables and migration rows a
+    broken migration graph left `migrate zero` unable to unwind. It destroys
+    data on purpose, which is why it is opt-in and why the default answer to
+    that situation is a 409 that names what would be lost.
+    """
     backend_root = Path(settings.BASE_DIR)
 
     if module not in _get_installed_modules(backend_root):
         return JsonResponse({'detail': [{'module': ['not-installed']}]}, status=404)
 
     try:
-        result = _remove_module(module, backend_root)
+        result = _remove_module(module, backend_root, force=force)
+    except UninstallWouldOrphanData as exc:
+        # Not an error in the caller's request and not a crash — a refusal, with
+        # the remedy named. Removing the files here would leave these tables
+        # behind with nothing on disk that mentions them, and the next install
+        # would fail on "table already exists".
+        return JsonResponse({
+            'detail': [{'uninstall': ['uninstall-would-orphan-data']}],
+            'module': module,
+            'tables': exc.tables,
+            'migration_rows': exc.migrations,
+            'migrate_output': exc.migrate_output,
+            'remedy': (
+                f'`migrate {module} zero` failed and the module still owns '
+                f'{len(exc.tables)} table(s) and {len(exc.migrations)} migration '
+                f'row(s). Nothing has been deleted. Repair the migration graph and '
+                f'retry, or re-send with ?force=true to back the data up '
+                f'(backups/<module>_uninstall_<ts>/data.json) and drop it.'
+            ),
+        }, status=409)
     except Exception as exc:
         return JsonResponse({'detail': [{'uninstall': [str(exc)]}]}, status=500)
 
@@ -2107,9 +2134,123 @@ def _apply_install_config(backend_root: Path, frontend_root: Path, config: dict)
     return {}
 
 
-def _remove_module(module: str, backend_root: Path) -> dict:
+class UninstallWouldOrphanData(Exception):
+    """`migrate <module> zero` failed and the module still holds database state.
+
+    Carries what is left, so the refusal can name it.
+    """
+
+    def __init__(self, tables, migrations, migrate_output):
+        super().__init__('uninstall-would-orphan-data')
+        self.tables = tables
+        self.migrations = migrations
+        self.migrate_output = migrate_output
+
+
+def _module_tables(module: str) -> list:
+    """Tables this module still owns in the database.
+
+    The app registry is the authoritative list, but a module whose `models.py`
+    no longer imports has no registry entry and its tables are still there — so
+    the default `<app_label>_<model>` prefix is unioned in, and the result is
+    intersected with the tables that actually exist.
+    """
+    from django.apps import apps as django_apps
+    from django.db import connection
+
+    named = set()
+    try:
+        for model in django_apps.get_app_config(module).get_models():
+            named.add(model._meta.db_table)
+            for m2m in model._meta.local_many_to_many:
+                through = m2m.remote_field.through
+                if through is not None:
+                    named.add(through._meta.db_table)
+    except LookupError:
+        pass
+
+    with connection.cursor() as cursor:
+        existing = set(connection.introspection.table_names(cursor))
+    named |= {t for t in existing if t.startswith(f'{module}_')}
+    return sorted(named & existing)
+
+
+def _module_migration_rows(module: str) -> list:
+    from django.db import connection
+
+    with connection.cursor() as cursor:
+        cursor.execute(
+            'SELECT name FROM django_migrations WHERE app = %s ORDER BY name', [module]
+        )
+        return [row[0] for row in cursor.fetchall()]
+
+
+def _drop_module_state(module: str, backend_root: Path) -> dict:
+    """Back the module's data up, then drop its tables and migration rows.
+
+    Only ever reached through `force`. The backup is not optional and its
+    failure is fatal — the upgrade path's rule, for the same reason: *no backup,
+    no destructive change.*
+    """
+    from django.db import connection
+
+    ts = datetime.now(dt_timezone.utc).strftime('%Y%m%d_%H%M%S')
+    backup_dir = backend_root / 'backups' / f'{module}_uninstall_{ts}'
+    backup_dir.mkdir(parents=True, exist_ok=True)
+    dump = subprocess.run(
+        ['python', 'manage.py', 'dumpdata', module, '--indent', '2',
+         '-o', str(backup_dir / 'data.json')],
+        cwd=str(backend_root), capture_output=True, text=True, timeout=300,
+    )
+    if dump.returncode != 0:
+        shutil.rmtree(backup_dir, ignore_errors=True)
+        raise RuntimeError(
+            f'backup-failed: {(dump.stderr or dump.stdout)[-500:]}'
+        )
+    if (backend_root / module).exists():
+        shutil.copytree(backend_root / module, backup_dir / 'backend', dirs_exist_ok=True)
+
+    tables = _module_tables(module)
+    rows = _module_migration_rows(module)
+    cascade = ' CASCADE' if connection.vendor == 'postgresql' else ''
+    with connection.constraint_checks_disabled():
+        with connection.cursor() as cursor:
+            for table in tables:
+                cursor.execute(
+                    f'DROP TABLE IF EXISTS {connection.ops.quote_name(table)}{cascade}'
+                )
+            cursor.execute('DELETE FROM django_migrations WHERE app = %s', [module])
+    return {'backup': str(backup_dir), 'tables_dropped': tables,
+            'migration_rows_deleted': rows}
+
+
+def _remove_module(module: str, backend_root: Path, force: bool = False) -> dict:
     """
     Reverse _apply_package for a given module.
+
+    **A failed unwind is not a successful uninstall.** Step 1 runs
+    `migrate <module> zero`, and that command fails outright when the module's
+    migration graph is broken — which is exactly the state a botched install
+    leaves behind. This used to record `migrate_ok: False` and carry on deleting
+    files, so the tables and the `django_migrations` rows survived with nothing
+    left on disk that mentioned them; the next install then failed on
+    "table already exists" with nothing anywhere connecting the two.
+
+    So a failed unwind is now sorted into the two cases it actually covers:
+
+    * **Nothing left to unwind** — the module never migrated, so `zero` had no
+      work to do and its failure means nothing. Proceed. This is the common
+      case, and it is the one a broken package produces: the install died before
+      `migrate` ever succeeded.
+    * **State left behind** — refuse, before a single file is deleted, and name
+      the tables and migration rows that would have been orphaned. Deleting the
+      files here is what makes the problem un-diagnosable later.
+
+    `force` is the way out of the second case, since refusing with no remedy
+    just trades one dead end for another: it backs the data up with `dumpdata`
+    and then drops the tables and the migration rows. The backup is not
+    optional and its failure is fatal — the upgrade path's rule, for the same
+    reason.
     """
     frontend_root = Path(getattr(settings, 'FRONTEND_SRC_DIR', '/frontend/src'))
     patches_dir   = _patches_dir(backend_root)
@@ -2140,6 +2281,21 @@ def _remove_module(module: str, backend_root: Path) -> dict:
         ['python', 'manage.py', 'migrate', module, 'zero'],
         cwd=str(backend_root), capture_output=True, text=True, timeout=120,
     )
+
+    # ── 1b. A failed unwind: is there anything left, or was there nothing? ─
+    # Asked BEFORE anything is deleted, because the answer decides whether
+    # deleting is safe and because the files are what make the leftovers
+    # identifiable afterwards.
+    forced = None
+    if migrate.returncode != 0:
+        tables = _module_tables(module)
+        rows = _module_migration_rows(module)
+        if tables or rows:
+            if not force:
+                raise UninstallWouldOrphanData(
+                    tables, rows, (migrate.stderr or migrate.stdout)[-1000:],
+                )
+            forced = _drop_module_state(module, backend_root)
 
     # ── 2. Delete settings patch file FIRST ───────────────────────────────
     # Deleting the patch removes the app from INSTALLED_APPS before the app
@@ -2189,6 +2345,11 @@ def _remove_module(module: str, backend_root: Path) -> dict:
         'module':           module,
         'frontend_ok':      frontend_ok,
         'migrate_ok':       migrate.returncode == 0,
+        # `migrate_ok: false` on its own never said whether that mattered. This
+        # does: the module owns no tables and no migration rows any more,
+        # whichever way that came about.
+        'database_clean':   not (_module_tables(module) or _module_migration_rows(module)),
+        'forced_cleanup':   forced,
         'migrate_output':   (migrate.stdout or migrate.stderr)[-1000:],
         # See _apply_package: in dev the autoreloader reloads on the api/views.py
         # change; only production requires a manual restart to drop the module.

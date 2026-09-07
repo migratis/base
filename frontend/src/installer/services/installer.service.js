@@ -27,8 +27,12 @@ const frontendZipUrl = (appId) =>
 const listInstalled = () =>
   api.get("/installer/installed").then((r) => r.data);
 
-const uninstall = (module) =>
-  api.post(`/installer/uninstall/${encodeURIComponent(module)}`).then((r) => r.data);
+// `force` backs the module's data up and then drops the tables and migration
+// rows a broken migration graph left `migrate zero` unable to unwind. Reached
+// only from the refusal panel, which is the only place that knows what is there.
+const uninstall = (module, force = false) =>
+  api.post(`/installer/uninstall/${encodeURIComponent(module)}${force ? '?force=true' : ''}`)
+    .then((r) => r.data);
 
 const upgradePreview = (appId) =>
   api.post(`/installer/upgrade/${appId}/preview`).then((r) => r.data);
