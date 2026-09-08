@@ -90,6 +90,14 @@ _FRAMEWORK_ROUTERS = [
     ('stripe_payment', 'stripe_payment_router', 'migratis.stripe_payment.views', '/billing/'),
     ('credits',      'credits_router',      'migratis.credits.views',      '/credits/'),
     ('routing',      'routing_router',      'migratis.routing.views',      '/routing/'),
+    # `datasource` reached every OTHER place on the activation rail — api/views.py
+    # carries its commented import and add_router, settings.js carries the flag,
+    # _FRONTEND_FLAGS names it — and not this one. Both syncs iterate THIS list,
+    # so the router was never mounted and _installed_framework_apps could never
+    # report the app active, which pinned DATASOURCE to false on every install:
+    # an application that declared a source got a form with no lookup button and
+    # a backend with no endpoint behind it.
+    ('datasource',   'datasource_router',   'migratis.datasource.views',   '/datasource/'),
 ]
 
 
