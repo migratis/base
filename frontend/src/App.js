@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { lazyWithRetry } from "./common/tools/lazyWithRetry";
-import { Routes, Route, useLocation } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import "./App.scss";
 import 'react-toastify/dist/ReactToastify.css';
 import { Layout as Public, Layout as Private } from './common/components/Layout';
@@ -14,7 +14,7 @@ const Register = lazyWithRetry(() => import('./user/components/Register'));
 const Invitation = lazyWithRetry(() => import('./user/components/Invitation'));
 const Reset = lazyWithRetry(() => import('./user/components/Reset'));
 const Password = lazyWithRetry(() => import('./user/components/Password'));
-const Profile = lazyWithRetry(() => import('./user/components/Profile'));
+const AccountSettings = lazyWithRetry(() => import('./user/components/account/AccountSettings'));
 const Subscribe = lazyWithRetry(() => import('./subscription/components/Subscribe'));
 const Contact = lazyWithRetry(() => import('./support/components/Contact'));
 const Tickets = lazyWithRetry(() => import('./support/components/Tickets'));
@@ -90,7 +90,10 @@ const App = () => {
         <Route element={<Private private={true}/>}>
           { USER &&
             <>
-              <Route exact path='/profile' element={<Profile/>} />
+              <Route exact path='/account' element={<AccountSettings/>} />
+              {/* /profile kept as a redirect for back-compat — the account
+                  hub is /account, which is where common/'s MenuLeft links. */}
+              <Route exact path='/profile' element={<Navigate to="/account" replace />} />
             </>
           }
           { SUPPORT &&
