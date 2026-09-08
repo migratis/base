@@ -311,6 +311,10 @@ ROUTING_ENGINE     = env('ROUTING_ENGINE', default='valhalla')
 ROUTING_ENGINE_URL = env('ROUTING_ENGINE_URL', default='')
 ROUTING_ENGINE_KEY = env('ROUTING_ENGINE_KEY', default='')
 ROUTING_ENGINE_TIMEOUT = int(env('ROUTING_ENGINE_TIMEOUT', default='20'))
+# How long the engine breaker stays tripped after a failure. `datasource` has
+# always declared its twin; this one was read by routing/breaker.py and named
+# nowhere, so the 300s floor was the only value it could ever have.
+ROUTING_BREAKER_SECONDS = int(env('ROUTING_BREAKER_SECONDS', default='300'))
 
 # **`POST /routing/snap` stays open here, and is gated on migratis.ai.** That is
 # the one place the two deployments deliberately disagree, and it is a setting
@@ -370,6 +374,14 @@ CRONJOBS = []
 
 # Subscription gate — False means check_access() enforces subscription
 NO_SUBSCRIPTION = env.bool('NO_SUBSCRIPTION', default=False)
+# Free-trial eligibility. Off means nobody is trial-eligible: the Checkout
+# builder omits the trial period and user.trial is False everywhere.
+SUBSCRIPTION_TRIAL = env.bool('SUBSCRIPTION_TRIAL', default=True)
+# Dotted path to an entitlement provider; empty selects the built-in
+# subscription one. Like ROUTING_BREAKER_SECONDS above, this was read with a
+# getattr default and declared nowhere, so no deployment could select a
+# provider however it was configured.
+ENTITLEMENT_PROVIDER = env('ENTITLEMENT_PROVIDER', default='')
 
 # Path to the frontend src/ directory as seen from inside the container.
 # Mount the frontend volume in docker-compose for the installer to write files automatically.
