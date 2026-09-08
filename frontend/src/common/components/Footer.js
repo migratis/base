@@ -45,9 +45,20 @@ export const Footer = (props) => {
                     `column` flow keeps those runs together down the columns
                     instead of interleaving them along a row. */}
                 <nav className="footer-links" aria-label={t('informations')}>
-                    <NavLink className="foot-link" to={props.user ? "/support/ticket" : "/contact"}>
-                        <strong>{props.user ? t('support') : t('contact')}</strong>
-                    </NavLink>
+                    {/* Whichever channel this deployment actually has. Both
+                        targets are flag-gated routes, so a base template with
+                        neither module activated was emitting two dead links —
+                        the ticket queue to a signed-in reader and the contact
+                        form to everyone else. */}
+                    { (props.user && flag('SUPPORT')) ? (
+                        <NavLink className="foot-link" to="/support/ticket">
+                            <strong>{t('support')}</strong>
+                        </NavLink>
+                    ) : flag('CONTACT') ? (
+                        <NavLink className="foot-link" to="/contact">
+                            <strong>{t('contact')}</strong>
+                        </NavLink>
+                    ) : null }
                     <NavLink className="foot-link" to={'/help'}>
                         <strong>{t('help')}</strong>
                     </NavLink>

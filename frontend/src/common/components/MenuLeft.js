@@ -10,6 +10,10 @@ import LangSelector from './LangSelector';
 import { toast } from 'react-toastify';
 import { BlockedModal as LoginModal } from "../modals/BlockedModal";
 import { SUPPORT } from '../../settings';
+// `flag()` rather than an import: CONTACT may not be declared at all in a
+// deployment that has no contact page, and webpack fails the build on a
+// static import of a missing export (see common/tools/featureFlag).
+import { flag } from '../tools/featureFlag';
 import logo from '../../img/brand/mark.svg';
 import { sidebarSlots } from '../shell/registry';
 import { useShell } from '../shell/ShellContext';
@@ -143,17 +147,21 @@ export const MenuLeft = (props) => {
                   <LangSelector compact={false} />
                 </div>
 
+                {/* Whichever channel exists. Falling through to /contact
+                    whenever SUPPORT was off emitted a link to a route the base
+                    template gates behind its own CONTACT flag — a dead menu
+                    entry on every install with no support module. */}
                 {SUPPORT ? (
                   <a href="/support/ticket" className="sidebar-item" onClick={props.onMobileClose}>
                     <HelpOutline />
                     <span className="sidebar-label">{t('support')}</span>
                   </a>
-                ) : (
+                ) : flag('CONTACT') ? (
                   <a href="/contact" className="sidebar-item" onClick={props.onMobileClose}>
                     <HelpOutline />
                     <span className="sidebar-label">{t('contact')}</span>
                   </a>
-                )}
+                ) : null}
 
                 <div className="sidebar-item" onClick={() => { logOut(); props.onMobileClose(); }}>
                   <LogOutOutline />
@@ -172,10 +180,12 @@ export const MenuLeft = (props) => {
                 <LangSelector compact={false} />
               </div>
 
-              <a href="/contact" className="sidebar-item" onClick={props.onMobileClose}>
-                <HelpOutline />
-                <span className="sidebar-label">{t('contact')}</span>
-              </a>
+              {flag('CONTACT') && (
+                <a href="/contact" className="sidebar-item" onClick={props.onMobileClose}>
+                  <HelpOutline />
+                  <span className="sidebar-label">{t('contact')}</span>
+                </a>
+              )}
             </div>
           )}
         </div>

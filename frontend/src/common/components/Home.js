@@ -15,6 +15,7 @@ import {
   IoPeopleOutline as PeopleIcon,
   IoMapOutline as MapIcon,
   IoTerminalOutline as TerminalIcon,
+  IoCloudDownloadOutline as SourceIcon,
 } from 'react-icons/io5';
 
 // Landing-page chapters, in narrative order: design → preview → generate →
@@ -94,6 +95,20 @@ const CHAPTERS = [
       'Built-in map picker and viewer',
       'OpenStreetMap — no API key needed',
       'Map display mode for record lists',
+    ],
+  },
+  {
+    // Beside Maps on purpose: both give an application a dimension outside
+    // itself, and both are decided when the schema is, not after it.
+    key: 'ch13',
+    Icon: SourceIcon,
+    title: 'Fill Forms From a Public Catalogue',
+    desc: 'If your application catalogues films, books, records, or products, most of what it holds already exists in a public catalogue somewhere. Declare a source once and your users fill a form from it: type a few letters, pick a result, and the fields fill in — still editable, and still saved by the ordinary form.',
+    features: [
+      'Search a public catalogue from inside a form',
+      'Adopt a published source, or describe your own',
+      'Suggestions only — nothing is ever saved without you',
+      'No AI runs, so no credits are spent',
     ],
   },
   {
