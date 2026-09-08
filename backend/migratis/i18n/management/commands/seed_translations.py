@@ -284,7 +284,132 @@ TRANSLATIONS['layout'] = {
         'es': 'Sesión Expirada',
         'ro': 'Sesiune Expirată',
     },
+    # Cookie consent banner (CookieConsent.js, ns 'layout').
+    'accept': {
+        'en': 'Accept',
+        'fr': 'Accepter',
+        'es': 'Aceptar',
+        'ro': 'Accept',
+    },
+    'cookie-consent-text': {
+        'en': 'We use cookies to improve your experience. By continuing to visit this site you agree to our use of cookies.',
+        'fr': 'Nous utilisons des cookies pour améliorer votre expérience. En continuant à visiter ce site, vous acceptez notre utilisation des cookies.',
+        'es': 'Utilizamos cookies para mejorar su experiencia. Al continuar visitando este sitio, acepta nuestro uso de cookies.',
+        'ro': 'Folosim cookie-uri pentru a îmbunătăți experiența dvs. Continuând să vizitați acest site, sunteți de acord cu utilizarea cookie-urilor.',
+    },
+    'explore-cookies': {
+        'en': 'Explore cookies',
+        'fr': 'Explorer les cookies',
+        'es': 'Explorar cookies',
+        'ro': 'Explorează cookie-urile',
+    },
+
 }
+
+# ===========================================================================
+# Footer labels (layout)
+# ===========================================================================
+# The footer rendered raw slugs — none of its own labels had ever been seeded.
+# These are the short strings; the pages behind the links carry their prose in
+# the `legal` and `info` namespaces below.
+TRANSLATIONS['layout'].update({
+    # NOTE: the footer's "About" and "Services" panes were removed — they
+    # restated the home page in the one band nobody reads prose in, and squeezed
+    # the links into a third of the width. Their keys (`about`, `text-about`,
+    # `other-services`, `text-other-services`) are gone with them.
+    'informations': {
+        'en': 'Information',
+        'fr': 'Informations',
+        'es': 'Información',
+        'ro': 'Informații',
+    },
+    'text-informations': {
+        'en': 'Support, documentation and the legal terms of the service.',
+        'fr': 'Support, documentation et conditions légales du service.',
+        'es': 'Soporte, documentación y condiciones legales del servicio.',
+        'ro': 'Suport, documentație și condițiile legale ale serviciului.',
+    },
+    'help': {
+        'en': 'Help',
+        'fr': 'Aide',
+        'es': 'Ayuda',
+        'ro': 'Ajutor',
+    },
+    'legal': {
+        'en': 'Legal',
+        'fr': 'Légal',
+        'es': 'Legal',
+        'ro': 'Juridic',
+    },
+    'legal-notice': {
+        'en': 'Legal notice',
+        'fr': 'Mentions légales',
+        'es': 'Aviso legal',
+        'ro': 'Mențiuni legale',
+    },
+    'legal-disclaimer': {
+        'en': 'Legal disclaimer',
+        'fr': 'Avertissement légal',
+        'es': 'Limitación de responsabilidad',
+        'ro': 'Declinarea responsabilității',
+    },
+    'terms-of-service': {
+        'en': 'Terms of sale',
+        'fr': 'Conditions générales de vente',
+        'es': 'Condiciones generales de venta',
+        'ro': 'Condiții generale de vânzare',
+    },
+    'privacy-policy': {
+        'en': 'Privacy policy',
+        'fr': 'Politique de confidentialité',
+        'es': 'Política de privacidad',
+        'ro': 'Politica de confidențialitate',
+    },
+    'refund-policy': {
+        'en': 'Refunds & withdrawal',
+        'fr': 'Remboursement et rétractation',
+        'es': 'Reembolsos y desistimiento',
+        'ro': 'Rambursări și retragere',
+    },
+    'licensing': {
+        'en': 'Open-source licensing',
+        'fr': 'Licence open source',
+        'es': 'Licencia de código abierto',
+        'ro': 'Licențiere open-source',
+    },
+    'security': {
+        'en': 'Security',
+        'fr': 'Sécurité',
+        'es': 'Seguridad',
+        'ro': 'Securitate',
+    },
+    'status': {
+        'en': 'Service status',
+        'fr': 'État du service',
+        'es': 'Estado del servicio',
+        'ro': 'Starea serviciului',
+    },
+    # Footer label *and* the title of the page it opens (linked into `info` via
+    # NAMESPACE_LINKS), so the two can never disagree.
+    'llm-providers': {
+        'en': 'List your AI model',
+        'fr': 'Référencer votre modèle IA',
+        'es': 'Publica tu modelo de IA',
+        'ro': 'Listează-ți modelul AI',
+    },
+    'cookies': {
+        'en': 'Cookies',
+        'fr': 'Cookies',
+        'es': 'Cookies',
+        'ro': 'Cookie-uri',
+    },
+    'all-rights-reserved': {
+        'en': 'Migratis — all rights reserved.',
+        'fr': 'Migratis — tous droits réservés.',
+        'es': 'Migratis — todos los derechos reservados.',
+        'ro': 'Migratis — toate drepturile rezervate.',
+    },
+})
 
 # ===========================================================================
 # cookie
