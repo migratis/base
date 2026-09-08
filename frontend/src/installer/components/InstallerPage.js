@@ -1054,6 +1054,46 @@ const InstallerPage = () => {
             </div>
           )}
 
+          {/* The same shape one module over, and the same bug it had: the
+              install activated all of the code and none of the access. A
+              declared source without its key answers `datasource-refused`
+              forever, which reads as "the catalogue has nothing" rather than
+              as a missing credential — so the names go on screen, with the
+              file that must hold them.
+
+              The names are dynamic (one per source the application declares,
+              `DATASOURCE_<SLUG>_KEY`), which is why they arrive from the
+              backend rather than being spelled out here as Stripe's are: an
+              application may declare several, and it names them in its own
+              manifest. Only the ones still unset are listed, so a re-install
+              of a configured deployment says nothing.
+
+              Told, not asked, and only because the names are not knowable in
+              time: the config step runs BEFORE the package is fetched, and the
+              app list Migratis serves carries `modules_needed` but not
+              `datasource_keys` — those live in the manifest inside the package.
+              `_apply_datasource_keys` does accept `config.datasource[NAME]`,
+              the way the Stripe group is supplied, so the day the list carries
+              the names this becomes a group in the form above and this notice
+              goes back to covering only what the operator skipped. */}
+          {result.datasource_key_required && (
+            <div className="alert alert-info" data-testid="datasource-key-required">
+              <strong>{t('almost-done')}</strong>{' '}
+              {result.datasource_key_required.message}
+              <pre className="mb-2 mt-2 small bg-white p-2 rounded">
+                {result.datasource_key_required.settings_file}
+                {(result.datasource_key_required.settings || []).map((name) => (
+                  `\n${name}=`
+                ))}
+              </pre>
+              <ol className="mb-0 mt-2 small">
+                {(result.datasource_key_required.steps || []).map((step) => (
+                  <li key={step}>{step}</li>
+                ))}
+              </ol>
+            </div>
+          )}
+
           {/* Manual steps left for the user. Each is shown only when its side
               actually needs it: the backend restart when the server doesn't
               autoreload (production), and `npm run build` when the frontend is a
