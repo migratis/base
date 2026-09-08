@@ -14,11 +14,26 @@ const EMPTY_CONFIG = {
   stripe: { STRIPE_API_KEY: '', STRIPE_SECRET_KEY: '', STRIPE_WEBHOOK_SECRET_KEY: '' },
 };
 
-// Which config groups an app needs, derived from its modules_needed.
+// Which config groups an app needs, derived from its modules_needed — except
+// the data-source keys, which are named one per declared source and so come
+// from the application itself rather than from a module being present.
+const datasourceKeys = (app) => app?.datasource_keys || [];
+
 const requiredGroups = (app) => {
   const mods = app?.modules_needed || [];
-  return { user: mods.includes('user'), subscription: mods.includes('subscription') };
+  return {
+    user: mods.includes('user'),
+    subscription: mods.includes('subscription'),
+    datasource: datasourceKeys(app).length > 0,
+  };
 };
+
+// The other groups have fixed field names; this one is `DATASOURCE_<SLUG>_KEY`
+// per source the application declares, so the blank is built from the app.
+const emptyConfigFor = (app) => ({
+  ...EMPTY_CONFIG,
+  datasource: Object.fromEntries(datasourceKeys(app).map((name) => [name, ''])),
+});
 
 // The axios interceptor resolves (not rejects) error responses, so a dead
 // upstream session arrives in `.then` as a payload carrying this signal. The
@@ -296,8 +311,8 @@ const InstallerPage = () => {
     if (!selectedApp) return;
     const groups = requiredGroups(selectedApp);
     setError('');
-    if (groups.user || groups.subscription) {
-      setConfig(EMPTY_CONFIG);
+    if (groups.user || groups.subscription || groups.datasource) {
+      setConfig(emptyConfigFor(selectedApp));
       setStep(STEPS.CONFIG);
     } else {
       handleInstall();
@@ -314,6 +329,15 @@ const InstallerPage = () => {
     }
     if (groups.subscription) {
       payload.stripe = config.stripe;
+    }
+    if (groups.datasource) {
+      // Blank means "not now" — `_apply_datasource_keys` writes only the values
+      // it was given and reports the rest as still missing, so skipping the
+      // field here lands in the post-install notice rather than writing an
+      // empty variable that reads as configured.
+      const supplied = Object.fromEntries(
+        Object.entries(config.datasource || {}).filter(([, v]) => v.trim()));
+      if (Object.keys(supplied).length) payload.datasource = supplied;
     }
     return payload;
   };
@@ -814,6 +838,31 @@ const InstallerPage = () => {
                       className="form-control"
                       value={config.stripe[key]}
                       onChange={(e) => setConfigField('stripe', key, e.target.value)}
+                    />
+                  </div>
+                ))}
+              </>
+            )}
+
+            {/* One field per external source the application declares. The
+                variable name IS the label — it is what goes in the .env file,
+                and inventing a friendly name for it would leave the operator
+                matching prose against a file. Optional on purpose: a key left
+                blank is reported by the post-install notice instead, which is
+                the only thing that existed before the list carried these
+                names, and is still what covers a key obtained later. */}
+            {requiredGroups(selectedApp).datasource && (
+              <>
+                <h6 className="mt-3">{t('config-datasource')}</h6>
+                <p className="small text-muted mb-2">{t('config-datasource-help')}</p>
+                {datasourceKeys(selectedApp).map((name) => (
+                  <div className="mb-3" key={name}>
+                    <label className="form-label"><code>{name}</code></label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={(config.datasource || {})[name] || ''}
+                      onChange={(e) => setConfigField('datasource', name, e.target.value)}
                     />
                   </div>
                 ))}

@@ -942,6 +942,30 @@ TRANSLATIONS['installer'] = {
         'en': 'Stripe keys', 'fr': 'Clés Stripe',
         'es': 'Claves de Stripe', 'ro': 'Chei Stripe',
     },
+    # One field per external source the application declares. The variable name
+    # is the label, because that is what goes in the .env file.
+    'config-datasource': {
+        'en': 'External source keys', 'fr': 'Clés des sources externes',
+        'es': 'Claves de fuentes externas', 'ro': 'Chei pentru surse externe',
+    },
+    'config-datasource-help': {
+        'en': 'This application reads from an external API. Migratis never '
+              'receives or ships a key — it belongs to this deployment. Leave a '
+              'field blank to set it later; the install will say which are '
+              'still missing.',
+        'fr': "Cette application interroge une API externe. Migratis ne reçoit "
+              "ni ne livre jamais de clé — elle appartient à ce déploiement. "
+              "Laissez un champ vide pour le renseigner plus tard ; "
+              "l'installation indiquera lesquelles manquent encore.",
+        'es': 'Esta aplicación consulta una API externa. Migratis nunca recibe '
+              'ni entrega una clave — pertenece a esta instalación. Deje un '
+              'campo en blanco para definirlo más tarde; la instalación '
+              'indicará cuáles siguen faltando.',
+        'ro': 'Această aplicație interoghează un API extern. Migratis nu '
+              'primește și nu livrează niciodată o cheie — ea aparține acestei '
+              'instalări. Lăsați un câmp gol pentru a-l completa mai târziu; '
+              'instalarea va indica ce chei lipsesc.',
+    },
     'stripe-publishable': {
         'en': 'Publishable key', 'fr': 'Clé publiable',
         'es': 'Clave publicable', 'ro': 'Cheie publicabilă',
