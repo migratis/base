@@ -7,7 +7,7 @@ from django.shortcuts import render
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.conf import settings as django_settings
 # ── Activated by generated app settings_patch.py ──────────────────────────
-# from migratis.user.views import router as user_router
+from migratis.user.views import router as user_router
 from migratis.i18n.views import router as i18n_router
 from migratis.cookie.views import router as cookie_router
 # from migratis.support.views import router as support_router
@@ -15,7 +15,7 @@ from migratis.cookie.views import router as cookie_router
 # from migratis.stripe_payment.views import router as stripe_payment_router
 # from migratis.credits.views import router as credits_router
 # from migratis.routing.views import router as routing_router
-# from migratis.datasource.views import router as datasource_router
+from migratis.datasource.views import router as datasource_router
 # from migratis.generator.views import router as generator_router
 from migratis.api.functions import formatErrors as _formatErrors
 from migratis.installer.views import router as installer_router
@@ -78,7 +78,7 @@ except (ImportError, RuntimeError):
     pass
 
 # ── Activated by generated app settings_patch.py ──────────────────────────
-# api.add_router("/user/", user_router)
+api.add_router("/user/", user_router)
 api.add_router("/i18n/",    i18n_router)
 api.add_router("/cookie/",  cookie_router)
 # api.add_router("/support/", support_router)
@@ -86,7 +86,7 @@ api.add_router("/cookie/",  cookie_router)
 # api.add_router("/billing/", stripe_payment_router)
 # api.add_router("/credits/", credits_router)
 # api.add_router("/routing/", routing_router)
-# api.add_router("/datasource/", datasource_router)
+api.add_router("/datasource/", datasource_router)
 # api.add_router("/generator/", generator_router)
 # The installer is mounted only when enabled (INSTALLER setting), so its
 # endpoints are not reachable on deployments that ship without it.
@@ -124,10 +124,6 @@ def installer_status(request):
 def get_csrf(request):
     return render(request, 'csrftoken.html', context={})
 
-
-@api.get("/", auth=None)
-def index(request):
-    return render(request, 'index.html', context={})
 
 
 @api.get("/home", auth=None)

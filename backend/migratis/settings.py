@@ -259,7 +259,12 @@ FILE_UPLOAD_HANDLERS = (
     'django.core.files.uploadhandler.TemporaryFileUploadHandler',
 )
 
-MIGRATIS_BACKEND_URL = env('MIGRATIS_BACKEND_URL', default='http://host.docker.internal:8000')
+# Where this template's installer reaches Migratis to list and download the
+# applications it can install. The hosted instance is the right default: the
+# loopback one only ever worked on a box that happens to run Migratis itself,
+# and an operator installing base anywhere else met it as a connection error
+# with nothing saying which URL was tried.
+MIGRATIS_BACKEND_URL = env('MIGRATIS_BACKEND_URL', default='https://migratis.ai')
 
 # Who receives Django's unhandled-exception mail. Django's own AdminEmailHandler
 # (on the `django.request` logger) is the only reader — a 500 with DEBUG=False

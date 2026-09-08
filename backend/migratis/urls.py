@@ -17,7 +17,6 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from migratis.api import views
 from migratis.api.views import api
 
 admin.site.site_header = "Migratis Administration"
@@ -28,7 +27,6 @@ urlpatterns = [
     path('backend/admin/clearcache/', include('clearcache.urls')),
     path('backend/admin/', admin.site.urls),
     path('backend/api/', api.urls),
-    path('backend/', views.index, name='index'),
 ]
 
 if settings.DEBUG:
