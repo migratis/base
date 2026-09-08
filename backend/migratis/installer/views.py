@@ -706,10 +706,16 @@ def _agent_forbidden_response():
         how = ("INSTALLER_AGENT_TOKEN is configured on this server — send the "
                "matching 'X-Installer-Token' header.")
     else:
+        # Name the file, not "the settings": Django reads backend/migratis/.env
+        # (settings.py's own directory), while backend/.env is Compose's. An
+        # operator who puts the token in the wrong one gets this same 403 back
+        # with no hint that anything was configured at all.
         how = ("Call it from the machine running this base backend "
                "(loopback, e.g. http://127.0.0.1:<port>/backend/api/installer/...). "
                "To allow an off-box caller instead, set INSTALLER_AGENT_TOKEN in "
-               "the server settings and send it as 'X-Installer-Token'.")
+               "backend/migratis/.env (the file Django reads — NOT backend/.env, "
+               "which is Compose's), restart the backend so it is read, and send "
+               "the value as 'X-Installer-Token'.")
     return JsonResponse({
         'detail': [{'auth': ['forbidden']}],
         'code':   'installer_forbidden',

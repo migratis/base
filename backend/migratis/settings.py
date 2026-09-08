@@ -379,6 +379,16 @@ FRONTEND_SRC_DIR = env('FRONTEND_SRC_DIR', default='/frontend/src')
 # Keep in sync with INSTALLER in frontend/src/settings.js (which hides the route).
 INSTALLER = env.bool('INSTALLER', default=True)
 
+# Agent gate for the package endpoints. Empty (the default) leaves them
+# loopback-only; a value flips them to `X-Installer-Token` header auth, which is
+# the only way an off-box agent can reach them. This MUST be read from the
+# environment: `_agent_endpoint_allowed` asks for it with a `getattr` default,
+# so a settings module that never names it makes the token branch unreachable —
+# the endpoints stay loopback-only however the operator configures them, while
+# the 403's own text, the agent guide and the README all keep describing a
+# header that cannot work.
+INSTALLER_AGENT_TOKEN = env('INSTALLER_AGENT_TOKEN', default='')
+
 
 
 
