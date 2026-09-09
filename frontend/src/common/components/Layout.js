@@ -26,17 +26,29 @@ export const Layout = (props) => {
     }
   }, []);
 
-  // Refresh user profile from server on mount so fields added after login
-  // (e.g. is_staff) are always up to date in localStorage and React state.
+  // Who is logged in is the SESSION's answer, not this browser's copy of it.
+  // `localStorage.user` is a copy: it goes missing on its own — `logOut()`
+  // removes it without waiting for the logout request that may never have
+  // landed, storage gets cleared, a tab is opened before it was written — and
+  // when it is missing while the cookie is alive, every role gate resolves
+  // "anonymous" over a session the API is still serving. App 8's owner
+  // reported that as "I am connected and there is no Add button", beside a
+  // list whose rows had just been served to them.
+  //
+  // So the server is asked on mount unless it has already answered: `"false"`
+  // is what the 401 interceptor stores, and it is the one value that means
+  // "there is no session" rather than "we do not know" — which is what keeps
+  // an anonymous visitor from putting a 401 in their console on every page.
+  // The refresh is also what it always was: fields added after login (is_staff,
+  // the role groups) arrive without a re-login.
   useEffect(() => {
-    if (user) {
-      userService.getProfile().then((fresh) => {
-        if (fresh && fresh.id) {
-          localStorage.setItem("user", JSON.stringify(fresh));
-          setUser(fresh);
-        }
-      }).catch(() => {});
-    }
+    if (localStorage.getItem("user") === "false") return;
+    userService.getProfile().then((fresh) => {
+      if (fresh && fresh.id) {
+        localStorage.setItem("user", JSON.stringify(fresh));
+        setUser(fresh);
+      }
+    }).catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
