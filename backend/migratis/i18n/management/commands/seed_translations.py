@@ -1529,6 +1529,62 @@ TRANSLATIONS['home'] = {
         'es': 'Modo de visualización en mapa para listas de registros',
         'ro': 'Mod de afișare hartă pentru listele de înregistrări',
     },
+    # ── Data sources (SCOPE_external_data_sources.md@d2de531) ───────────────
+    # Rendered between Maps and Code generation: both give an application a
+    # dimension outside itself, and both are decided when the schema is.
+    'ch13-title': {
+        'en': 'Fill Forms From a Public Catalogue',
+        'fr': 'Remplir vos formulaires depuis un catalogue public',
+        'es': 'Rellena formularios desde un catálogo público',
+        'ro': 'Completează formulare dintr-un catalog public',
+    },
+    'ch13-desc': {
+        'en': 'If your application catalogues films, books, records, or products, most '
+              'of what it holds already exists in a public catalogue somewhere. Declare '
+              'a source once and your users fill a form from it: type a few letters, '
+              'pick a result, and the fields fill in — still editable, and still saved '
+              'by the ordinary form.',
+        'fr': "Si votre application recense des films, des livres, des disques ou des "
+              "produits, l'essentiel de son contenu existe déjà dans un catalogue "
+              "public. Déclarez une source une fois et vos utilisateurs remplissent un "
+              "formulaire depuis celle-ci : quelques lettres, un résultat choisi, et "
+              "les champs se remplissent — toujours modifiables, et toujours "
+              "enregistrés par le formulaire habituel.",
+        'es': 'Si tu aplicación cataloga películas, libros, discos o productos, la mayor '
+              'parte de lo que contiene ya existe en algún catálogo público. Declara una '
+              'fuente una vez y tus usuarios rellenan un formulario desde ella: unas '
+              'letras, un resultado elegido y los campos se rellenan — siguen siendo '
+              'editables y se guardan con el formulario de siempre.',
+        'ro': 'Dacă aplicația ta catalogează filme, cărți, discuri sau produse, cea mai '
+              'mare parte din conținutul ei există deja într-un catalog public. Declară '
+              'o sursă o dată, iar utilizatorii completează un formular din ea: câteva '
+              'litere, un rezultat ales, și câmpurile se completează — rămân editabile '
+              'și sunt salvate de formularul obișnuit.',
+    },
+    'ch13-f1': {
+        'en': 'Search a public catalogue from inside a form',
+        'fr': "Chercher dans un catalogue public depuis le formulaire",
+        'es': 'Buscar en un catálogo público desde el formulario',
+        'ro': 'Caută într-un catalog public direct din formular',
+    },
+    'ch13-f2': {
+        'en': 'Adopt a published source, or describe your own',
+        'fr': "Adopter une source publiée, ou décrire la vôtre",
+        'es': 'Adopta una fuente publicada o describe la tuya',
+        'ro': 'Adoptă o sursă publicată sau descrie-o pe a ta',
+    },
+    'ch13-f3': {
+        'en': 'Suggestions only — nothing is ever saved without you',
+        'fr': "Des propositions seulement — rien n'est enregistré sans vous",
+        'es': 'Solo sugerencias: nada se guarda sin ti',
+        'ro': 'Doar sugestii — nimic nu se salvează fără tine',
+    },
+    'ch13-f4': {
+        'en': 'No AI runs, so no credits are spent',
+        'fr': "Aucune IA ne s'exécute, aucun crédit n'est dépensé",
+        'es': 'No se ejecuta ninguna IA, no se gasta ningún crédito',
+        'ro': 'Nu rulează nicio IA, deci nu se consumă credite',
+    },
     'ch12-title': {
         'en': 'Bring Your Own AI Agent',
         'fr': 'Utilisez votre propre agent IA',
