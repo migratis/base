@@ -908,6 +908,12 @@ def installer_list_installed(request):
 def installer_uninstall(request, module: str, force: bool = False):
     """Remove an installed module.
 
+    Removed with it: the module's tables and migration rows, its settings
+    patch, both source trees, its entries in the frontend registry — and the
+    `{module}:{role}` auth Groups its role ladder created, which used to
+    survive the application they belonged to and go on offering themselves in
+    every Group picker in the admin.
+
     `force` is only ever needed after a refusal, and the refusal says so: it
     backs the module's data up and then drops the tables and migration rows a
     broken migration graph left `migrate zero` unable to unwind. It destroys
@@ -2238,6 +2244,35 @@ def _drop_module_state(module: str, backend_root: Path) -> dict:
             'migration_rows_deleted': rows}
 
 
+def _remove_module_role_groups(module: str) -> list:
+    """Delete the auth Groups this module's role ladder created.
+
+    `roles.bootstrap_role_groups` creates one `django.contrib.auth` Group per
+    non-anonymous role, namespaced `{module}:{role}` precisely so two installed
+    applications cannot share one. Uninstall dropped the module's tables, its
+    migration rows, its settings patch and both source trees — and left those
+    Groups behind, with their members still in them, for an application that no
+    longer exists. They then show up in every Group picker in the Django admin,
+    and an install of a *different* module that happens to reuse the name finds
+    a ladder already populated with strangers.
+
+    The namespace is what makes this safe to do by prefix: `{module}:` can only
+    have been written by this module. A pre-namespacing bare Group (`admin`) is
+    deliberately NOT matched — it may be any application's, or the deployment's
+    own, and guessing there is how one uninstall takes down another app's roles.
+
+    Deleting a Group removes its memberships with it; the user rows are
+    untouched.
+    """
+    from django.contrib.auth.models import Group
+
+    groups = list(Group.objects.filter(name__startswith=f'{module}:')
+                  .values_list('name', flat=True))
+    if groups:
+        Group.objects.filter(name__startswith=f'{module}:').delete()
+    return sorted(groups)
+
+
 def _remove_module(module: str, backend_root: Path, force: bool = False) -> dict:
     """
     Reverse _apply_package for a given module.
@@ -2311,6 +2346,11 @@ def _remove_module(module: str, backend_root: Path, force: bool = False) -> dict
                 )
             forced = _drop_module_state(module, backend_root)
 
+    # ── 1c. Drop the module's role Groups ─────────────────────────────────
+    # After the refusal above, so an uninstall that stops on orphaned data
+    # leaves the ladder its users are still in exactly as it found it.
+    groups_removed = _remove_module_role_groups(module)
+
     # ── 2. Delete settings patch file FIRST ───────────────────────────────
     # Deleting the patch removes the app from INSTALLED_APPS before the app
     # directory is removed. The StatReloader fires here and reloads Django
@@ -2359,6 +2399,10 @@ def _remove_module(module: str, backend_root: Path, force: bool = False) -> dict
         'module':           module,
         'frontend_ok':      frontend_ok,
         'migrate_ok':       migrate.returncode == 0,
+        # The `{module}:{role}` auth Groups the ladder created. Named, because
+        # a membership silently disappearing is exactly what an admin needs to
+        # be able to trace afterwards.
+        'groups_removed':   groups_removed,
         # `migrate_ok: false` on its own never said whether that mattered. This
         # does: the module owns no tables and no migration rows any more,
         # whichever way that came about.
