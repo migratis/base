@@ -1078,10 +1078,17 @@ TRANSLATIONS['installer'] = {
         'es': 'Copia de seguridad guardada en', 'ro': 'Copie de rezervă stocată în',
     },
     'upgrade-translations-hint': {
-        'en': 'Seeded data was not touched. To load the translation keys added by this version, run:',
-        'fr': "Les données initiales n'ont pas été modifiées. Pour charger les clés de traduction ajoutées par cette version, exécutez :",
-        'es': 'Los datos iniciales no se modificaron. Para cargar las claves de traducción añadidas por esta versión, ejecute:',
-        'ro': 'Datele inițiale nu au fost modificate. Pentru a încărca cheile de traducere adăugate de această versiune, rulați:',
+        'en': 'Your data was not touched. The translation keys this version adds are '
+              'loaded on the restart above; if a word still shows as its key, run:',
+        'fr': "Vos données n'ont pas été modifiées. Les clés de traduction ajoutées par "
+              "cette version sont chargées au redémarrage ci-dessus ; si un mot "
+              "s'affiche encore sous forme de clé, exécutez :",
+        'es': 'Sus datos no se modificaron. Las claves de traducción que añade esta '
+              'versión se cargan en el reinicio indicado arriba; si una palabra sigue '
+              'apareciendo como su clave, ejecute:',
+        'ro': 'Datele dvs. nu au fost modificate. Cheile de traducere adăugate de '
+              'această versiune se încarcă la repornirea de mai sus; dacă un cuvânt '
+              'apare încă sub formă de cheie, rulați:',
     },
     'upgrade-failed': {
         'en': 'Upgrade failed', 'fr': 'Échec de la mise à jour',

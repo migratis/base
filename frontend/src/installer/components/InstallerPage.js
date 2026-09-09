@@ -987,8 +987,12 @@ const InstallerPage = () => {
             </div>
           )}
 
-          {/* Seeds are skipped on upgrade so user-edited data survives; new
-              translation keys arrive only when the seed command is re-run. */}
+          {/* The module's data is never re-seeded on upgrade — that would
+              overwrite rows the user has edited. Its WORDS are: the seed
+              command is `get_or_create` throughout, and it runs on the reload
+              the upgrade's own source write triggers (production: on the
+              restart asked for below). The command stays on screen as the
+              fallback for when neither has happened yet. */}
           {upgradeResult.success && (
             <div className="alert alert-info">
               {t('upgrade-translations-hint')}

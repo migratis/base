@@ -1237,13 +1237,33 @@ def _apply_upgrade(zip_bytes: bytes, backend_root: Path, confirm: bool) -> dict:
             if src.exists():
                 shutil.copy2(src, backup_dir / fname)
 
-        # ── 2. Write ONLY the new migration files ──────────────────────────
-        # Migration modules already on disk are identical (the chain is
-        # append-only) and skipping them avoids touching files the
-        # autoreloader watches before migrate has run.
-        last_applied   = _last_applied_migration(module)
-        new_migrations = []
-        mig_prefix     = f'backend/{module}/migrations/'
+        # ── 2. Write ONLY the migration files that are NOT already there ───
+        # This used to write any migration whose bytes differed, on the belief
+        # that "modules already on disk are identical (the chain is
+        # append-only)". They are not: the generator re-renders the whole chain
+        # every time, and cosmetic drift is enough — app 8's regeneration
+        # emitted `choices=[['film', 'Film']]` where the installed
+        # `0016_upgrade_v16.py` had `choices=[('film', 'Film')]`.
+        #
+        # Rewriting an already-applied migration is at best pointless (the DB
+        # has applied it; new bytes cannot change that) and at worst fatal: the
+        # file is an IMPORTED module, so Django's StatReloader sees it change
+        # and restarts the dev server — in the middle of this request, before
+        # `migrate` has run and long before the source files are written. That
+        # is exactly what happened to the app 8 upgrade: migration 0017 landed,
+        # the server reloaded, the POST never completed, and the install sat on
+        # the old source with two unapplied migrations and no answer given.
+        # `_pending_install.json` exists because the INSTALL path already knew
+        # about this hazard; the upgrade did not.
+        #
+        # So: append-only, enforced rather than assumed. A migration already on
+        # disk is left exactly as it is, and the ones that were skipped despite
+        # differing are named in the response — silence there is what made this
+        # take a log dive to find.
+        last_applied       = _last_applied_migration(module)
+        new_migrations     = []
+        migrations_skipped = []
+        mig_prefix         = f'backend/{module}/migrations/'
         for name in names:
             if not name.startswith(mig_prefix) or name.endswith('/'):
                 continue
@@ -1251,13 +1271,13 @@ def _apply_upgrade(zip_bytes: bytes, backend_root: Path, confirm: bool) -> dict:
             if name.endswith('.py'):
                 content = _fix_backend_py(content, module, name)
             dest = backend_root / name[len('backend/'):]
-            if dest.exists() and dest.read_bytes() == content:
+            if dest.exists():
+                if dest.read_bytes() != content:
+                    migrations_skipped.append(dest.name)
                 continue
-            existed = dest.exists()
             dest.parent.mkdir(parents=True, exist_ok=True)
             dest.write_bytes(content)
-            if not existed:
-                new_migrations.append(dest)
+            new_migrations.append(dest)
         pycache = backend_root / module / 'migrations' / '__pycache__'
         if pycache.exists():
             shutil.rmtree(pycache, ignore_errors=True)
@@ -1345,6 +1365,30 @@ def _apply_upgrade(zip_bytes: bytes, backend_root: Path, confirm: bool) -> dict:
             _sync_frontend_language(backend_root, frontend_root)
             _rebuild_registry(backend_root, frontend_root)
 
+        # ── 4b. Defer the seed to InstallerConfig.ready() ──────────────────
+        # An upgrade brings new words with it — entity and field labels, and
+        # every key the emitted code looks up — and used to hand the user a
+        # command to run by hand instead. Nobody ran it, so an upgraded module
+        # kept the vocabulary of the install and logged `missingKey` for the
+        # rest. The seed command is `get_or_create` throughout, so running it is
+        # additive and idempotent; it just cannot run HERE, because the file it
+        # would run is written in step 5 below and that write is what restarts
+        # the server. Which is precisely what `_pending_install.json` is for:
+        # the install path defers migrate+seed through it for the same reason.
+        # Written before step 5 so it survives the reload that step 5 triggers.
+        pending = patches_dir / '_pending_install.json'
+        pending_payload = {}
+        if pending.exists():
+            # An install of this module deferred moments ago stashes the admin
+            # credentials here and they have not been used yet. Clobbering the
+            # file would drop the superuser the wizard promised to create.
+            try:
+                pending_payload = json.loads(pending.read_text()) or {}
+            except (OSError, ValueError):
+                pending_payload = {}
+        pending_payload['module'] = module
+        pending.write_text(json.dumps(pending_payload))
+
         # ── 5. Backend source files LAST — they are watched by the
         #       autoreloader, so the dev reload fires only after everything
         #       above has completed (mirrors _apply_package's ordering) ─────
@@ -1390,9 +1434,16 @@ def _apply_upgrade(zip_bytes: bytes, backend_root: Path, confirm: bool) -> dict:
         'migrate_output':       (migrate.stdout or migrate.stderr)[-2000:],
         'frontend_ok':          frontend_ok,
         'backup_path':          str(backup_dir.relative_to(backend_root)),
-        # Seeds are skipped on purpose; new translation keys arrive only when
-        # the user re-runs the module's seed command.
-        'seed_skipped':         True,
+        # Migrations already on disk are never rewritten (append-only). These
+        # differed from the package's copy and were left alone — cosmetic
+        # re-rendering by the generator, and named here so that it can be told
+        # apart from a chain that has genuinely diverged.
+        'migrations_skipped':   migrations_skipped,
+        # The seed runs on the reload the source write triggers, through
+        # `_pending_install.json` — the same route the install path uses. In
+        # production, where nothing autoreloads, it runs on the restart
+        # `restart_required` is already asking for.
+        'seed_deferred':        True,
         'translations_command': f'docker exec backend-base-api-1 python /backend/manage.py seed_{module}',
         'restart_required':     not _backend_autoreloads(),
         **_routing_service_notice(backend_root, manifest),
