@@ -62,7 +62,9 @@ def installer_agent_guide(request):
     so they never drift. /install-package and /upgrade-package implement it."""
     return JsonResponse(build_installer_guide())
 
-MIGRATIS_BACKEND_URL = getattr(settings, 'MIGRATIS_BACKEND_URL', 'http://host.docker.internal:8000')
+# settings.py defines this (default `https://migratis.ai`); the fallback here
+# matches it rather than naming a Migratis on the developer's own machine.
+MIGRATIS_BACKEND_URL = getattr(settings, 'MIGRATIS_BACKEND_URL', 'https://migratis.ai')
 
 # Migratis' trusted-device cookie: once a 2FA code is verified with
 # remember_device, Migratis sets this cookie and subsequent logins skip 2FA for
@@ -573,7 +575,21 @@ def installer_disconnect(request):
 
 @router.get('/session', auth=None)
 def installer_session(request):
-    return JsonResponse({'connected': bool(request.session.get('migratis_cookies'))})
+    """Is a Migratis session stored — and which Migratis is the default one.
+
+    `default_url` is the URL every endpoint here falls back to when the connect
+    form's URL field is left blank. It travels so the form can SHOW it: the
+    field's own label says "leave blank for the default" beside a placeholder,
+    and a placeholder written by hand is free to disagree with the value the
+    server will actually use. It did — `http://host.docker.internal:8000`, the
+    address of a Migratis running on the developer's own machine, offered to
+    every reader of a template whose default has been `https://migratis.ai`
+    since it was configurable at all.
+    """
+    return JsonResponse({
+        'connected':   bool(request.session.get('migratis_cookies')),
+        'default_url': MIGRATIS_BACKEND_URL,
+    })
 
 
 # --------------------------------------------------------------------------- #

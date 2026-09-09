@@ -118,6 +118,10 @@ const InstallerPage = () => {
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
   const [url, setUrl]           = useState('');
+  // The Migratis the backend falls back to when the URL field is blank —
+  // read from /session so the placeholder cannot claim a different one
+  // than the request will actually use.
+  const [defaultUrl, setDefaultUrl] = useState('');
 
   // Two-factor step
   const [tfaEmail, setTfaEmail] = useState('');
@@ -214,6 +218,7 @@ const InstallerPage = () => {
         fetchInstalled();
         InstallerService.getSession()
           .then((session) => {
+            if (session.default_url) setDefaultUrl(session.default_url);
             // Keep the restored result on screen — load apps without resetting
             // the step back to the selection list.
             if (session.connected) fetchApps(pending ? { keepStep: true } : {});
@@ -650,7 +655,7 @@ const InstallerPage = () => {
               <input
                 type="url"
                 className="form-control"
-                placeholder="http://host.docker.internal:8000"
+                placeholder={defaultUrl || 'https://migratis.ai'}
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
               />
