@@ -21,7 +21,12 @@ const Tickets = lazyWithRetry(() => import('./support/components/Tickets'));
 const Disclaimer = lazyWithRetry(() => import('./common/components/Disclaimer'));
 const LegalNotice = lazyWithRetry(() => import('./common/components/LegalNotice'));
 const RefundPolicy = lazyWithRetry(() => import('./common/components/RefundPolicy'));
-const Licensing = lazyWithRetry(() => import('./common/components/Licensing'));
+// No `/licensing` route: publishing approved components under the GPL exists
+// only because of the generator, and this template has no GENERATOR flag — the
+// footer gates its link on the same flag, so the link and the page it opens
+// cannot disagree. `common/components/Licensing.js` is mirrored from migratis
+// with the rest of `common/` and stays unrouted here. Importing it anyway was
+// a `no-unused-vars` warning, which `CI=true npm run build` fails on.
 const Security = lazyWithRetry(() => import('./common/components/Security'));
 const Status = lazyWithRetry(() => import('./common/components/Status'));
 const Help = lazyWithRetry(() => import('./common/components/Help'));
