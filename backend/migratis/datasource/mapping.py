@@ -14,9 +14,41 @@ A missing synopsis must leave the field untouched so the required-field check
 still fires on the ordinary write path, rather than filling it with `""` and
 satisfying the check with nothing.
 """
+import re
 from dataclasses import dataclass, field as dc_field
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
+
+# What a provider writes where it has nothing (ticket #11). OMDb answers 'N/A'
+# for `Director` on every series and for `Rated` on obscure titles, and passing
+# that through filled a text field with two letters that mean nothing — and an
+# `enum` field with a value outside its declared choices, where the emitted
+# validator then refuses the save with `invalid-choice` over a field the user
+# never touched. A sentinel is **absent**, which leaves the field alone and lets
+# the ordinary required check speak: `resolve_path`'s rule, one layer down.
+#
+# Matched on the WHOLE value, never as a substring — `numeric_field_without_
+# computer`'s rule, and here it is the difference between a missing director and
+# a film called *Unknown Soldier*. Deliberately short: every entry is a string
+# no catalogue would use as a real value. `null`/`none`/`nil` are NOT on it,
+# because those are programmers' words and a real title may be one.
+_SENTINELS = frozenset((
+    'n/a', 'n.a.', 'n\\a', '-', '--', '---', '—', '–', 'unknown', 'tbd',
+))
+
+# `1,500` is fifteen hundred whichever convention wrote it; `1,5` is one and a
+# half in four of the languages this platform speaks. Three digits per group,
+# every group, or this does not apply.
+_GROUPED_RE = re.compile(r'^-?\d{1,3}(?:,\d{3})+(?:\.\d+)?$')
+
+# A number, then anything that is not another digit: "142 min", "98 minutes".
+# `"2h 22min"` fails it on purpose — two numbers, two readings.
+_LEADING_NUMBER_RE = re.compile(r'^(-?\d+(?:\.\d+)?)\s*[^\d]*$')
+
+
+def is_sentinel(value):
+    """Whether a payload value is a provider's way of writing "nothing"."""
+    return str(value).strip().lower() in _SENTINELS
 
 # The list separator for a `[]` hop — a cast, a genre list, an author list. A
 # joined string rather than a list because the target is one declared field of a
@@ -124,7 +156,11 @@ def resolve_path(payload, path):
                 if got is _ABSENT or got is None:
                     continue
                 values.append(_scalar(got))
-            values = [v for v in values if v not in ('', None)]
+            # A provider's "nothing" is dropped here too, for the reason
+            # `coerce_value` drops it: joining it would put the literal 'N/A'
+            # in the middle of a cast list (ticket #11).
+            values = [v for v in values
+                      if v not in ('', None) and not is_sentinel(v)]
             return LIST_JOIN.join(values) if values else _ABSENT
     return current
 
@@ -211,19 +247,60 @@ def bind_values(slots, binding):
     return values
 
 
+def _number_text(value):
+    """A payload value as the digits it means, or `_ABSENT`.
+
+    Ticket #11. OMDb's canonical numeric fields are written for a person to
+    read — `Runtime: "142 min"`, `imdbVotes: "2,800,000"` — and neither `int()`
+    nor `float()` accepts a unit suffix or a group separator. So both mappings
+    answered `_ABSENT`, `bind_values` dropped the field, and app 8's
+    `runtime_minutes` and `imdb_votes` stayed blank on every lookup with
+    nothing reported: *a path that resolves to nothing maps nothing and is
+    indistinguishable from an API with no data*, which is the one failure this
+    module's docstring exists to forbid.
+
+    Widened exactly as far as **one** reading survives, `_coerce_date`'s rule in
+    arithmetic:
+
+    * **Strict grouping only** — `1,500` is fifteen hundred either way, but
+      `1,5` is one and a half in four of the languages this platform speaks.
+      Three digits per group, every group, or nothing.
+    * **One number only** — `"142 min"` has a single reading; `"2h 22min"` reads
+      as 2 or as 142 depending on how hard you squint, and answering 2 would be
+      a wrong number the owner cannot see. Anything with a second digit after
+      the first run stays absent.
+    * **A leading number only** — `"$5"` and `"about 200"` are not numbers here.
+      A prefix would have to be a unit table, and this module ships no
+      per-provider knowledge of any kind.
+    """
+    text = str(value).strip()
+    if not text or is_sentinel(text):
+        return _ABSENT
+    if _GROUPED_RE.match(text):
+        return text.replace(',', '')
+    match = _LEADING_NUMBER_RE.match(text)
+    return match.group(1) if match else _ABSENT
+
+
 def _coerce_integer(value):
+    text = _number_text(value)
+    if text is _ABSENT:
+        return _ABSENT
     try:
-        return int(str(value).strip())
+        return int(text)
     except (TypeError, ValueError):
         try:
-            return int(float(str(value).strip()))
+            return int(float(text))
         except (TypeError, ValueError):
             return _ABSENT
 
 
 def _coerce_decimal(value):
+    text = _number_text(value)
+    if text is _ABSENT:
+        return _ABSENT
     try:
-        return float(Decimal(str(value).strip()))
+        return float(Decimal(text))
     except (TypeError, ValueError, InvalidOperation):
         return _ABSENT
 
@@ -290,6 +367,10 @@ def coerce_value(value, field_type):
     if value is None or value is _ABSENT:
         return _ABSENT
     if isinstance(value, (dict, list)):
+        return _ABSENT
+    # Before any type is consulted: what a provider writes for "nothing" is
+    # nothing, whatever column it was going to land in (ticket #11).
+    if not isinstance(value, bool) and is_sentinel(value):
         return _ABSENT
     return _COERCERS.get((field_type or '').strip(), _coerce_text)(value)
 
