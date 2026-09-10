@@ -35,6 +35,19 @@ replaces it with an envelope rather than inheriting a promise it cannot keep:
 **GET only, in any version** (D9). A primitive that can POST to a third party is
 a webhook system, has entirely different failure and abuse properties, and is
 not this.
+
+**One premise moves for `fetch_binary`, and it moves out loud.** A poster lives
+on the provider's CDN, not on its API host, so the media fetch is the single
+place where the host is named by the **payload** rather than by the adapter the
+designer declared and a reviewer approved. Every check above that decides *where
+the packet goes* still runs, per call and unchanged; three things are added
+rather than relaxed — a **closed** list of image content types (SVG is XML with
+script in it and is not on it), an image-sized byte cap of its own, and **no
+credential parameter at all**, since an API key sent to a CDN is a key handed to
+a third party the declaration never named. It is reached only by a **generated
+application's** lookup: the design sandbox stores its records as JSON, renders a
+poster URL perfectly well, and therefore never reaches past the one host its
+designer declared.
 """
 import json
 import logging
@@ -53,6 +66,16 @@ CONNECT_TIMEOUT = 5
 READ_TIMEOUT    = 12
 MAX_BYTES       = 512 * 1024      # a search page, not a dataset
 MAX_DEPTH       = 12
+# A poster, an album cover, a book jacket — generous enough for a real one and
+# far below what a form is going to carry back as base64. Separate from
+# MAX_BYTES because the two are ceilings on different things.
+MAX_IMAGE_BYTES = 4 * 1024 * 1024
+# A CLOSED list, not an `image/` prefix. `image/svg+xml` matches that prefix and
+# is XML with script in it; every other rule in this file is about where a
+# packet goes, and this one is about what comes back being inert.
+IMAGE_TYPES = frozenset((
+    'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif',
+))
 # Deliberately anonymous. It names the software and nothing about the caller,
 # the application or the deployment — a User-Agent is the easiest place for a
 # customer's identity to leak to a third party nobody vetted.
@@ -162,11 +185,13 @@ def _bearer(credential):
     return f'Bearer {token}'
 
 
-def fetch_json(adapter, *, path, params=None, credential=''):
-    """One GET through the whole envelope. Raises `SourceUnavailable` /
-    `SourceRefused`, never returns a partial answer."""
-    url, query, headers = build_request(adapter, path=path, params=params,
-                                        credential=credential)
+def _validated_route(url):
+    """`(hostname, [(family, ip)])` for a URL the envelope will allow.
+
+    Every check that happens before a socket exists, in one place, because both
+    callers below need all of them and a media fetch that quietly skipped one
+    would be the SSRF this module was written to prevent.
+    """
     parts = urlsplit(url)
     if parts.scheme != 'https':
         raise SourceUnavailable('scheme-refused')
@@ -179,17 +204,19 @@ def fetch_json(adapter, *, path, params=None, credential=''):
     # after approval must stop working without anyone re-saving a row (§8.1a).
     if not policy.host_allowed(hostname):
         raise SourceUnavailable('host-denied')
-
-    port = parts.port or 443
     try:
-        resolved = addresses.resolve_public(hostname, port)
+        return hostname, addresses.resolve_public(hostname, parts.port or 443)
     except addresses.AddressRefused as exc:
         raise SourceUnavailable(str(exc)) from exc
 
+
+def _attempt(url, hostname, resolved, query, headers, reader=None):
+    """Try each validated address in turn. A refusal is final; a transport
+    failure moves to the next answer the resolver gave."""
     last = None
     for _family, ip in resolved:
         try:
-            return _send(url, ip, hostname, query, headers)
+            return _send(url, ip, hostname, query, headers, reader=reader)
         except SourceRefused:
             raise
         except SourceUnavailable as exc:
@@ -198,7 +225,52 @@ def fetch_json(adapter, *, path, params=None, credential=''):
     raise last or SourceUnavailable('unreachable')
 
 
-def _send(url, ip, hostname, query, headers):
+def fetch_json(adapter, *, path, params=None, credential=''):
+    """One GET through the whole envelope. Raises `SourceUnavailable` /
+    `SourceRefused`, never returns a partial answer."""
+    url, query, headers = build_request(adapter, path=path, params=params,
+                                        credential=credential)
+    hostname, resolved = _validated_route(url)
+    return _attempt(url, hostname, resolved, query, headers)
+
+
+def fetch_binary(url, *, max_bytes=MAX_IMAGE_BYTES, allowed_types=IMAGE_TYPES):
+    """One GET for a media file a provider's payload pointed at.
+
+    `(content_type, bytes)`. This is the one place where **the host is named by
+    the payload rather than by the adapter** the designer declared and a
+    reviewer approved — a poster lives on the provider's CDN, not on its API
+    host — so the premise §8.1 opens with is replaced here rather than inherited
+    quietly:
+
+    * every check that decides *where the packet goes* still runs, unchanged and
+      per call: https only, no userinfo, the deny policy, address validation and
+      connection pinning, and no redirect followed;
+    * **nothing of the owner's rides along.** `build_request` is not used and
+      there is no parameter that could carry a credential: an API key belongs to
+      the API host and sending it to a CDN would hand it to a third party the
+      declaration never named;
+    * what comes back must be an image **from a closed list**, and SVG is not on
+      it — it is XML with script in it, and every other rule here is about where
+      a packet goes rather than about what returns being inert;
+    * the body cap is an image's, read incrementally like the JSON one.
+
+    Reached only by a generated application's lookup (`views.lookup_detail`).
+    The design sandbox does not call it, so a designer's preview still talks to
+    exactly the host they declared.
+    """
+    hostname, resolved = _validated_route(url)
+    headers = {
+        'Accept': ', '.join(sorted(allowed_types)),
+        'User-Agent': USER_AGENT,
+        'Connection': 'close',
+    }
+    return _attempt(url, hostname, resolved, {}, headers,
+                    reader=lambda response: _read_binary(
+                        response, max_bytes=max_bytes, allowed_types=allowed_types))
+
+
+def _send(url, ip, hostname, query, headers, reader=None):
     session = requests.Session()
     # A fresh session with nothing carried over. `trust_env` off is what stops a
     # deployment's own proxy variables and netrc credentials riding out to a host
@@ -223,13 +295,14 @@ def _send(url, ip, hostname, query, headers):
         pass
 
     try:
-        return _read(response)
+        return (reader or _read)(response)
     finally:
         response.close()
         session.close()
 
 
-def _read(response):
+def _status_or_raise(response):
+    """The three status readings both readers share (§8.4)."""
     status = response.status_code
     if status in (401, 403, 429):
         # The owner's problem, said as such (§8.4). The provider's body is
@@ -240,7 +313,43 @@ def _read(response):
     if status >= 400:
         raise SourceUnavailable(f'status:{status}')
 
-    content_type = (response.headers.get('Content-Type') or '').split(';')[0].strip().lower()
+
+def _content_type(response):
+    return (response.headers.get('Content-Type') or '').split(';')[0].strip().lower()
+
+
+def _capped_body(response, max_bytes):
+    """The body, read incrementally — never `len(response.content)` after the
+    fact, by which time the ceiling has already been exceeded in memory."""
+    body = bytearray()
+    for chunk in response.iter_content(8192):
+        body.extend(chunk)
+        if len(body) > max_bytes:
+            raise SourceUnavailable('too-large')
+    return bytes(body)
+
+
+def _read_binary(response, *, max_bytes, allowed_types):
+    """A media response as `(content_type, bytes)`.
+
+    The content type is checked against a **closed list** rather than an
+    `image/` prefix: `image/svg+xml` matches that prefix and is XML with script
+    in it, and a poster nobody can run is the whole point of storing one.
+    """
+    _status_or_raise(response)
+    content_type = _content_type(response)
+    if content_type not in allowed_types:
+        raise SourceUnavailable(f'content-type:{content_type}')
+    body = _capped_body(response, max_bytes)
+    if not body:
+        raise SourceUnavailable('empty-body')
+    return content_type, body
+
+
+def _read(response):
+    _status_or_raise(response)
+
+    content_type = _content_type(response)
     if content_type and not (content_type == 'application/json' or
                              content_type.endswith('+json')):
         # JSON only (§13). An HTML error page that parses as nothing is a
@@ -248,16 +357,9 @@ def _read(response):
         # how "the API returned nothing" becomes the answer to "your key expired".
         raise SourceUnavailable(f'content-type:{content_type}')
 
-    body = bytearray()
-    for chunk in response.iter_content(8192):
-        body.extend(chunk)
-        if len(body) > MAX_BYTES:
-            # Incrementally, never `len(response.content)` after the fact — by
-            # then the ceiling has already been exceeded in memory, which is the
-            # thing the ceiling exists to prevent.
-            raise SourceUnavailable('too-large')
+    body = _capped_body(response, MAX_BYTES)
     try:
-        payload = json.loads(bytes(body).decode('utf-8', errors='replace'))
+        payload = json.loads(body.decode('utf-8', errors='replace'))
     except (ValueError, UnicodeDecodeError) as exc:
         raise SourceUnavailable('not-json') from exc
     if _depth(payload) > MAX_DEPTH:

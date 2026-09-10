@@ -104,7 +104,15 @@ def lookup_detail(request, key: str):
     try:
         picked = services.detail(
             adapter, binding, external_id,
-            credential=registry.credential_for(adapter), application_id=key)
+            credential=registry.credential_for(adapter), application_id=key,
+            # A generated application stores an `image` field as a real file, so
+            # a poster URL cannot land in it: the form previews the URL, the
+            # save reports success and nothing is stored. The bytes travel
+            # instead, as the `data:` URL an uploaded file already produces.
+            # Asked for HERE and nowhere else — the design sandbox keeps its
+            # records as JSON, renders the URL fine, and therefore never reaches
+            # past the one host its designer declared.
+            inline_media=True)
     except services.LookupError_ as exc:
         return _failure(exc)
     return JsonResponse(picked)

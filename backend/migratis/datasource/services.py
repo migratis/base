@@ -15,11 +15,22 @@ probe, so this module goes nowhere near `ai_debit_credits` and nowhere near
 `credits.services` (**D6**), and a test reads its source for those names exactly
 as `routing/views.py` already has one.
 """
+import base64
 import logging
 
 from . import breaker, client, mapping, throttle
 
 logger = logging.getLogger(__name__)
+
+# How many media files one PICK may fetch. A binding is free to map five image
+# fields, and a user who clicks "use this" made one choice, not five requests.
+MAX_INLINE_MEDIA = 2
+
+# The field types whose value is a FILE rather than a reference to one. Only
+# `image` for now: an arbitrary `file` slot would mean fetching whatever a
+# payload names with no way to say what a legitimate answer looks like, and
+# nobody has asked for one.
+MEDIA_FIELD_TYPES = ('image',)
 
 # The three outcomes §8.4 tells apart, because the caller does something
 # different with each. They are i18n keys: the frontend renders them, and a
@@ -93,13 +104,68 @@ def search(adapter, binding, query_text, *, credential='', application_id=None):
     return candidates
 
 
-def detail(adapter, binding, external_id, *, credential='', application_id=None):
+def inline_media_values(values, binding, *, max_media=MAX_INLINE_MEDIA):
+    """A URL bound to an `image` field, replaced by the bytes it names.
+
+    Prod app 8: a poster URL fills the form, `ImageField` previews it, the save
+    reports success and **no image is stored** — the emitted service appends the
+    URL as a plain string and the view's `UploadedFile = File(None)` never sees
+    a file. `ai_sandbox_config` already states the shape an `image` value has to
+    have, and it is the one an uploaded file already produces:
+    `"data:image/jpeg;base64,…"`. So the fix is to deliver that shape, not to
+    teach four write paths to recognise a URL.
+
+    Keyed on the target field's **declared type**, the mapper's rule
+    throughout: a `string` field holding a URL is a URL, and fetching it would
+    be inventing a file nobody declared.
+
+    A fetch that fails leaves the field **absent, never the URL**. The URL is
+    precisely the thing that cannot be stored, and leaving it is what made the
+    form show a poster the save then dropped — a success message over a missing
+    image. Absent lets the ordinary required check speak instead, which is the
+    same judgement `resolve_path` makes about a path that does not resolve.
+
+    Not billed and not metered: the daily ceiling was consumed by the lookup
+    this belongs to, and a CDN that is down must not trip the API's breaker.
+    """
+    fetched = 0
+    for field_name, slot_type in sorted((binding.field_types or {}).items()):
+        if slot_type not in MEDIA_FIELD_TYPES:
+            continue
+        value = values.get(field_name)
+        if not isinstance(value, str) or not value.startswith('https://'):
+            continue
+        if fetched >= max_media:
+            values.pop(field_name, None)
+            continue
+        fetched += 1
+        try:
+            content_type, blob = client.fetch_binary(value)
+        except client.DataSourceError as exc:
+            logger.info('[DATASOURCE] media not inlined for %s: %s', field_name, exc)
+            values.pop(field_name, None)
+            continue
+        encoded = base64.b64encode(blob).decode('ascii')
+        values[field_name] = f'data:{content_type};base64,{encoded}'
+    return values
+
+
+def detail(adapter, binding, external_id, *, credential='', application_id=None,
+           inline_media=False):
     """The second request of the two-step flow, fired on the PICK (§4.2).
 
     OMDb answers a search with ids and needs `?i=<id>` for the fields; TMDB wants
     `/movie/{id}` for credits. A one-step-only primitive does not serve the case
     that triggered this scope, which is why `detail_path` is in v1 — two
     requests, one user action.
+
+    `inline_media` is off by default and asked for by **a generated
+    application's lookup only**. The design sandbox stores its records as JSON,
+    so a poster URL renders there and is left exactly as the provider sent it —
+    which keeps a designer's preview talking to the one host they declared,
+    rather than to whatever host that host's payload names. It rides on the
+    PICK rather than on the search because a search answers up to
+    `MAX_CANDIDATES` results and nobody chose any of them yet.
     """
     if not (adapter.detail_path or '').strip():
         raise LookupError_(UNAVAILABLE)
@@ -113,10 +179,13 @@ def detail(adapter, binding, external_id, *, credential='', application_id=None)
     listed = mapping.result_list(payload, adapter)
     item = listed[0] if listed else (payload if isinstance(payload, dict) else {})
     slots = mapping.slots_of(item, adapter)
+    values = mapping.bind_values(slots, binding)
+    if inline_media:
+        inline_media_values(values, binding)
     return {
         'label':  mapping._text(mapping.resolve_path(item, adapter.label_path)),
         'id':     str(external_id),
-        'values': mapping.bind_values(slots, binding),
+        'values': values,
     }
 
 
