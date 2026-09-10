@@ -24,7 +24,16 @@ export default function PaginatedEntitySelectField ({
   required = false,
   isVisible = true,
   serverError = null,
-  autoFocus = true,
+  // A FIELD does not decide where the caret goes — the FORM does. react-select
+  // focuses itself on mount when this is on, so a form carrying several selects
+  // had several of them claiming focus; a burst of `setValue` (an external
+  // lookup fires one per mapped field) then had them handing focus back and
+  // forth through re-renders that never settled, and the tab froze with no
+  // console error at all. Prod app 8, on the four selects of its Title form —
+  // and `EntityForm` had already been passing `autoFocus={false}` to four of
+  // its own, one workaround per caller. A caller that genuinely wants the caret
+  // still asks for it.
+  autoFocus = false,
   inputClass = "",
   disabled = false,
   dispatch = () => {},

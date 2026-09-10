@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import Select from 'react-select';
 import makeAnimated from 'react-select/animated';
 import { useTranslation } from 'react-i18next';
@@ -16,7 +16,16 @@ export default function SelectField ({
   required = false,
   isVisible = true,
   serverError = null,
-  autoFocus = true,
+  // A FIELD does not decide where the caret goes — the FORM does. react-select
+  // focuses itself on mount when this is on, so a form carrying several selects
+  // had several of them claiming focus; a burst of `setValue` (an external
+  // lookup fires one per mapped field) then had them handing focus back and
+  // forth through re-renders that never settled, and the tab froze with no
+  // console error at all. Prod app 8, on the four selects of its Title form —
+  // and `EntityForm` had already been passing `autoFocus={false}` to four of
+  // its own, one workaround per caller. A caller that genuinely wants the caret
+  // still asks for it.
+  autoFocus = false,
   inputClass = "",
   dispatch = () => {},
   onMenuScrollToBottom = () => {},
@@ -31,8 +40,22 @@ export default function SelectField ({
 }) {
 
   const { t } = useTranslation('form');
-  const animatedComponents = makeAnimated();
+  // Built ONCE. `makeAnimated()` mints new component TYPES on every call, so
+  // calling it in the render body hands react-select a different `components`
+  // identity each pass and forces it to unmount and remount its whole subtree.
+  // On a form that re-renders on every setValue — an external-source lookup
+  // fires fifteen — that is what turned a render error into a frozen tab.
+  const animatedComponents = useMemo(() => makeAnimated(), []);
   const { control, setValue, formState: { errors } } = useFormContext();
+  // `render_as: 'select'` is a display choice over whatever the column holds,
+  // so nothing guarantees options were supplied: only an `enum` carries them
+  // from its `Field.choices`. Prod app 8's `Title.language` is a plain string
+  // rendered as a select with NO options, and the day an external lookup began
+  // filling it, `options.find(...)` on `undefined` threw on every render —
+  // inside a Controller, under a form re-rendering fifteen times, so it hung
+  // the tab instead of surfacing. A renderer must tolerate what it is handed
+  // (`TagsField`'s rule, one component over).
+  const opts = Array.isArray(options) ? options : [];
 
   const getNestedError = (errors, path) => {
     return path.split('.').reduce((acc, key) => acc?.[key], errors);
@@ -84,7 +107,7 @@ export default function SelectField ({
             menuPortalTarget={menuPortalTarget}
             menuPosition={menuPosition}
             onInputChange={onInputChange}
-            options={options}
+            options={opts}
             className={error ? 'migratis-is-invalid w-100' : 'w-100' }
             styles={{
               menu: provided => ({ ...provided, zIndex: 9999 })
@@ -95,8 +118,8 @@ export default function SelectField ({
             autoFocus={autoFocus}
             isLoading={isLoading}
             value={isMulti
-              ? (Array.isArray(field.value) ? field.value.map(v => options.find(o => o.value === v) || v).filter(Boolean) : [])
-              : (field.value ? options.find(o => o.value === field.value) || field.value : null)
+              ? (Array.isArray(field.value) ? field.value.map(v => opts.find(o => o.value === v) || v).filter(Boolean) : [])
+              : (field.value ? opts.find(o => o.value === field.value) || field.value : null)
             }
             onChange={(selected) => {
               if (isMulti) {
