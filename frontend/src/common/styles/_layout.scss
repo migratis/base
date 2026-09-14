@@ -474,6 +474,22 @@ footer {
   }
 }
 
+// The base template's footer is not this one — an application built from the
+// framework is owned by somebody else and must not publish migratis.ai's legal
+// documents as its own, so `common/components/Footer.js` is the one file the
+// sync hook skips. It carries two or three links, which the four-column flow
+// above would strand in a single ragged column: they read as one centred row.
+.footer-generic {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 28px;
+
+  .foot-link {
+    margin-bottom: 0;
+  }
+}
+
 .foot-link {
   // A block, so each link is its own line inside a column and the column break
   // never lands in the middle of one.

@@ -409,6 +409,23 @@ TRANSLATIONS['layout'].update({
         'es': 'Migratis — todos los derechos reservados.',
         'ro': 'Migratis — toate drepturile rezervate.',
     },
+    # The whole of this template's footer (common/components/Footer.js — the one
+    # file migratis does not sync down, because an application built from the
+    # framework is owned by somebody else and must not publish migratis.ai's
+    # terms as its own). What is left is what is honestly ours to say: what this
+    # runs on, and where its source is.
+    'built-with-migratis': {
+        'en': 'Built with Migratis',
+        'fr': 'Propulsé par Migratis',
+        'es': 'Creado con Migratis',
+        'ro': 'Creat cu Migratis',
+    },
+    'source-code': {
+        'en': 'Source code',
+        'fr': 'Code source',
+        'es': 'Código fuente',
+        'ro': 'Codul sursă',
+    },
 })
 
 # ===========================================================================
