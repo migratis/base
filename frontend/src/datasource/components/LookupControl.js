@@ -5,9 +5,31 @@ import Spinner from 'react-bootstrap/Spinner';
 import { IoCloudDownloadOutline as SourceIcon,
          IoImageOutline as NoImageIcon } from 'react-icons/io5';
 import {
-  appLookup, sandboxLookup, QUOTA_EXHAUSTED, RATE_LIMITED, REFUSED,
+  appLookup, sandboxLookup,
+  UNAVAILABLE, QUOTA_EXHAUSTED, RATE_LIMITED, REFUSED,
 } from '../services/lookup.service';
 import { describeCandidate } from '../candidatePreview';
+
+/**
+ * What each failure says when the host translates none of it.
+ *
+ * Every `t()` in this file carries a fallback, and these are the ones a key
+ * alone cannot supply. `LookupControl` is mounted with the CALLER's translator
+ * (`formLookups`), and it has three hosts with three vocabularies: the
+ * designer's pages (the `generator` namespace), a generated application (its
+ * own, seeded by codegen's `_SHARED_COMPONENT_TRANSLATIONS`) — and the sandbox
+ * preview, which speaks the APPLICATION's vocabulary and has never carried a
+ * word about data sources, so every key rendered itself. `ExportButton`, the
+ * other framework component the sandbox mounts this way, has always passed a
+ * fallback on every call; this is that rule, kept by a test rather than by
+ * memory.
+ */
+const FALLBACKS = {
+  [UNAVAILABLE]:     'The source could not be reached. What you typed has been kept.',
+  [REFUSED]:         'The source refused the request — its key may be missing or no longer valid.',
+  [QUOTA_EXHAUSTED]: 'This application has used all its lookups for today.',
+  [RATE_LIMITED]:    'Too many searches just now — try again in a moment.',
+};
 
 /**
  * "Fill this form from an external source."
@@ -89,11 +111,13 @@ const CandidateRow = ({ candidate, preview, reserveThumb, twoStep, busy, onPick,
             row that promises three fields and fills eleven is the kind of
             small lie that makes the honest numbers unbelievable too. */}
         <span className="lookup-candidate-fills">
-          {twoStep ? t('datasource-fills-on-pick')
-                   : t('datasource-fills-count', { count: fillCount })}
+          {twoStep ? t('datasource-fills-on-pick',
+                       'Full details are fetched when you choose this')
+                   : t('datasource-fills-count',
+                       { count: fillCount, defaultValue: 'Fills {{count}} fields' })}
         </span>
         <span className="btn btn-sm btn-primary lookup-candidate-cta">
-          {t('datasource-use-this')}
+          {t('datasource-use-this', 'Use this')}
         </span>
       </span>
     </button>
@@ -196,12 +220,12 @@ const LookupControl = ({ sources = [], sandboxToken = '', entityName = '',
     if (!outcome) return '';
     if (outcome.key === REFUSED) {
       return outcome.sourceStatus
-        ? `${t(REFUSED)} (${outcome.sourceStatus})`
-        : t(REFUSED);
+        ? `${t(REFUSED, FALLBACKS[REFUSED])} (${outcome.sourceStatus})`
+        : t(REFUSED, FALLBACKS[REFUSED]);
     }
-    if (outcome.key === QUOTA_EXHAUSTED) return t(QUOTA_EXHAUSTED);
-    if (outcome.key === RATE_LIMITED) return t('datasource-rate-limited');
-    return t(outcome.key);
+    if (outcome.key === QUOTA_EXHAUSTED) return t(QUOTA_EXHAUSTED, FALLBACKS[QUOTA_EXHAUSTED]);
+    if (outcome.key === RATE_LIMITED) return t(RATE_LIMITED, FALLBACKS[RATE_LIMITED]);
+    return t(outcome.key, FALLBACKS[outcome.key] || FALLBACKS[UNAVAILABLE]);
   };
 
   return (
@@ -221,11 +245,12 @@ const LookupControl = ({ sources = [], sandboxToken = '', entityName = '',
           <div className="d-flex gap-2">
             <input className="form-control" value={query} autoFocus
                    aria-label={openSource.label}
-                   placeholder={t('datasource-search-placeholder')}
+                   placeholder={t('datasource-search-placeholder',
+                                  'What are you looking for?')}
                    onChange={(e) => setQuery(e.target.value)}
                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); search(); } }} />
             <Button type="button" onClick={search} disabled={busy || !query.trim()}>
-              {busy ? <Spinner size="sm" animation="border" /> : t('datasource-search')}
+              {busy ? <Spinner size="sm" animation="border" /> : t('datasource-search', 'Search')}
             </Button>
           </div>
 
@@ -239,7 +264,7 @@ const LookupControl = ({ sources = [], sandboxToken = '', entityName = '',
           {candidates && candidates.length === 0 && !failure && (
             /* A real answer, and told apart from every failure above. */
             <div className="text-muted small mt-2" data-testid="lookup-empty">
-              {t('datasource-no-candidates')}
+              {t('datasource-no-candidates', 'Nothing found')}
             </div>
           )}
 
@@ -253,7 +278,8 @@ const LookupControl = ({ sources = [], sandboxToken = '', entityName = '',
               ))}
             </div>
           )}
-          <div className="form-text text-muted mt-1">{t('datasource-fills-help')}</div>
+          <div className="form-text text-muted mt-1">{t('datasource-fills-help',
+                  'Choosing a result fills the form. You can change anything before saving.')}</div>
         </div>
       )}
     </div>
