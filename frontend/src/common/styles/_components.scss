@@ -1116,3 +1116,99 @@
     max-width: 360px;
   }
 }
+
+// ── External-source lookup ────────────────────────────────────────────────────
+// The candidate list is what somebody chooses FROM, so a row has to carry
+// enough to tell "Blade Runner" from "Blade Runner 2049" without picking one to
+// find out: the poster the source published, the label it answered with, the
+// values that would land in the form, and how many fields that is.
+//
+// The whole row is the button (see LookupControl.js), so the reset that
+// `list-group-item-action` does not do — left alignment, full width — belongs
+// here rather than in five utility classes on the element.
+.lookup-candidate {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+
+  // A phone puts the action under the body rather than squeezing both.
+  @media (max-width: 576px) {
+    flex-wrap: wrap;
+  }
+}
+
+// Poster-shaped, because that is what a source that publishes one publishes.
+// A fixed box either way: an image whose proportions we cannot know must not
+// decide the row's height.
+.lookup-candidate-thumb {
+  flex: 0 0 auto;
+  width: 46px;
+  height: 66px;
+  object-fit: cover;
+  border-radius: 4px;
+  background-color: var(--color-border);
+}
+
+.lookup-candidate-thumb--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  opacity: 0.5;
+}
+
+.lookup-candidate-body {
+  display: flex;
+  flex: 1 1 12rem;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.lookup-candidate-title {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+// One grid for the whole row's facts rather than one per fact, so the values
+// line up down the column — the alignment is most of what makes four short
+// lines scannable instead of four sentences.
+.lookup-candidate-facts {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 2px 10px;
+  font-size: $font-size-small;
+}
+
+.lookup-candidate-fact-label {
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.lookup-candidate-fact-value {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.lookup-candidate-action {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.lookup-candidate-fills {
+  color: var(--color-text-muted);
+  font-size: $font-size-small;
+  text-align: right;
+}
+
+// Styled as the button it stands in for — it is inside the row's own <button>,
+// so it must never be one itself.
+.lookup-candidate-cta {
+  pointer-events: none;
+}

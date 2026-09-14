@@ -1,11 +1,13 @@
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { useFormContext } from 'react-hook-form';
 import Button from 'react-bootstrap/Button';
 import Spinner from 'react-bootstrap/Spinner';
-import { IoCloudDownloadOutline as SourceIcon } from 'react-icons/io5';
+import { IoCloudDownloadOutline as SourceIcon,
+         IoImageOutline as NoImageIcon } from 'react-icons/io5';
 import {
   appLookup, sandboxLookup, QUOTA_EXHAUSTED, RATE_LIMITED, REFUSED,
 } from '../services/lookup.service';
+import { describeCandidate } from '../candidatePreview';
 
 /**
  * "Fill this form from an external source."
@@ -28,10 +30,81 @@ import {
  * mistake in a new module.
  *
  * The payload is **data** (D10): every value is rendered as text into a form
- * input. Nothing here sets innerHTML, and nothing here reaches a prompt.
+ * input. Nothing here sets innerHTML, and nothing here reaches a prompt. The
+ * single exception is the candidate poster, which is an `<img src>` and
+ * therefore fetches — so it is taken only from a field the design declares
+ * `image`, only when the value is https or an inline image, and always with
+ * `referrerPolicy="no-referrer"`. See `../candidatePreview.js`, which decides
+ * what a row says; this file decides how it looks.
  */
+/**
+ * One candidate, as something a person can choose between.
+ *
+ * The whole row is the control — a poster, a label and four facts are one
+ * target, not a caption beside a button — so it is a `<button>` and the "use
+ * this" wording is the affordance inside it rather than a second, nested one.
+ * The accessible name is therefore the row's own text, which is exactly what a
+ * screen reader needs read out to make the same choice.
+ *
+ * `referrerPolicy="no-referrer"` on the poster: this is the one element here
+ * that fetches, and the source's CDN has no business learning which deployment
+ * — or which sandbox token — a designer is looking at. `alt=""` because the
+ * label right beside it is the picture's text; announcing a filename twice
+ * helps nobody.
+ */
+const CandidateRow = ({ candidate, preview, reserveThumb, twoStep, busy, onPick, t }) => {
+  const { thumbnail, facts, fillCount } = preview;
+  return (
+    <button type="button" disabled={busy} onClick={onPick}
+            data-testid="lookup-candidate"
+            className="list-group-item list-group-item-action lookup-candidate">
+      {thumbnail ? (
+        <img className="lookup-candidate-thumb" src={thumbnail.src} alt=""
+             loading="lazy" referrerPolicy="no-referrer" />
+      ) : reserveThumb ? (
+        /* A source that published a poster for one result and not the next
+           would otherwise hand back a ragged list; the slot stays. */
+        <span className="lookup-candidate-thumb lookup-candidate-thumb--empty"
+              aria-hidden="true"><NoImageIcon /></span>
+      ) : null}
+
+      <span className="lookup-candidate-body">
+        <span className="lookup-candidate-title">{candidate.label}</span>
+        {facts.length > 0 && (
+          <span className="lookup-candidate-facts">
+            {facts.map((fact) => (
+              <Fragment key={fact.field}>
+                <span className="lookup-candidate-fact-label">{fact.label}</span>
+                <span className="lookup-candidate-fact-value">{fact.text}</span>
+              </Fragment>
+            ))}
+          </span>
+        )}
+      </span>
+
+      <span className="lookup-candidate-action">
+        {/* What the pick will do, said before it is made. A two-step source
+            answers its search with a thinner row than the pick will fetch
+            (§4.2), so counting what is on screen would understate it — and a
+            row that promises three fields and fills eleven is the kind of
+            small lie that makes the honest numbers unbelievable too. */}
+        <span className="lookup-candidate-fills">
+          {twoStep ? t('datasource-fills-on-pick')
+                   : t('datasource-fills-count', { count: fillCount })}
+        </span>
+        <span className="btn btn-sm btn-primary lookup-candidate-cta">
+          {t('datasource-use-this')}
+        </span>
+      </span>
+    </button>
+  );
+};
+
+/** The control itself: the source buttons, the search box, and the list of
+ *  candidates `CandidateRow` above renders one of. */
 const LookupControl = ({ sources = [], sandboxToken = '', entityName = '',
                          viewAs = null, viewAsId = '1', fillable = null,
+                         fieldMeta = null,
                          transport: injected, t = (k) => k, disabled = false }) => {
   const { setValue, getValues } = useFormContext();
   // The control picks its own transport, so the HOST imports nothing from this
@@ -53,6 +126,18 @@ const LookupControl = ({ sources = [], sandboxToken = '', entityName = '',
   const [busy, setBusy]             = useState(false);
   const [candidates, setCandidates] = useState(null);
   const [failure, setFailure]       = useState(null);
+
+  // What each row says, decided once per answer rather than per render — and
+  // before the early return below, so the hook order never depends on whether
+  // this entity declares a source.
+  const described = useMemo(
+    () => (candidates || []).map((candidate) => ({
+      candidate,
+      preview: describeCandidate(candidate, { fieldMeta, fillable }),
+    })),
+    [candidates, fieldMeta, fillable],
+  );
+  const anyThumbnail = described.some(({ preview }) => preview.thumbnail);
 
   if (!sources.length) return null;
 
@@ -159,18 +244,14 @@ const LookupControl = ({ sources = [], sandboxToken = '', entityName = '',
           )}
 
           {candidates && candidates.length > 0 && (
-            <ul className="list-group mt-2" data-testid="lookup-candidates">
-              {candidates.map((candidate, index) => (
-                <li key={candidate.id || index}
-                    className="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-                  <span>{candidate.label}</span>
-                  <Button type="button" size="sm" disabled={busy}
-                          onClick={() => fill(candidate)}>
-                    {t('datasource-use-this')}
-                  </Button>
-                </li>
+            <div className="list-group mt-2" data-testid="lookup-candidates">
+              {described.map(({ candidate, preview }, index) => (
+                <CandidateRow key={candidate.id || index}
+                              candidate={candidate} preview={preview}
+                              reserveThumb={anyThumbnail} twoStep={!!openSource.two_step}
+                              busy={busy} t={t} onPick={() => fill(candidate)} />
               ))}
-            </ul>
+            </div>
           )}
           <div className="form-text text-muted mt-1">{t('datasource-fills-help')}</div>
         </div>
