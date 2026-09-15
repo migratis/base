@@ -3,6 +3,7 @@ import { toast } from 'react-toastify';
 import { API_SERVER } from "../../settings";
 import { trackPromise } from 'react-promise-tracker';
 import i18n from '../../i18n';
+import { signalSessionExpired } from './session';
 
 const customAxios = axios.create({
     baseURL: `${API_SERVER}`,
@@ -74,23 +75,10 @@ customAxios.interceptors.response.use(
   },
   async (err) => {
 
+    // One rule, one place: `common/tools/session.js`. Both transports call it,
+    // because the AI transport's own copy of it had drifted.
     if (err && err.response && err.response.status === 401) {
-      // Only a session that existed can expire. A 401 on an anonymous visit
-      // means "not logged in", which is a perfectly legal state on a public
-      // page — flagging it there left the flag in localStorage and prompted for
-      // a login on the next page, whichever page that was.
-      const storedUser = localStorage.getItem("user");
-      const hadSession = storedUser && storedUser !== 'false';
-
-      localStorage.setItem("user", false);
-
-      if (hadSession) {
-        localStorage.setItem("session_expired", "true");
-        const event = new CustomEvent('session-expired', {
-          detail: { url: err.config?.url }
-        });
-        window.dispatchEvent(event);
-      }
+      signalSessionExpired(err.config?.url);
     }
 
     if (err && err.response && err.response.status === 403 && !silent403(err)) {

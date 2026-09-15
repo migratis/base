@@ -9,6 +9,7 @@ import { BlockedModal } from "../modals/BlockedModal";
 import { useTranslation } from "react-i18next";
 import { IoMenuOutline as MenuIcon, IoCloseOutline as CloseIcon } from 'react-icons/io5';
 import { useShell } from '../shell/ShellContext';
+import { useSessionWatch } from '../hooks/useSessionWatch';
 
 export const Layout = (props) => {
   const { t } = useTranslation('layout');
@@ -27,30 +28,25 @@ export const Layout = (props) => {
   }, []);
 
   // Who is logged in is the SESSION's answer, not this browser's copy of it.
-  // `localStorage.user` is a copy: it goes missing on its own — `logOut()`
-  // removes it without waiting for the logout request that may never have
-  // landed, storage gets cleared, a tab is opened before it was written — and
-  // when it is missing while the cookie is alive, every role gate resolves
-  // "anonymous" over a session the API is still serving. App 8's owner
-  // reported that as "I am connected and there is no Add button", beside a
-  // list whose rows had just been served to them.
+  // `localStorage.user` is a copy, and the two disagree in both directions.
   //
-  // So the server is asked on mount unless it has already answered: `"false"`
-  // is what the 401 interceptor stores, and it is the one value that means
-  // "there is no session" rather than "we do not know" — which is what keeps
-  // an anonymous visitor from putting a 401 in their console on every page.
-  // The refresh is also what it always was: fields added after login (is_staff,
-  // the role groups) arrive without a re-login.
-  useEffect(() => {
-    if (localStorage.getItem("user") === "false") return;
-    userService.getProfile().then((fresh) => {
-      if (fresh && fresh.id) {
-        localStorage.setItem("user", JSON.stringify(fresh));
-        setUser(fresh);
-      }
-    }).catch(() => {});
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // It goes missing while the session is alive — `logOut()` removes it without
+  // waiting for the logout request that may never have landed, storage gets
+  // cleared, a tab is opened before it was written — and then every role gate
+  // resolves "anonymous" over a session the API is still serving. App 8's owner
+  // reported that as "I am connected and there is no Add button", beside a list
+  // whose rows had just been served to them.
+  //
+  // And it outlives the session, which is the half nothing watched: an expiry
+  // reaches no browser, so a tab left open goes on drawing the signed-in shell
+  // until the owner clicks something and is told the thing they clicked failed.
+  //
+  // `useSessionWatch` asks the server on mount and again whenever the tab comes
+  // back to the foreground, which is where an expired session now announces
+  // itself — through the same `session-expired` signal a 401 raises, so there
+  // is one path to the login modal below and not two. It stops asking once the
+  // wall is up; there is nothing left to discover behind it.
+  useSessionWatch({ userService, onUser: setUser, enabled: !sessionExpiredShow });
 
   // An expired session is only worth interrupting for on a page that needed the
   // session. The flag lives in localStorage and used to survive until the next
