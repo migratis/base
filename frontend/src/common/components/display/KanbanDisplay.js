@@ -4,6 +4,7 @@ import {
   IoTrashOutline as TrashIcon,
 } from 'react-icons/io5';
 import InteractionRowActions from '../InteractionRowActions';
+import { recordSelection } from './recordSelection';
 
 const KanbanDisplay = ({
   entity,
@@ -11,6 +12,8 @@ const KanbanDisplay = ({
   relOptions = {},
   config = {},
   onEdit,
+  onSelectRecord,
+  selectedRecordId = null,
   onDelete,
   onInteraction,
   viewAs,
@@ -101,12 +104,15 @@ const KanbanDisplay = ({
               <Badge bg={getColumnColor(status)}>{columnRecords.length}</Badge>
             </div>
             <div className="flex-grow-1 overflow-auto p-2" style={{ minHeight: '200px' }}>
-              {columnRecords.map((record) => (
+              {columnRecords.map((record) => {
+                const sel = recordSelection(record, { onSelectRecord, selectedRecordId, onEdit });
+                return (
                 <div
                   key={record.id}
-                  className="bg-white border rounded p-2 mb-2"
-                  style={{ cursor: onEdit ? 'pointer' : 'default' }}
-                  onClick={onEdit ? () => onEdit(record) : undefined}
+                  className={`bg-white border rounded p-2 mb-2 ${sel.className}`.trim()}
+                  style={{ cursor: onEdit ? 'pointer' : 'default', ...(sel.style || {}) }}
+                  onClick={onEdit ? () => onEdit(record) : sel.onClick}
+                  aria-selected={sel.ariaSelected}
                 >
                   {primaryField && (
                     <div style={{ fontWeight: '500', marginBottom: '0.5rem' }}>
@@ -148,7 +154,8 @@ const KanbanDisplay = ({
                     </div>
                   )}
                 </div>
-              ))}
+                );
+              })}
               {columnRecords.length === 0 && (
                 <div className="text-center text-muted p-3" style={{ fontSize: '0.85em' }}>
                   {tval('no-records-in-column', 'No records')}

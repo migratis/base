@@ -17,6 +17,7 @@ import InteractionRowActions from '../InteractionRowActions';
 import GeoValue from '../../fields/GeoValue';
 import { isGeoField } from '../../fields/geoSummary';
 import { relationLabels } from '../../tools/export/values';
+import { recordSelection } from './recordSelection';
 
 const CardsDisplay = ({
   entity,
@@ -24,6 +25,8 @@ const CardsDisplay = ({
   relOptions = {},
   config = {},
   onEdit,
+  onSelectRecord,
+  selectedRecordId = null,
   onDelete,
   onInteraction,
   viewAs,
@@ -164,9 +167,16 @@ const CardsDisplay = ({
     <div className="d-flex flex-wrap gap-3">
       {records.map((record) => {
         const recordImages = getAllImages(record);
+        const sel = recordSelection(record, { onSelectRecord, selectedRecordId, onEdit });
 
         return (
-          <div key={record.id} className="card shadow-sm" style={{ minWidth: '280px', maxWidth: '350px', flex: '1 1 280px' }}>
+          <div
+            key={record.id}
+            className={`card shadow-sm ${sel.className}`.trim()}
+            onClick={sel.onClick}
+            aria-selected={sel.ariaSelected}
+            style={{ minWidth: '280px', maxWidth: '350px', flex: '1 1 280px', ...(sel.style || {}) }}
+          >
             <div
               style={{ height: '150px', overflow: 'hidden', background: '#f0f0f0', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}
               onClick={() => setExpandedRecord(record)}

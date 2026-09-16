@@ -16,6 +16,7 @@ import {
   IoTrashOutline as TrashIcon,
 } from 'react-icons/io5';
 import InteractionRowActions from '../InteractionRowActions';
+import { recordSelection } from './recordSelection';
 
 // -------------------------------------------------------------------
 // Helpers
@@ -96,23 +97,34 @@ const colorFor = (() => {
 
 const EventChip = ({
   record, titleField, colorVariant, onEdit, onDelete,
+  onSelectRecord, selectedRecordId = null,
   interactions, viewAs, getRoleRank, onInteraction,
 }) => {
   const title = titleField ? record.data[titleField] : null;
   const label = title ? String(title) : '—';
+  const sel = recordSelection(record, { onSelectRecord, selectedRecordId, onEdit });
 
   return (
     <div className="mb-1">
       <div
-        className={`d-flex align-items-center gap-1 rounded px-1`}
+        className={`d-flex align-items-center gap-1 rounded px-1 ${sel.className}`.trim()}
+        aria-selected={sel.ariaSelected}
         style={{
           background: `var(--bs-${colorVariant}-bg, #e7f0ff)`,
           border: `1px solid var(--bs-${colorVariant}, #0d6efd)`,
           fontSize: '0.72rem',
           cursor: onEdit ? 'pointer' : 'default',
           overflow: 'hidden',
+          ...(sel.style || {}),
         }}
-        onClick={(e) => { e.stopPropagation(); if (onEdit) onEdit(record); }}
+        onClick={(e) => {
+          // `stopPropagation` stays: the day cell behind this chip has its own
+          // click (add a record on that date), and a chip click must never
+          // also mean "add".
+          e.stopPropagation();
+          if (onEdit) { onEdit(record); return; }
+          if (sel.onClick) sel.onClick();
+        }}
       >
         <span
           style={{
@@ -164,6 +176,8 @@ const CalendarDisplay = ({
   config = {},
   onEdit,
   onDelete,
+  onSelectRecord,
+  selectedRecordId = null,
   onAdd,
   onInteraction,
   viewAs,
@@ -363,6 +377,8 @@ const CalendarDisplay = ({
                     colorVariant={variant}
                     onEdit={onEdit}
                     onDelete={onDelete}
+                    onSelectRecord={onSelectRecord}
+                    selectedRecordId={selectedRecordId}
                     interactions={config?.interactions}
                     viewAs={viewAs}
                     getRoleRank={getRoleRank}

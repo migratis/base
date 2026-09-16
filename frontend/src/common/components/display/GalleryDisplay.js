@@ -10,6 +10,7 @@ import {
   IoInformationCircleOutline as InfoIcon,
 } from 'react-icons/io5';
 import InteractionRowActions from '../InteractionRowActions';
+import { recordSelection } from './recordSelection';
 
 const GalleryDisplay = ({
   entity,
@@ -17,6 +18,8 @@ const GalleryDisplay = ({
   relOptions = {},
   config = {},
   onEdit,
+  onSelectRecord,
+  selectedRecordId = null,
   onDelete,
   onInteraction,
   viewAs,
@@ -106,14 +109,18 @@ const GalleryDisplay = ({
       <div className="d-flex flex-wrap gap-3">
         {records.map((record) => {
           const thumbnailSrc = getThumbnailSrc(record);
+          const sel = recordSelection(record, { onSelectRecord, selectedRecordId, onEdit });
 
           return (
             <div
               key={record.id}
-              className="bg-white border rounded overflow-hidden"
+              className={`bg-white border rounded overflow-hidden ${sel.className}`.trim()}
+              onClick={sel.onClick}
+              aria-selected={sel.ariaSelected}
               style={{
                 width: config?.display_mode_options?.item_width || '220px',
                 cursor: 'pointer',
+                ...(sel.style || {}),
               }}
             >
               {thumbnailSrc && (

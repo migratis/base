@@ -4,6 +4,7 @@ import {
   IoTrashOutline as TrashIcon,
 } from 'react-icons/io5';
 import InteractionRowActions from '../InteractionRowActions';
+import { recordSelection } from './recordSelection';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -76,11 +77,12 @@ const contrastColor = (hex) => {
 
 const GridCell = ({
   record, cellW, cellH, labelField, colorValue, spacing,
-  onEdit, onDelete,
+  onEdit, onDelete, onSelectRecord, selectedRecordId = null,
   interactions, viewAs, getRoleRank, onInteraction,
   t,
 }) => {
   const [hovered, setHovered] = useState(false);
+  const sel = recordSelection(record, { onSelectRecord, selectedRecordId, onEdit });
 
   const bgColor   = paletteFor(colorValue);
   const textColor = contrastColor(bgColor);
@@ -96,8 +98,14 @@ const GridCell = ({
     <div
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      onClick={() => onEdit(record)}
+      // A click meant *edit* here unconditionally, which also threw
+      // `onEdit is not a function` in any read-only context — a page block
+      // passes no `onEdit` at all.
+      onClick={onEdit ? () => onEdit(record) : sel.onClick}
+      className={sel.className}
+      aria-selected={sel.ariaSelected}
       style={{
+        ...(sel.style || {}),
         width:           cellW,
         height:          cellH,
         background:      bgColor,
@@ -221,6 +229,8 @@ const GridDisplay = ({
   config = {},
   onEdit,
   onDelete,
+  onSelectRecord,
+  selectedRecordId = null,
   onInteraction,
   viewAs,
   getRoleRank,
@@ -337,6 +347,8 @@ const GridDisplay = ({
                     spacing={spacingField}
                     onEdit={onEdit}
                     onDelete={onDelete}
+                    onSelectRecord={onSelectRecord}
+                    selectedRecordId={selectedRecordId}
                     interactions={config?.interactions}
                     viewAs={viewAs}
                     getRoleRank={getRoleRank}
@@ -372,6 +384,8 @@ const GridDisplay = ({
               spacing={spacingField}
               onEdit={onEdit}
               onDelete={onDelete}
+              onSelectRecord={onSelectRecord}
+              selectedRecordId={selectedRecordId}
               interactions={config?.interactions}
               viewAs={viewAs}
               getRoleRank={getRoleRank}

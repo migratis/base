@@ -13,6 +13,7 @@ import {
 // stylesheets. Shared with MapField; must run before any map renders.
 import '../../tools/mapSetup';
 import InteractionRowActions from '../InteractionRowActions';
+import { recordSelection } from './recordSelection';
 
 // -----------------------------------------------------------------------------
 // Constants (kept in step with MapField)
@@ -102,6 +103,8 @@ const MapDisplay = ({
   config = {},
   onEdit,
   onDelete,
+  onSelectRecord,
+  selectedRecordId = null,
   onInteraction,
   viewAs,
   getRoleRank,
@@ -143,6 +146,27 @@ const MapDisplay = ({
             className="d-flex flex-wrap gap-1 mb-1"
           />
           <div className="d-flex flex-wrap gap-1">
+            {/* A marker has no free click — it opens this popup — so the map
+                publishes its selection from HERE, which is also the only place
+                on a map where the record is unambiguous. */}
+            {(() => {
+              const sel = recordSelection(record, {
+                onSelectRecord, selectedRecordId, onEdit,
+              });
+              if (!sel.selectable) return null;
+              return (
+                <Button
+                  size="sm"
+                  variant={sel.selected ? 'primary' : 'outline-primary'}
+                  aria-selected={sel.ariaSelected}
+                  onClick={sel.onClick}
+                >
+                  {sel.selected
+                    ? tval('selected', 'Selected')
+                    : tval('select', 'Select')}
+                </Button>
+              );
+            })()}
             {onEdit && (
               <Button size="sm" variant="outline-primary" onClick={() => onEdit(record)}>
                 {tval('edit', 'Edit')}

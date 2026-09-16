@@ -7,6 +7,7 @@ import InteractionRowActions from '../InteractionRowActions';
 import GeoValue from '../../fields/GeoValue';
 import { isGeoField } from '../../fields/geoSummary';
 import { formatCellValue, relationLabels, EMPTY } from '../../tools/export/values';
+import { recordSelection } from './recordSelection';
 
 const TableDisplay = ({
   entity,
@@ -16,6 +17,8 @@ const TableDisplay = ({
   onEdit,
   onDelete,
   onInteraction,
+  onSelectRecord,
+  selectedRecordId = null,
   viewAs,
   getRoleRank,
   t,
@@ -142,8 +145,16 @@ const TableDisplay = ({
           </tr>
         </thead>
         <tbody>
-          {records.map((record) => (
-            <tr key={record.id} className="align-middle">
+          {records.map((record) => {
+            const sel = recordSelection(record, { onSelectRecord, selectedRecordId, onEdit });
+            return (
+            <tr
+              key={record.id}
+              className={`align-middle ${sel.className}`.trim()}
+              onClick={sel.onClick}
+              style={sel.style}
+              aria-selected={sel.ariaSelected}
+            >
               <td>
                 <div className="d-flex gap-1">
                   {onEdit && (
@@ -184,7 +195,8 @@ const TableDisplay = ({
                 </td>
               )}
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </Table>
     </div>

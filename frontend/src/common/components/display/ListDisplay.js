@@ -6,6 +6,7 @@ import InteractionRowActions from '../InteractionRowActions';
 import GeoValue from '../../fields/GeoValue';
 import { isGeoField } from '../../fields/geoSummary';
 import { formatCellValue } from '../../tools/export/values';
+import { recordSelection } from './recordSelection';
 
 const ListDisplay = ({
   entity,
@@ -13,6 +14,8 @@ const ListDisplay = ({
   relOptions = {},
   config = {},
   onEdit,
+  onSelectRecord,
+  selectedRecordId = null,
   onDelete,
   onInteraction,
   viewAs,
@@ -79,11 +82,15 @@ const ListDisplay = ({
 
   return (
     <div className="list-display">
-      {records.map((record) => (
+      {records.map((record) => {
+        const sel = recordSelection(record, { onSelectRecord, selectedRecordId, onEdit });
+        return (
         <div
           key={record.id}
-          className="d-flex align-items-center border-bottom py-2 px-1"
-          style={{ minHeight: '48px' }}
+          className={`d-flex align-items-center border-bottom py-2 px-1 ${sel.className}`.trim()}
+          onClick={sel.onClick}
+          aria-selected={sel.ariaSelected}
+          style={{ minHeight: '48px', ...(sel.style || {}) }}
         >
           <div className="flex-grow-1 me-3" style={{ overflow: 'hidden' }}>
             <div style={{ fontWeight: '500', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -122,7 +129,8 @@ const ListDisplay = ({
             )}
           </div>
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 };

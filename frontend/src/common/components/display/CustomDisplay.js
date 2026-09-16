@@ -51,7 +51,11 @@ function normalizeComponentCode(code) {
   return code.replace(/\\n/g, '\n').replace(/\\t/g, '\t').replace(/\\r/g, '');
 }
 
-function compileDisplay(componentName, code) {
+// Exported because a composed page block compiles in the SAME scope — the four
+// injected names and the `"use strict"` are the contract, not a display detail,
+// and a second copy of this function is a second scope to drift
+// (SCOPE_composed_pages.md §13).
+export function compileDisplay(componentName, code) {
   try {
     const src = normalizeComponentCode(code);
     // `sanitizeHtml` is injected into scope so AI code may safely render

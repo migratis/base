@@ -5,6 +5,7 @@ import {
 } from 'react-icons/io5';
 import InteractionRowActions from '../InteractionRowActions';
 import { relationLabels } from '../../tools/export/values';
+import { recordSelection } from './recordSelection';
 
 const MasonryDisplay = ({
   entity,
@@ -12,6 +13,8 @@ const MasonryDisplay = ({
   relOptions = {},
   config = {},
   onEdit,
+  onSelectRecord,
+  selectedRecordId = null,
   onDelete,
   onInteraction,
   viewAs,
@@ -116,10 +119,16 @@ const MasonryDisplay = ({
       flexWrap: 'wrap',
       gap: '1rem',
     }}>
-      {records.map((record) => (
+      {records.map((record) => {
+        const sel = recordSelection(record, { onSelectRecord, selectedRecordId, onEdit });
+        return (
         <div
           key={record.id}
+          className={sel.className}
+          onClick={sel.onClick}
+          aria-selected={sel.ariaSelected}
           style={{
+            ...(sel.style || {}),
             background: '#fff',
             border: '1px solid #dee2e6',
             borderRadius: '0.25rem',
@@ -188,7 +197,8 @@ const MasonryDisplay = ({
             )}
           </div>
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 };
