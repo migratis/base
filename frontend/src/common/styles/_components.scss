@@ -1212,3 +1212,164 @@
 .lookup-candidate-cta {
   pointer-events: none;
 }
+
+// ── A composed page (SCOPE_composed_pages.md §3 / §3.1) ───────────────────────
+// The one stylesheet a composed page has, in `common/` so the sandbox host and
+// every generated application are styling literally the same markup — the same
+// argument `common/pageBlocks/` itself is built on. It ships under somebody
+// else's brand, so it spends only the tokens in `_variables.scss`, adds no
+// colour of its own, and says nothing about any particular block kind that is
+// not true of that kind everywhere.
+//
+// `.page-view`'s grid template belongs to `pageGrid.gridStyle()` and is not
+// restated here; placement is one function and this is not a second one.
+//
+// What is left is the block, and it has one job worth spending rules on:
+// **a page is a grid of promises, and a blank rectangle is the one thing it
+// must never show.** A card with a visible edge reads as "nothing here yet";
+// the same content with no edge reads as a page that failed to load. So every
+// block gets the edge, and every one of the frame's "cannot render" messages is
+// drawn the same quiet way — they are all the same fact, which is that the
+// block is explaining itself instead of drawing.
+//
+// ⚠ Three kinds collide with their own content class: `BlockFrame` writes
+// `page-block-<kind>` on the SECTION, while `StatBlock`, `TextBlock` and the
+// action button write `page-block-stat` / `-text` / `-action` on an element
+// INSIDE it. Style the frame as `.page-block.page-block-<kind>` and the content
+// as `.page-block-body > .page-block-<kind>` — the bare selector hits both.
+// `pageBlocks.test.js` holds that shape.
+
+.page-view {
+  min-width: 0;
+}
+
+.page-block {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;    // a wide table must not stretch the column it sits in
+  min-height: 0;   // ...nor the row, which is what lets the body scroll instead
+  padding: 14px 16px;
+  background-color: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-sm);
+}
+
+.page-block-title {
+  margin: 0 0 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--color-text-dark);
+}
+
+// The scroll container, and the reason the block keeps its promise about size:
+// a block spans the rows it was given, so content taller than them has to go
+// somewhere. Without this it is drawn straight over the block below — CSS grid
+// places by row and does not clip.
+.page-block-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+
+  > :first-child { margin-top: 0; }
+  > :last-child  { margin-bottom: 0; }
+}
+
+// Empty, waiting for a selection, unavailable, crashed — one treatment, because
+// to the reader they are one fact.
+.page-block-empty,
+.page-block-unavailable,
+.page-block-failed {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  margin: 0;
+  padding: 8px 4px;
+  color: var(--color-text-soft);
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+// The whole page failed, so there is no card to put the reason in.
+.page-view-failed {
+  margin: 0;
+  padding: 24px;
+  color: var(--color-text-soft);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+// ── stat ──
+// The one place a dashboard earns some boldness. `—` is unknown and never 0
+// (`StatBlock`'s rule), and it is set at the size of a number rather than
+// shrunk into a hint: an unknown is an answer the reader has to see.
+.page-block.page-block-stat > .page-block-body {
+  display: flex;
+  align-items: center;
+  overflow: hidden;      // a number does not scroll
+}
+
+.page-block-body > .page-block-stat {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+.page-block-stat-value {
+  overflow: hidden;
+  font-size: clamp(1.5rem, 2.6vw, 2rem);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.page-block-stat-unit {
+  color: var(--color-text-soft);
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+// ── text ──
+// A text block is the page talking, not data it holds. Prose inside a data card
+// reads as a panel with one sentence in it, so the card comes off and the words
+// sit on the page — while the block still occupies exactly the cells it was
+// given, because that is what was composed.
+.page-block.page-block-text {
+  padding-left: 0;
+  padding-right: 0;
+  background-color: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.page-block-body > .page-block-text {
+  margin: 0;
+  line-height: 1.5;
+}
+
+// ── action ──
+// The button IS the block: a whole cell of grid was given to one affordance.
+.page-block.page-block-action > .page-block-body {
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+.page-block-body > .page-block-action {
+  width: 100%;
+}
+
+// ── chart and map ──
+// Both size themselves to the box they are handed, so the box must not become a
+// scroll container and hand them its content height instead.
+.page-block.page-block-chart > .page-block-body,
+.page-block.page-block-map > .page-block-body {
+  overflow: hidden;
+}
