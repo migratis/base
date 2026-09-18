@@ -21,8 +21,9 @@ export { parseXlsx } from './xlsx';
 export {
   coerceCell, isBlank, numberText, mappableFields, guessMapping, UNMAPPABLE_TYPES,
 } from './coerce';
-export { runImport } from './runImport';
+export { runImport, describeFailure } from './runImport';
 export { importTargets } from './targets';
+export { acceptedOrThrow, WriteRefused } from './outcome';
 export {
   IMPORT_MAX_ROWS, INFERENCE_SAMPLE_ROWS, IMPORT_ACCEPT, LIST_JOIN,
 } from './constants';
