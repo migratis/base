@@ -1,4 +1,4 @@
-// SCOPE_composed_pages.md §6 — where a block sits, computed once.
+// SCOPE_composed_pages.md@87901d3 §6 — where a block sits, computed once.
 //
 // **The runtime needs no dragging.** A published page is plain CSS grid:
 // `grid-column: <x+1> / span <w>; grid-row: <y+1> / span <h>`. That is this

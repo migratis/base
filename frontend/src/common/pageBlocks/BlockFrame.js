@@ -1,4 +1,4 @@
-// SCOPE_composed_pages.md §3.1 — the frame every page block is drawn in.
+// SCOPE_composed_pages.md@87901d3 §3.1 — the frame every page block is drawn in.
 //
 // In `common/` on purpose: the display-sync hook mirrors this directory into
 // base, so the sandbox and every generated application render the *same file*.

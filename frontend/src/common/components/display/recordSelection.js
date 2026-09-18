@@ -1,4 +1,4 @@
-// SCOPE_composed_pages.md §4.1 — when a click on a record selects it.
+// SCOPE_composed_pages.md@87901d3 §4.1 — when a click on a record selects it.
 //
 // One rule, one place. Every display below `SandboxList` receives
 // `onSelectRecord`, and before this only `HubDetailDisplay` ever called it — so

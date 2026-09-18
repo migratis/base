@@ -264,10 +264,15 @@ def _rebuild_registry(backend_root: Path, frontend_root: Path):
     entries the viewer's role may not list — the same navigation rule the
     sandbox applies. Dropping these here was why anonymous visitors saw
     every entity tab.
+
+    Returns what the landing route resolved to — `{path, module, label,
+    displaced}` — or None when there is no frontend volume to write. A page
+    that declared `is_home` and did not win is in `displaced`, so the caller
+    can say so; nothing here decides how loudly.
     """
     registry_path = frontend_root / 'module_registry.js'
     if not registry_path.exists():
-        return  # frontend volume not mounted
+        return None  # frontend volume not mounted
 
     # Match the leading `const X = lazyWithRetry(() => import('path')` prefix
     # only — newer generator output appends a `.then(m => ({ default: ... }))`
@@ -284,6 +289,11 @@ def _rebuild_registry(backend_root: Path, frontend_root: Path):
     all_routes  = []   # [(url_path, component_name), ...]
     all_menu    = []   # [{"label", "path", "min_list_role", "module"}, ...]
     all_roles   = {}   # {module: {ranks, anonymous, default_auth, privileged}}
+    # Composed pages, D1 — a page may be its module's landing route. The menu
+    # item carries `is_home`; every claim is collected here so the conflict is
+    # RESOLVED (last installed wins) rather than silently dropped, which is the
+    # same failure as a declaration accepted and ignored.
+    home_claims = []   # [{"module", "path", "label", "at"}, ...]
 
     patches_dir = _patches_dir(backend_root)
     for additions_file in sorted(patches_dir.glob('*_additions.json')):
@@ -313,6 +323,16 @@ def _rebuild_registry(backend_root: Path, frontend_root: Path):
                 all_routes.append((m.group(1), rename.get(m.group(2), m.group(2))))
 
         for item in additions.get('menu_items', []):
+            if item.get('is_home'):
+                home_claims.append({
+                    'module': module,
+                    'path':   item.get('path', ''),
+                    'label':  item.get('label', ''),
+                    # Install order, not alphabetical order: the glob above is
+                    # sorted by name, and "last installed" is a fact about when
+                    # the additions file was written.
+                    'at':     additions_file.stat().st_mtime,
+                })
             all_menu.append({
                 'label':         item.get('label', ''),
                 'path':          item.get('path', ''),
@@ -370,7 +390,20 @@ def _rebuild_registry(backend_root: Path, frontend_root: Path):
     lines.append(f"export const moduleRoles = {json.dumps(all_roles, indent=2)};")
     lines.append('')
 
+    # The landing route. Empty string when no installed module claims one, so
+    # App.js keeps its own Home — a falsy export is also what an older registry
+    # written before this existed gives an importing App.js.
+    home = sorted(home_claims, key=lambda c: c['at'])[-1] if home_claims else None
+    lines.append(f"export const moduleHome = {json.dumps(home['path'] if home else '')};")
+    lines.append('')
+
     registry_path.write_text('\n'.join(lines))
+    return {
+        'path':      home['path'] if home else '',
+        'module':    home['module'] if home else '',
+        'label':     home['label'] if home else '',
+        'displaced': [c for c in home_claims if c is not home],
+    }
 
 
 # --------------------------------------------------------------------------- #
@@ -1464,6 +1497,7 @@ def _apply_upgrade(zip_bytes: bytes, backend_root: Path, confirm: bool) -> dict:
         'restart_required':     not _backend_autoreloads(),
         **_routing_service_notice(backend_root, manifest),
         **_datasource_key_notice(backend_root, manifest),
+        **_home_route_notice(home, module),
     }
 
 
@@ -1638,6 +1672,7 @@ def _apply_package(zip_bytes: bytes, config: dict = None) -> dict:
         pending.write_text(json.dumps(pending_payload))
 
         # ── 8. Frontend source files + registry (the slow part) ────────────
+        home = None
         if frontend_ok:
             for name in names:
                 if not name.startswith('frontend/src/'):
@@ -1649,7 +1684,7 @@ def _apply_package(zip_bytes: bytes, config: dict = None) -> dict:
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 dest.write_bytes(zf.read(name))
                 installed_files.append(f'frontend/src/{rel}')
-            _rebuild_registry(backend_root, frontend_root)
+            home = _rebuild_registry(backend_root, frontend_root)
 
         # ── 9. Fix ownership — chown written files back to the volume owner ─
         uid, gid = _volume_owner(backend_root)
@@ -1938,6 +1973,48 @@ def _datasource_key_notice(backend_root: Path, manifest: dict = None) -> dict:
             ],
         }
     }
+
+
+def _home_route_notice(home: dict = None, module: str = '') -> dict:
+    """Say which page now answers `/`, and which claim lost.
+
+    Composed pages, D1. Two installed modules may each declare a landing page;
+    one of them has to win, and the rule is last-installed-wins. Resolving it
+    in silence is the failure the decision names by hand — a declaration
+    accepted and ignored — so the install response carries both halves: the
+    page that took the route, and every page that asked and did not get it.
+
+    Returns {} when no installed module claims a landing route, and when the
+    module just installed neither took `/` nor lost it — an install that
+    changed nothing about the landing route says nothing.
+    """
+    if not home or not home.get('path'):
+        return {}
+    displaced = [c for c in (home.get('displaced') or []) if c.get('module')]
+    if home.get('module') != module and not any(c['module'] == module for c in displaced):
+        return {}
+    notice = {
+        'reason':  'module-home-route',
+        'message': (
+            f"The home page ( / ) now opens {home.get('label') or home['path']} "
+            f"from the {home['module']} application."
+        ),
+        'path':    home['path'],
+        'module':  home['module'],
+    }
+    if displaced:
+        notice['displaced'] = [
+            {'module': c['module'], 'path': c['path'], 'label': c['label']}
+            for c in displaced
+        ]
+        notice['message'] += (
+            ' The most recently installed application wins, so '
+            + ', '.join(
+                f"{c['label'] or c['path']} ({c['module']})" for c in displaced
+            )
+            + ' keeps its own menu entry but no longer answers / .'
+        )
+    return {'module_home_route': notice}
 
 
 def _installed_framework_apps(backend_root: Path) -> set:

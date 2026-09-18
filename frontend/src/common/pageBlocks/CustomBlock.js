@@ -1,4 +1,4 @@
-// SCOPE_composed_pages.md §13 — a per-app page-block component, in its envelope.
+// SCOPE_composed_pages.md@87901d3 §13 — a per-app page-block component, in its envelope.
 //
 // **The props contract is closed, and this file is where it is closed.** App 2's
 // components read `entityConfig.embedded_children` — a key of the *authoring

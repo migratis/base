@@ -1,4 +1,4 @@
-// SCOPE_composed_pages.md §3 / §5 — one aggregated number.
+// SCOPE_composed_pages.md@87901d3 §3 / §5 — one aggregated number.
 //
 // The number is computed server-side, **over the block's own list queryset**,
 // and arrives here as a prop. That is the export scope's argument transferred:

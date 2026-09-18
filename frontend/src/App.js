@@ -5,7 +5,14 @@ import "./App.scss";
 import 'react-toastify/dist/ReactToastify.css';
 import { Layout as Public, Layout as Private } from './common/components/Layout';
 import { SUPPORT, SUBSCRIPTION, USER, COOKIE, CONTACT } from './settings';
-import { moduleRoutes } from './module_registry';
+// Namespace import on purpose: `moduleHome` is written by the installer's
+// registry rebuild, and a deployment whose registry predates it would fail
+// `CI=true npm run build` on a missing named export rather than simply keeping
+// its own Home page.
+import * as moduleRegistry from './module_registry';
+
+const moduleRoutes = moduleRegistry.moduleRoutes || [];
+const moduleHome = moduleRegistry.moduleHome || '';
 
 const Home = lazyWithRetry(() => import('./common/components/Home'));
 const Message = lazyWithRetry(() => import('./common/components/Message'));
@@ -90,7 +97,15 @@ const App = () => {
           {moduleRoutes.map(({ path, Component }) => (
             <Route key={path} path={path} element={<Component />} />
           ))}
-          <Route path={"/"} element={<Home />} />
+          {/* An installed application may claim the landing route with a
+              composed page (`is_home`). The installer resolves two claims
+              last-installed-wins and reports it; here there is at most one
+              path, and an older registry that predates the export simply has
+              none. */}
+          <Route
+            path={"/"}
+            element={moduleHome ? <Navigate to={moduleHome} replace /> : <Home />}
+          />
         </Route>
         <Route element={<Private private={true}/>}>
           { USER &&

@@ -1,4 +1,4 @@
-// SCOPE_composed_pages.md §3 / §6 — a grouped aggregate, drawn.
+// SCOPE_composed_pages.md@87901d3 §3 / §6 — a grouped aggregate, drawn.
 //
 // **Charts are the exception that costs no new dependency.** `recharts` has
 // been declared in both `frontend/package.json` and `base/frontend/package.json`

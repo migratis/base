@@ -54,7 +54,7 @@ function normalizeComponentCode(code) {
 // Exported because a composed page block compiles in the SAME scope — the four
 // injected names and the `"use strict"` are the contract, not a display detail,
 // and a second copy of this function is a second scope to drift
-// (SCOPE_composed_pages.md §13).
+// (SCOPE_composed_pages.md@87901d3 §13).
 export function compileDisplay(componentName, code) {
   try {
     const src = normalizeComponentCode(code);

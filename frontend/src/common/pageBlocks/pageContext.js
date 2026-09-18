@@ -1,4 +1,4 @@
-// SCOPE_composed_pages.md §4.1 — the page selection context, derived.
+// SCOPE_composed_pages.md@87901d3 §4.1 — the page selection context, derived.
 //
 // **In `common/`, beside the renderers, for their reason.** It is pure — no
 // DOM, no transport, no React — so both hosts can run the one copy, and one

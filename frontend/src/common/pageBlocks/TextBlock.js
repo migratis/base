@@ -1,4 +1,4 @@
-// SCOPE_composed_pages.md §3 — fixed prose on a page. The one block kind with
+// SCOPE_composed_pages.md@87901d3 §3 — fixed prose on a page. The one block kind with
 // no subject at all.
 //
 // The text is `blockConfig.body`, and in a generated application it arrives as
