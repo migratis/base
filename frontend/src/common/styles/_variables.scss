@@ -144,6 +144,10 @@ $content-padding:     24px;
   --shadow-sm:            #{$shadow-sm};
   --shadow:               #{$shadow};
   --shadow-lg:            #{$shadow-lg};
+  --shadow-xl:            #{$shadow-xl};
+
+  // Typography
+  --font-stack-code:      #{$font-stack-code};
 
   // Transitions
   --transition-fast:      #{$transition-fast};

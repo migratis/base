@@ -46,7 +46,10 @@ i18n
     fallbackLng: 'en',
     debug: true,
     supportedLngs: ['en'],
-    ns: ['layout'],
+    // `cookie` is preloaded because the storage notice draws on the first
+    // paint of every page: lazily loading its namespace showed the raw keys
+    // for a tick, in a notice whose whole job is to be read.
+    ns: ['layout', 'cookie'],
     defaultNS: 'layout',
     interpolation: {
       escapeValue: false,

@@ -25,6 +25,10 @@
 <h3>If you are a user of this service</h3>
 <p>The operator of this service has not published this document yet. Nothing here is a contract and no part of it binds anyone. Ask the operator before relying on it.</p>
 
+<h3>What this template already does about cookies</h3>
+<p>This application stores a little information on each visitor's device — the session that keeps them signed in, the token that protects forms, the language they chose, the record of their answer to the storage notice, and a few keys the interface needs to draw a page. All of it is strictly necessary to deliver the service the visitor asked for, so it is exempt from consent under Article 5(3) of the ePrivacy Directive, and the notice shipped on the first visit therefore <em>informs</em> rather than asking. The inventory published at <code>/cookies</code> is yours: it comes from <code>manage.py seed_cookies</code>, and it names your deployment as the provider.</p>
+<p>If you add anything outside that exemption — audience measurement, advertising, a social network widget, a third-party script of any kind — three things become your responsibility, and only the first is automatic. Declare it in <code>seed_cookies</code> with the category it belongs to: the notice will then ask for consent, offer refusal as easily as acceptance, and delete what was refused, with no further work. Then say so in this document. And do not leave the published page claiming you track nobody — that sentence is already written to disappear by itself as soon as your inventory contradicts it.</p>
+
 <h3>This is not Migratis’ document</h3>
 <p>This application was built with the Migratis framework, and the framework’s template ships this page deliberately empty. Migratis publishes its own terms of sale and its own privacy policy at https://migratis.ai; those apply to migratis.ai alone and say nothing about this deployment, its operator or its users. A document can only be written by the person it binds.</p>
 

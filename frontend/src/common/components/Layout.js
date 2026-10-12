@@ -2,7 +2,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useLocation, Outlet } from "react-router-dom";
 import { MenuLeft } from "./MenuLeft";
 import { ToastContainer } from 'react-toastify';
-import { SPCookieConsent } from "./CookieConsent";
+import { CookieNotice } from "./CookieNotice";
 import { Footer } from "./Footer";
 import { LoaderIndicator } from "./LoaderIndicator";
 import { BlockedModal } from "../modals/BlockedModal";
@@ -157,7 +157,7 @@ export const Layout = (props) => {
           information links, which have to be reachable from every page. */}
       <Footer user={user} />
       { location.pathname !== "/cookies" &&
-        <SPCookieConsent/>
+        <CookieNotice/>
       }
       <BlockedModal
         show={sessionExpiredShow}

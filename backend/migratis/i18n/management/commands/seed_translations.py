@@ -33,6 +33,10 @@ NAMESPACE_LINKS['billing'] = [
     'your-invoices', 'download-invoice', 'paid', 'unpaid', 'of', 'trial-period',
 ]
 
+# The /cookies page title is the footer label that links to it, so a link and
+# the page it opens cannot disagree.
+NAMESPACE_LINKS['cookie'] = ['cookies', 'privacy-policy']
+
 
 # ===========================================================================
 # layout
@@ -285,24 +289,6 @@ TRANSLATIONS['layout'] = {
         'ro': 'Sesiune Expirată',
     },
     # Cookie consent banner (CookieConsent.js, ns 'layout').
-    'accept': {
-        'en': 'Accept',
-        'fr': 'Accepter',
-        'es': 'Aceptar',
-        'ro': 'Accept',
-    },
-    'cookie-consent-text': {
-        'en': 'We use cookies to improve your experience. By continuing to visit this site you agree to our use of cookies.',
-        'fr': 'Nous utilisons des cookies pour améliorer votre expérience. En continuant à visiter ce site, vous acceptez notre utilisation des cookies.',
-        'es': 'Utilizamos cookies para mejorar su experiencia. Al continuar visitando este sitio, acepta nuestro uso de cookies.',
-        'ro': 'Folosim cookie-uri pentru a îmbunătăți experiența dvs. Continuând să vizitați acest site, sunteți de acord cu utilizarea cookie-urilor.',
-    },
-    'explore-cookies': {
-        'en': 'Explore cookies',
-        'fr': 'Explorer les cookies',
-        'es': 'Explorar cookies',
-        'ro': 'Explorează cookie-urile',
-    },
 
 }
 
@@ -432,30 +418,299 @@ TRANSLATIONS['layout'].update({
 # cookie
 # ===========================================================================
 TRANSLATIONS['cookie'] = {
-    'cookies-list': {
-        'en': 'Cookie list of the site',
-        'fr': 'Liste des cookies du site',
-        'es': 'Lista de cookies del sitio',
-        'ro': 'Lista de cookie-uri a site-ului',
+    # ── The /cookies page ───────────────────────────────────────────────────
+    # The page title is the footer label (`cookies`, linked in from `layout`),
+    # so a link and the page it opens cannot disagree. `cookies-list` was its
+    # own wording and already did.
+    'storage-intro': {
+        'en': 'Everything this site stores on your device, what it is for, and how '
+              'long it lasts. The list covers cookies and browser storage alike — '
+              'the law treats them the same way.',
+        'fr': "Tout ce que ce site conserve sur votre appareil, à quoi cela sert et "
+              "combien de temps cela dure. La liste couvre les cookies comme le "
+              "stockage du navigateur : la loi les traite de la même façon.",
+        'es': 'Todo lo que este sitio almacena en su dispositivo, para qué sirve y '
+              'cuánto dura. La lista cubre tanto las cookies como el almacenamiento '
+              'del navegador: la ley los trata igual.',
+        'ro': 'Tot ce stochează acest site pe dispozitivul dvs., la ce folosește și '
+              'cât '
+              'durează. Lista acoperă atât cookie-urile, cât și stocarea din '
+              'browser — legea le tratează la fel.',
     },
-    'csrftoken': {
-        'en': 'Protective token against cross site request forgery.',
-        'fr': 'Jeton de protection contre la contrefaçon de requête inter-site.',
-        'es': 'Token de protección contra la falsificación de solicitudes entre sitios',
-        'ro': 'Token de protecție împotriva falsificării cererilor între site-uri',
+    'your-choice': {
+        'en': 'Your choice',
+        'fr': 'Votre choix',
+        'es': 'Su elección',
+        'ro': 'Alegerea dvs.',
     },
-    'description': {
-        'en': 'Description',
-        'fr': 'Description',
-        'es': 'Descripción',
-        'ro': 'Descriere',
+    # The honest statement of this deployment's position, and the reason the
+    # first-visit banner is a notice rather than a consent request.
+    'nothing-to-consent-to': {
+        'en': 'There is nothing here for you to accept or refuse. This site stores '
+              'only what it needs to work — your session, the token that protects '
+              'forms, the language you chose and the record of this notice — and '
+              'runs no analytics, serves no advertising and loads no third-party '
+              'tracking script. Storage of that kind is exempt from consent, so '
+              'asking you for it would be misleading.',
+        'fr': "Il n'y a rien ici à accepter ou à refuser. Ce site ne conserve que "
+              "ce qui est nécessaire à son fonctionnement — votre session, le jeton "
+              "qui protège les formulaires, la langue que vous avez choisie et la "
+              "trace de cet avis — et n'utilise aucune mesure d'audience, aucune "
+              "publicité et aucun script de suivi tiers. Ce type de stockage est "
+              "exempté de consentement : vous le demander serait trompeur.",
+        'es': 'Aquí no hay nada que aceptar o rechazar. Este sitio almacena solo lo '
+              'que necesita para funcionar — su sesión, el token que protege los '
+              'formularios, el idioma que eligió y el registro de este aviso — y no '
+              'utiliza analítica, no muestra publicidad y no carga ningún script de '
+              'seguimiento de terceros. Ese tipo de almacenamiento está exento de '
+              'consentimiento, por lo que pedírselo sería engañoso.',
+        'ro': 'Nu există nimic aici de acceptat sau de refuzat. Acest site stochează '
+              'doar ceea ce îi este necesar pentru a funcționa — sesiunea dvs., '
+              'tokenul care protejează formularele, limba pe care ați ales-o și '
+              'înregistrarea acestei notificări — și nu folosește analitică, nu '
+              'afișează publicitate și nu încarcă niciun script de urmărire de la '
+              'terți. Acest tip de stocare este scutit de consimțământ, așa că a '
+              'vi-l cere ar fi înșelător.',
     },
-    'i18next': {
-        'en': 'Cookie to keep the navigation language',
-        'fr': 'Cookie de mémorisation de la langue de navigation',
-        'es': 'Cookie para mantener el idioma de navegación',
-        'ro': 'Cookie pentru a păstra limba de navigare',
+    'what-you-can-refuse': {
+        'en': 'What is strictly necessary cannot be switched off. Everything else is '
+              'yours to allow or refuse, now and at any time afterwards.',
+        'fr': "Ce qui est strictement nécessaire ne peut pas être désactivé. Tout le "
+              "reste, vous pouvez l'autoriser ou le refuser, maintenant et à tout "
+              "moment par la suite.",
+        'es': 'Lo estrictamente necesario no se puede desactivar. Todo lo demás es '
+              'suyo para permitir o rechazar, ahora y en cualquier momento después.',
+        'ro': 'Ceea ce este strict necesar nu poate fi dezactivat. Restul vă aparține '
+              'să îl permiteți sau să îl refuzați, acum și oricând după aceea.',
     },
+    'save-my-choices': {
+        'en': 'Save my choices',
+        'fr': 'Enregistrer mes choix',
+        'es': 'Guardar mis elecciones',
+        'ro': 'Salvează alegerile mele',
+    },
+    'withdraw-my-choice': {
+        'en': 'Erase my recorded choice',
+        'fr': 'Effacer le choix enregistré',
+        'es': 'Borrar mi elección registrada',
+        'ro': 'Șterge alegerea înregistrată',
+    },
+    'choices-saved': {
+        'en': 'Your choices have been saved, and anything you refused has been '
+              'deleted from this browser.',
+        'fr': "Vos choix ont été enregistrés, et ce que vous avez refusé a été "
+              "supprimé de ce navigateur.",
+        'es': 'Sus elecciones se han guardado y todo lo que rechazó se ha eliminado '
+              'de este navegador.',
+        'ro': 'Alegerile dvs. au fost salvate, iar ceea ce ați refuzat a fost șters '
+              'din acest browser.',
+    },
+    'choice-cleared': {
+        'en': 'Your recorded choice has been erased. The notice will ask again on '
+              'your next visit.',
+        'fr': "Le choix enregistré a été effacé. L'avis vous sera présenté à nouveau "
+              "lors de votre prochaine visite.",
+        'es': 'Su elección registrada se ha borrado. El aviso volverá a aparecer en '
+              'su próxima visita.',
+        'ro': 'Alegerea dvs. înregistrată a fost ștearsă. Notificarea va apărea din '
+              'nou la următoarea vizită.',
+    },
+    'choice-recorded': {
+        'en': 'Recorded on this device on {{date}}.',
+        'fr': 'Enregistré sur cet appareil le {{date}}.',
+        'es': 'Registrado en este dispositivo el {{date}}.',
+        'ro': 'Înregistrat pe acest dispozitiv la {{date}}.',
+    },
+    'choice-not-recorded': {
+        'en': 'Nothing is recorded on this device yet.',
+        'fr': "Rien n'est encore enregistré sur cet appareil.",
+        'es': 'Todavía no hay nada registrado en este dispositivo.',
+        'ro': 'Încă nu este înregistrat nimic pe acest dispozitiv.',
+    },
+    'inventory-unavailable': {
+        'en': 'The list could not be loaded. Please try again in a moment — and if '
+              'it keeps failing, contact us: you are entitled to this information.',
+        'fr': "La liste n'a pas pu être chargée. Réessayez dans un instant — et si "
+              "cela persiste, contactez-nous : vous avez droit à cette information.",
+        'es': 'No se pudo cargar la lista. Inténtelo de nuevo en un momento y, si '
+              'sigue fallando, contáctenos: tiene derecho a esta información.',
+        'ro': 'Lista nu a putut fi încărcată. Încercați din nou într-o clipă — iar '
+              'dacă persistă, contactați-ne: aveți dreptul la aceste informații.',
+    },
+    # ── The first-visit notice (CookieNotice.js) ────────────────────────────
+    'notice-title': {
+        'en': 'Cookies and browser storage',
+        'fr': 'Cookies et stockage du navigateur',
+        'es': 'Cookies y almacenamiento del navegador',
+        'ro': 'Cookie-uri și stocare în browser',
+    },
+    'notice-information-text': {
+        'en': 'This site stores only what it needs to work: your session, the token '
+              'that protects forms, the language you chose, and this notice. No '
+              'analytics, no advertising, no third-party tracking — so there is '
+              'nothing for you to accept or refuse.',
+        'fr': "Ce site ne conserve que ce qui lui est nécessaire : votre session, le "
+              "jeton qui protège les formulaires, la langue que vous avez choisie et "
+              "cet avis. Aucune mesure d'audience, aucune publicité, aucun suivi "
+              "tiers — il n'y a donc rien à accepter ni à refuser.",
+        'es': 'Este sitio almacena solo lo que necesita para funcionar: su sesión, el '
+              'token que protege los formularios, el idioma que eligió y este aviso. '
+              'Sin analítica, sin publicidad, sin seguimiento de terceros: no hay '
+              'nada que aceptar ni rechazar.',
+        'ro': 'Acest site stochează doar ceea ce îi este necesar: sesiunea dvs., '
+              'tokenul care protejează formularele, limba pe care ați ales-o și '
+              'această notificare. Fără analitică, fără publicitate, fără urmărire '
+              'de la terți — deci nu aveți nimic de acceptat sau de refuzat.',
+    },
+    'notice-consent-text': {
+        'en': 'This site stores what it needs to work. It would also like to store '
+              'things that are not necessary, and that is your decision — refusing '
+              'changes nothing about your access to the site.',
+        'fr': "Ce site conserve ce qui lui est nécessaire. Il souhaiterait aussi "
+              "conserver des éléments qui ne le sont pas, et cela relève de votre "
+              "décision : refuser ne change rien à votre accès au site.",
+        'es': 'Este sitio almacena lo que necesita para funcionar. También querría '
+              'almacenar cosas que no son necesarias, y eso es su decisión: '
+              'rechazarlas no cambia nada en su acceso al sitio.',
+        'ro': 'Acest site stochează ceea ce îi este necesar. Ar dori să stocheze și '
+              'lucruri care nu sunt necesare, iar aceasta este decizia dvs.: '
+              'refuzul nu schimbă nimic în privința accesului dvs. la site.',
+    },
+    'see-everything-stored': {
+        'en': 'See everything this site stores',
+        'fr': 'Voir tout ce que ce site conserve',
+        'es': 'Ver todo lo que almacena este sitio',
+        'ro': 'Vedeți tot ce stochează acest site',
+    },
+    'understood': {
+        'en': 'Understood',
+        'fr': "J'ai compris",
+        'es': 'Entendido',
+        'ro': 'Am înțeles',
+    },
+    'accept-everything-optional': {
+        'en': 'Accept all',
+        'fr': 'Tout accepter',
+        'es': 'Aceptar todo',
+        'ro': 'Acceptă tot',
+    },
+    'refuse-everything-optional': {
+        'en': 'Refuse all',
+        'fr': 'Tout refuser',
+        'es': 'Rechazar todo',
+        'ro': 'Refuză tot',
+    },
+    'choose-what-to-allow': {
+        'en': 'Choose',
+        'fr': 'Choisir',
+        'es': 'Elegir',
+        'ro': 'Alege',
+    },
+    # ── Categories ──────────────────────────────────────────────────────────
+    'category-necessary': {
+        'en': 'Strictly necessary',
+        'fr': 'Strictement nécessaires',
+        'es': 'Estrictamente necesarias',
+        'ro': 'Strict necesare',
+    },
+    'category-necessary-help': {
+        'en': 'Needed to deliver the site you asked for: keeping you signed in, '
+              'protecting forms against forgery, remembering the language you '
+              'picked and remembering this choice. Exempt from consent, and there '
+              'is no version of the site that works without them.',
+        'fr': "Nécessaires pour fournir le site que vous avez demandé : vous "
+              "maintenir connecté, protéger les formulaires contre la falsification, "
+              "mémoriser la langue que vous avez choisie et mémoriser ce choix. "
+              "Exemptés de consentement, et il n'existe pas de version du site qui "
+              "fonctionne sans eux.",
+        'es': 'Necesarias para ofrecer el sitio que solicitó: mantener su sesión, '
+              'proteger los formularios contra falsificaciones, recordar el idioma '
+              'que eligió y recordar esta elección. Exentas de consentimiento, y no '
+              'existe una versión del sitio que funcione sin ellas.',
+        'ro': 'Necesare pentru a livra site-ul pe care l-ați solicitat: menținerea '
+              'autentificării, protejarea formularelor împotriva falsificării, '
+              'memorarea limbii alese și memorarea acestei alegeri. Scutite de '
+              'consimțământ și nu există o versiune a site-ului care funcționează '
+              'fără ele.',
+    },
+    'category-preferences-help': {
+        'en': 'Remembers settings that make the site more comfortable but that it '
+              'works perfectly well without.',
+        'fr': "Mémorise des réglages qui rendent le site plus confortable, mais dont "
+              "il se passe très bien.",
+        'es': 'Recuerda ajustes que hacen el sitio más cómodo, pero sin los que '
+              'funciona perfectamente.',
+        'ro': 'Memorează setări care fac site-ul mai confortabil, dar fără care '
+              'funcționează perfect.',
+    },
+    'category-statistics-help': {
+        'en': 'Measures how the site is used, so it can be improved. Nothing here '
+              'is needed to serve you a page.',
+        'fr': "Mesure l'utilisation du site afin de l'améliorer. Rien ici n'est "
+              "nécessaire pour vous servir une page.",
+        'es': 'Mide cómo se usa el sitio para poder mejorarlo. Nada de esto es '
+              'necesario para servirle una página.',
+        'ro': 'Măsoară modul în care este folosit site-ul, pentru a-l putea '
+              'îmbunătăți. Nimic de aici nu este necesar pentru a vă servi o pagină.',
+    },
+    'category-marketing-help': {
+        'en': 'Builds a profile of you, usually across other sites, to select '
+              'advertising.',
+        'fr': "Constitue un profil vous concernant, généralement à travers d'autres "
+              "sites, pour sélectionner de la publicité.",
+        'es': 'Crea un perfil sobre usted, normalmente a través de otros sitios, '
+              'para seleccionar publicidad.',
+        'ro': 'Construiește un profil despre dvs., de obicei pe mai multe site-uri, '
+              'pentru a selecta publicitate.',
+    },
+    'category-preferences': {
+        'en': 'Preferences',
+        'fr': 'Préférences',
+        'es': 'Preferencias',
+        'ro': 'Preferințe',
+    },
+    'category-statistics': {
+        'en': 'Statistics',
+        'fr': 'Statistiques',
+        'es': 'Estadísticas',
+        'ro': 'Statistici',
+    },
+    'category-marketing': {
+        'en': 'Marketing',
+        'fr': 'Marketing',
+        'es': 'Marketing',
+        'ro': 'Marketing',
+    },
+    'always-active': {
+        'en': 'Always active',
+        'fr': 'Toujours actifs',
+        'es': 'Siempre activas',
+        'ro': 'Întotdeauna active',
+    },
+    'requires-consent': {
+        'en': 'Your choice',
+        'fr': 'Votre choix',
+        'es': 'Su elección',
+        'ro': 'Alegerea dvs.',
+    },
+    # Singular and plural as two plain keys rather than i18next's `_one`/
+    # `_other` suffixes: `seed_translations` stores one text per key per
+    # language and knows nothing about plural categories, and Romanian's third
+    # category (`few`, which covers 2-19) would fall through to the bare key
+    # and render as the key itself. The component picks.
+    'entries-stored-one': {
+        'en': '{{count}} entry stored',
+        'fr': '{{count}} élément conservé',
+        'es': '{{count}} elemento almacenado',
+        'ro': '{{count}} element stocat',
+    },
+    'entries-stored': {
+        'en': '{{count}} entries stored',
+        'fr': '{{count}} éléments conservés',
+        'es': '{{count}} elementos almacenados',
+        'ro': '{{count}} elemente stocate',
+    },
+    # ── Table columns ───────────────────────────────────────────────────────
     'name': {
         'en': 'Name',
         'fr': 'Nom',
@@ -468,29 +723,255 @@ TRANSLATIONS['cookie'] = {
         'es': 'Proveedor',
         'ro': 'Furnizor',
     },
+    'description': {
+        'en': 'Purpose',
+        'fr': 'Finalité',
+        'es': 'Finalidad',
+        'ro': 'Scop',
+    },
+    'stored-as': {
+        'en': 'Stored as',
+        'fr': 'Stocké comme',
+        'es': 'Almacenado como',
+        'ro': 'Stocat ca',
+    },
+    'stored-as-cookie': {
+        'en': 'Cookie',
+        'fr': 'Cookie',
+        'es': 'Cookie',
+        'ro': 'Cookie',
+    },
+    'stored-as-local_storage': {
+        'en': 'Browser storage',
+        'fr': 'Stockage du navigateur',
+        'es': 'Almacenamiento del navegador',
+        'ro': 'Stocare în browser',
+    },
+    'stored-as-session_storage': {
+        'en': 'Session storage',
+        'fr': 'Stockage de session',
+        'es': 'Almacenamiento de sesión',
+        'ro': 'Stocare de sesiune',
+    },
+    'retention': {
+        'en': 'Kept for',
+        'fr': 'Durée de conservation',
+        'es': 'Conservación',
+        'ro': 'Păstrat timp de',
+    },
+    'retention-session': {
+        'en': 'Until you close the browser',
+        'fr': "Jusqu'à la fermeture du navigateur",
+        'es': 'Hasta que cierre el navegador',
+        'ro': 'Până la închiderea browserului',
+    },
+    'retention-persistent': {
+        'en': 'Until you clear it',
+        'fr': "Jusqu'à ce que vous l'effaciez",
+        'es': 'Hasta que lo borre',
+        'ro': 'Până când îl ștergeți',
+    },
+    'retention-minutes-one': {
+        'en': '{{count}} minute',
+        'fr': '{{count}} minute',
+        'es': '{{count}} minuto',
+        'ro': '{{count}} minut',
+    },
+    'retention-minutes': {
+        'en': '{{count}} minutes',
+        'fr': '{{count}} minutes',
+        'es': '{{count}} minutos',
+        'ro': '{{count}} minute',
+    },
+    'retention-hours-one': {
+        'en': '{{count}} hour',
+        'fr': '{{count}} heure',
+        'es': '{{count}} hora',
+        'ro': '{{count}} oră',
+    },
+    'retention-hours': {
+        'en': '{{count}} hours',
+        'fr': '{{count}} heures',
+        'es': '{{count}} horas',
+        'ro': '{{count}} ore',
+    },
+    'retention-days-one': {
+        'en': '{{count}} day',
+        'fr': '{{count}} jour',
+        'es': '{{count}} día',
+        'ro': '{{count}} zi',
+    },
+    'retention-days': {
+        'en': '{{count}} days',
+        'fr': '{{count}} jours',
+        'es': '{{count}} días',
+        'ro': '{{count}} zile',
+    },
+    'retention-months-one': {
+        'en': '{{count}} month',
+        'fr': '{{count}} mois',
+        'es': '{{count}} mes',
+        'ro': '{{count}} lună',
+    },
+    'retention-months': {
+        'en': '{{count}} months',
+        'fr': '{{count}} mois',
+        'es': '{{count}} meses',
+        'ro': '{{count}} luni',
+    },
+    # ── Third parties ───────────────────────────────────────────────────────
+    'third-parties': {
+        'en': 'Third parties',
+        'fr': 'Tiers',
+        'es': 'Terceros',
+        'ro': 'Terți',
+    },
+    'no-third-party-tracking': {
+        'en': 'This site loads no advertising, no audience measurement and no social '
+              'network script. Every entry in the list above is set by this site '
+              'itself, on this domain.',
+        'fr': "Ce site ne charge aucune publicité, aucune mesure d'audience et "
+              "aucun script de réseau social. Chaque élément de la liste ci-dessus "
+              "est déposé par ce site lui-même, sur ce domaine.",
+        'es': 'Este sitio no carga publicidad, ni medición de audiencia, ni scripts '
+              'de redes sociales. Cada elemento de la lista anterior lo establece '
+              'este sitio en este dominio.',
+        'ro': 'Acest site nu încarcă publicitate, măsurare a audienței sau scripturi '
+              'de rețele sociale. Fiecare element din lista de mai sus este setat de '
+              'acest site, pe acest domeniu.',
+    },
+    # Said plainly because the inventory used to declare two Stripe cookies
+    # this site has never set: the payment pages are Stripe's own.
+    'payment-on-stripe-pages': {
+        'en': 'Payment is handled on Stripe’s own pages: when you pay, you leave '
+              'this site, and the cookies Stripe sets are set there, on Stripe’s '
+              'domain, under Stripe’s own disclosure. This site loads no Stripe '
+              'script and sets no Stripe cookie on this domain.',
+        'fr': "Le paiement est traité sur les pages de Stripe : lorsque vous payez, "
+              "vous quittez ce site, et les cookies déposés par Stripe le sont "
+              "là-bas, sur le domaine de Stripe, sous la propre information de "
+              "Stripe. Ce site ne charge aucun script Stripe et ne dépose aucun "
+              "cookie Stripe sur ce domaine.",
+        'es': 'El pago se gestiona en las propias páginas de Stripe: cuando paga, '
+              'sale de este sitio, y las cookies que Stripe establece se establecen '
+              'allí, en el dominio de Stripe, bajo la información de Stripe. '
+              'Este sitio no carga ningún script de Stripe ni establece ninguna '
+              'cookie de Stripe en este dominio.',
+        'ro': 'Plata este gestionată pe paginile Stripe: când plătiți, părăsiți acest '
+              'site, iar cookie-urile pe care le setează Stripe sunt setate acolo, '
+              'pe domeniul Stripe, conform informării Stripe. Acest site nu încarcă '
+              'niciun script Stripe și nu setează niciun cookie Stripe pe acest '
+              'domeniu.',
+    },
+    'browser-settings-note': {
+        'en': 'Your browser can block or delete all of this at any time, from its '
+              'own settings. Blocking the strictly necessary entries will stop you '
+              'being able to stay signed in — that is what makes them necessary, '
+              'not a penalty for refusing them.',
+        'fr': "Votre navigateur peut bloquer ou supprimer tout cela à tout moment, "
+              "depuis ses propres réglages. Bloquer les éléments strictement "
+              "nécessaires vous empêchera de rester connecté — c'est précisément ce "
+              "qui les rend nécessaires, et non une sanction pour les avoir refusés.",
+        'es': 'Su navegador puede bloquear o eliminar todo esto en cualquier momento '
+              'desde sus propios ajustes. Bloquear los elementos estrictamente '
+              'necesarios le impedirá mantener la sesión abierta: eso es lo que los '
+              'hace necesarios, no una penalización por rechazarlos.',
+        'ro': 'Browserul dvs. poate bloca sau șterge toate acestea oricând, din '
+              'propriile setări. Blocarea elementelor strict necesare vă va împiedica '
+              'să rămâneți autentificat — exact acest lucru le face necesare, nu o '
+              'penalizare pentru refuzul lor.',
+    },
+    # ── Purposes, one per inventory entry ───────────────────────────────────
+    # `Cookie.description` points at the TranslationKey of the same name, so
+    # the key IS the storage key. See seed_cookies.py.
+    'csrftoken': {
+        'en': 'Protects every form you submit against being forged by another site '
+              '(cross-site request forgery).',
+        'fr': "Protège chaque formulaire que vous envoyez contre une falsification "
+              "par un autre site (falsification de requête inter-site).",
+        'es': 'Protege cada formulario que envía frente a la falsificación desde '
+              'otro sitio (falsificación de solicitudes entre sitios).',
+        'ro': 'Protejează fiecare formular pe care îl trimiteți împotriva '
+              'falsificării de către un alt site (falsificare de cereri între '
+              'site-uri).',
+    },
     'sessionid': {
-        'en': 'Session and internal authentication token.',
-        'fr': "Jeton de session et d'authentification interne.",
-        'es': 'Sesión y token interno de autenticación',
-        'ro': 'Sesiune și token intern de autentificare',
+        'en': 'Keeps you signed in between pages. Readable only by the server, '
+              'never by a script.',
+        'fr': "Vous maintient connecté d'une page à l'autre. Lisible uniquement par "
+              "le serveur, jamais par un script.",
+        'es': 'Mantiene su sesión abierta entre páginas. Solo lo puede leer el '
+              'servidor, nunca un script.',
+        'ro': 'Vă menține autentificat între pagini. Poate fi citit doar de server, '
+              'niciodată de un script.',
     },
-    'spcc1': {
-        'en': 'cookie consent cookies of the site',
-        'fr': 'Cookie de consentement des cookies du site',
-        'es': 'Cookies de consentimiento del sitio',
-        'ro': 'Cookie-uri de consimțământ ale site-ului',
+    'user': {
+        'en': 'This browser’s copy of who is signed in, so a page can be drawn '
+              'correctly before the server has answered.',
+        'fr': "La copie, dans ce navigateur, de l'identité connectée, afin qu'une "
+              "page puisse s'afficher correctement avant la réponse du serveur.",
+        'es': 'La copia en este navegador de quién tiene la sesión abierta, para que '
+              'una página pueda dibujarse correctamente antes de que responda el '
+              'servidor.',
+        'ro': 'Copia din acest browser a cine este autentificat, astfel încât o '
+              'pagină să poată fi afișată corect înainte ca serverul să răspundă.',
     },
-    '__stripe_mid': {
-        'en': 'Cookie set to provide fraud prevention. Stripe is our payment partner.',
-        'fr': 'Cookie placé par notre partenaire de paiement Stripe, pour prévenir la fraude.',
-        'es': 'Cookie establecida para prevenir el fraude. Stripe es nuestro socio de pagos.',
-        'ro': 'Cookie setat pentru prevenirea fraudei. Stripe este partenerul nostru de plăți.',
+    'session_expired': {
+        'en': 'Records that your session ended on the server, so you are told once '
+              'and asked to sign in again rather than shown an error.',
+        'fr': "Note que votre session a pris fin sur le serveur, afin que vous en "
+              "soyez informé une fois et invité à vous reconnecter plutôt que de "
+              "voir une erreur.",
+        'es': 'Registra que su sesión terminó en el servidor, para avisarle una vez '
+              'y pedirle que vuelva a iniciar sesión en lugar de mostrar un error.',
+        'ro': 'Înregistrează faptul că sesiunea dvs. s-a încheiat pe server, astfel '
+              'încât să fiți informat o dată și invitat să vă autentificați din nou, '
+              'în loc să vedeți o eroare.',
     },
-    '__stripe_sid': {
-        'en': 'Session cookie set by Stripe, our payment partner.',
-        'fr': 'Cookie de session placé par notre partenaire de paiement Stripe.',
-        'es': 'Cookie de sesión establecida por Stripe, nuestro socio de pagos.',
-        'ro': 'Cookie de sesiune setat de Stripe, partenerul nostru de plăți.',
+    'i18next': {
+        'en': 'The navigation language you selected, so the next page opens in it.',
+        'fr': "La langue de navigation que vous avez choisie, afin que la page "
+              "suivante s'ouvre dans cette langue.",
+        'es': 'El idioma de navegación que seleccionó, para que la página siguiente '
+              'se abra en él.',
+        'ro': 'Limba de navigare pe care ați selectat-o, astfel încât pagina '
+              'următoare să se deschidă în ea.',
+    },
+    'i18nextLng': {
+        'en': 'The navigation language you selected, kept in this browser so it '
+              'survives longer than the cookie above.',
+        'fr': "La langue de navigation que vous avez choisie, conservée dans ce "
+              "navigateur afin qu'elle persiste plus longtemps que le cookie "
+              "ci-dessus.",
+        'es': 'El idioma de navegación que seleccionó, guardado en este navegador '
+              'para que dure más que la cookie anterior.',
+        'ro': 'Limba de navigare pe care ați selectat-o, păstrată în acest browser '
+              'pentru a dura mai mult decât cookie-ul de mai sus.',
+    },
+    'mg_consent': {
+        'en': 'Your answer to the storage notice, and when you gave it — so you are '
+              'not asked again, and so a refusal can be honoured.',
+        'fr': "Votre réponse à l'avis sur le stockage et la date à laquelle vous "
+              "l'avez donnée — afin de ne pas vous la redemander et de pouvoir "
+              "respecter un refus.",
+        'es': 'Su respuesta al aviso sobre almacenamiento y cuándo la dio, para no '
+              'volver a preguntarle y poder respetar un rechazo.',
+        'ro': 'Răspunsul dvs. la notificarea privind stocarea și momentul în care '
+              'l-ați dat — pentru a nu vă întreba din nou și pentru a putea respecta '
+              'un refuz.',
+    },
+    'page-has-been-force-refreshed': {
+        'en': 'Notes that the page was reloaded once after a failed update, so a '
+              'broken deployment cannot put this browser into a reload loop.',
+        'fr': "Note que la page a été rechargée une fois après une mise à jour "
+              "échouée, afin qu'un déploiement défectueux ne puisse pas enfermer ce "
+              "navigateur dans une boucle de rechargement.",
+        'es': 'Anota que la página se recargó una vez tras una actualización '
+              'fallida, para que un despliegue defectuoso no pueda meter este '
+              'navegador en un bucle de recarga.',
+        'ro': 'Notează că pagina a fost reîncărcată o dată după o actualizare '
+              'eșuată, astfel încât o implementare defectă să nu poată bloca acest '
+              'browser într-o buclă de reîncărcare.',
     },
 }
 

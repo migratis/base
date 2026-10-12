@@ -334,29 +334,206 @@ h4 { font-size: 1.1rem; }
   to { transform: rotate(360deg); }
 }
 
-// ── Cookie consent overlay ────────────────────────────────────────────────────
-.consent {
+// ── Storage notice ────────────────────────────────────────────────────────────
+// The first-visit notice (common/components/CookieNotice.js). A card anchored
+// to one corner, not a full-width band across the bottom, and with no backdrop:
+// what this site stores is exempt from consent, so it may not be presented as a
+// condition of reading the page. The card is the quieter shape and it is also
+// the honest one.
+.cookie-notice {
   position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: var(--color-dark);
-  color: var(--color-light);
-  padding: 16px 24px;
-  z-index: 2000;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
+  bottom: 16px;
+  // Right, not left: `.sidebar-container` is fixed, full-height and expands
+  // from 64px to 240px on hover, so a card in the bottom-left corner both
+  // covers it and sits in the way of hovering it open.
+  right: 16px;
+  z-index: $z-modal-backdrop;
+  width: min(420px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  padding: 20px;
+  background: var(--color-bg-card);
+  color: var(--color-text-dark);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-xl);
+  // A card that slides up reads as the page offering something; one that fades
+  // in on top of the content reads as the page blocking it.
+  animation: cookie-notice-in 240ms ease-out;
 
-  @media (max-width: 768px) {
-    flex-direction: column;
-    text-align: center;
+  &:focus {
+    // It takes focus on open so it is reachable from the keyboard, which must
+    // not draw a ring around the whole card.
+    outline: none;
   }
 
-  .consent-actions {
-    display: flex;
-    gap: 12px;
+  &:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+}
+
+@keyframes cookie-notice-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cookie-notice { animation: none; }
+}
+
+.cookie-notice-title {
+  margin: 0 0 8px;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.cookie-notice-text {
+  margin: 0 0 10px;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--color-text-soft);
+}
+
+.cookie-notice-links {
+  margin: 0 0 16px;
+  font-size: 0.9rem;
+}
+
+.cookie-notice-choices {
+  margin: 0 0 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
+}
+
+// Every action on one row at the same size. The refusal is never the quiet
+// one — a refusal that is harder to reach than an acceptance is not a free
+// choice, and `btn-block` on the accept with a text link for the refusal is
+// exactly the pattern this replaces.
+.cookie-notice-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  .btn {
+    flex: 1 1 auto;
+    min-width: 120px;
+    font-size: 0.9rem;
+  }
+}
+
+// The consent form is taller than the notice, so it gets the room rather than
+// an inner scrollbar at 420px.
+.cookie-notice--consent {
+  width: min(520px, calc(100vw - 32px));
+}
+
+@media (max-width: 576px) {
+  .cookie-notice {
+    // The sidebar is a burger overlay at this width, so the card may have the
+    // whole band — and at 420px it would otherwise have had it anyway.
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    width: auto;
+    padding: 16px;
+  }
+
+  .cookie-notice-actions .btn {
+    flex: 1 1 100%;
+  }
+}
+
+// ── The per-category switches ─────────────────────────────────────────────────
+// Shared by the notice and the /cookies page: withdrawing a choice has to be as
+// easy as giving it, and the surest way is for both to be the same control.
+.cookie-choices {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.cookie-choice {
+  padding: 12px 0;
+
+  & + & {
+    border-top: 1px solid var(--color-border);
+  }
+
+  .form-check-input:disabled {
+    // Always-on rather than greyed out of reach: strictly necessary storage is
+    // not a switch somebody failed to enable.
+    opacity: 1;
+  }
+}
+
+.cookie-choice-label {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.cookie-choice-name {
+  font-weight: 600;
+}
+
+.cookie-choice-state {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+
+.cookie-choice-help {
+  margin: 4px 0 0 2.4em;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--color-text-soft);
+}
+
+.cookie-choice-count {
+  white-space: nowrap;
+  color: var(--color-text-muted);
+}
+
+.cookie-choice-feedback {
+  margin: 16px 0 0;
+}
+
+// ── The published inventory ───────────────────────────────────────────────────
+.cookie-section-title {
+  margin: 0 0 8px;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.cookie-section-text {
+  margin: 0 0 12px;
+  line-height: 1.6;
+  color: var(--color-text-soft);
+}
+
+.cookie-section-note {
+  margin: 12px 0 0;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.cookie-table {
+  margin-bottom: 0;
+
+  code {
+    // A storage key is a literal the reader may have to match against what
+    // their browser shows them, so it is set as one.
+    font-family: var(--font-stack-code);
+    font-size: 0.85em;
+    color: var(--color-text-dark);
+    word-break: break-all;
+  }
+
+  td, th {
+    vertical-align: top;
   }
 }
 
