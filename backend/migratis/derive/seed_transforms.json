@@ -1,0 +1,364 @@
+{
+  "_doc": "The seed transforms of SCOPE_calculated_tables.md §5.3. Data, not code: each is a declaration the engine's gate checks and its examples are the engine's test suite (P1). P3 publishes them to the local catalog.",
+  "transforms": [
+    {
+      "slug": "recurring_projection",
+      "use_case": "finance",
+      "label": "Recurring cash-flow projection",
+      "doc": "Expands recurring entries over a window of months, then carries a running balance.",
+      "inputs": {"items": {
+        "date":   {"type": "date"},
+        "amount": {"type": "decimal"},
+        "every":  {"type": "integer", "optional": true, "doc": "months between occurrences; empty = once"},
+        "until":  {"type": "date",    "optional": true},
+        "label":  {"type": "string",  "optional": true}
+      }},
+      "params": {
+        "from":            {"type": "date",    "default": "today"},
+        "months":          {"type": "integer", "default": 12, "min": 1, "max": 120},
+        "opening_balance": {"type": "decimal", "default": 0}
+      },
+      "output": {"date": "date", "label": "string", "amount": "decimal", "balance": "decimal"},
+      "key": ["date", "label"],
+      "steps": [
+        {"id": "occ", "op": "recur", "from": "items",
+         "start": "row.date", "every": "row.every", "unit": "month", "until": "row.until",
+         "window": ["param.from", "add_months(param.from, param.months)"]},
+        {"id": "line", "op": "compute", "from": "occ",
+         "set": {"date": "row.occurrence", "label": "coalesce(row.label, '')"}},
+        {"id": "bal", "op": "running", "from": "line", "order_by": ["row.date", "row.label"],
+         "set": {"balance": "param.opening_balance + cumsum(row.amount)"}},
+        {"op": "write", "from": "bal"}
+      ],
+      "examples": [
+        {
+          "doc": "Rent from 31 January lands on 28 February and then on 31 March: months are anchored, never chained.",
+          "inputs": {"items": [
+            {"date": "2026-01-31", "amount": -870, "every": 1, "label": "Loyer"},
+            {"date": "2026-02-05", "amount": 3200, "every": 1, "label": "Salaire"}
+          ]},
+          "params": {"from": "2026-02-01", "months": 2, "opening_balance": 1000},
+          "expect": [
+            {"date": "2026-02-05", "label": "Salaire", "amount": 3200, "balance": 4200},
+            {"date": "2026-02-28", "label": "Loyer",   "amount": -870, "balance": 3330},
+            {"date": "2026-03-05", "label": "Salaire", "amount": 3200, "balance": 6530},
+            {"date": "2026-03-31", "label": "Loyer",   "amount": -870, "balance": 5660}
+          ]
+        },
+        {
+          "doc": "An entry with no period happens once; one with an end date stops on it.",
+          "as_of": "2026-03-01",
+          "inputs": {"items": [
+            {"date": "2026-03-10", "amount": -400, "label": "Assurance"},
+            {"date": "2026-03-15", "amount": -50, "every": 1, "until": "2026-04-15", "label": "Abonnement"}
+          ]},
+          "params": {"months": 3},
+          "expect": [
+            {"date": "2026-03-10", "label": "Assurance",  "amount": -400, "balance": -400},
+            {"date": "2026-03-15", "label": "Abonnement", "amount": -50,  "balance": -450},
+            {"date": "2026-04-15", "label": "Abonnement", "amount": -50,  "balance": -500}
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "phased_yield",
+      "use_case": "garden",
+      "label": "Time-phased yield forecast",
+      "doc": "Spreads each planting's expected yield evenly over its harvest weeks, then totals it per item and week.",
+      "inputs": {"plantings": {
+        "item":           {"type": "ref"},
+        "units":          {"type": "decimal"},
+        "start":          {"type": "date"},
+        "lead_days":      {"type": "integer"},
+        "window_weeks":   {"type": "integer"},
+        "yield_per_unit": {"type": "decimal"}
+      }},
+      "params": {},
+      "output": {"item": "ref", "week": "date", "quantity": "decimal"},
+      "key": ["item", "week"],
+      "steps": [
+        {"id": "weeks", "op": "recur", "from": "plantings",
+         "start": "week_start(add_days(row.start, row.lead_days))",
+         "every": "1", "unit": "week", "count": "row.window_weeks"},
+        {"id": "share", "op": "compute", "from": "weeks",
+         "set": {"week": "row.occurrence",
+                 "quantity": "row.units * row.yield_per_unit / row.occurrence_total"}},
+        {"id": "total", "op": "group", "from": "share",
+         "by": {"item": "row.item", "week": "row.week"},
+         "set": {"quantity": "sum(row.quantity)"}},
+        {"op": "write", "from": "total"}
+      ],
+      "examples": [
+        {
+          "doc": "Two tomato plantings overlap for two weeks; the lettuce is harvested in one.",
+          "inputs": {"plantings": [
+            {"item": 1, "units": 10, "start": "2026-05-04", "lead_days": 60, "window_weeks": 4, "yield_per_unit": 2},
+            {"item": 1, "units": 5,  "start": "2026-05-18", "lead_days": 60, "window_weeks": 4, "yield_per_unit": 2},
+            {"item": 2, "units": 12, "start": "2026-05-04", "lead_days": 30, "window_weeks": 1, "yield_per_unit": 0.3}
+          ]},
+          "expect": [
+            {"item": 1, "week": "2026-06-29", "quantity": 5},
+            {"item": 1, "week": "2026-07-06", "quantity": 5},
+            {"item": 1, "week": "2026-07-13", "quantity": 7.5},
+            {"item": 1, "week": "2026-07-20", "quantity": 7.5},
+            {"item": 1, "week": "2026-07-27", "quantity": 2.5},
+            {"item": 1, "week": "2026-08-03", "quantity": 2.5},
+            {"item": 2, "week": "2026-06-01", "quantity": 3.6}
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "standings",
+      "use_case": "sports",
+      "label": "League standings",
+      "doc": "Turns played matches into a table: played, won, drawn, lost, goals, points and rank. Unplayed matches (no score) are left out.",
+      "inputs": {"matches": {
+        "home":       {"type": "ref"},
+        "away":       {"type": "ref"},
+        "home_score": {"type": "integer", "optional": true},
+        "away_score": {"type": "integer", "optional": true}
+      }},
+      "params": {
+        "points_win":  {"type": "integer", "default": 3, "min": 0, "max": 10},
+        "points_draw": {"type": "integer", "default": 1, "min": 0, "max": 10}
+      },
+      "output": {"team": "ref", "played": "integer", "won": "integer", "drawn": "integer",
+                 "lost": "integer", "goals_for": "integer", "goals_against": "integer",
+                 "goal_diff": "integer", "points": "integer", "rank": "integer"},
+      "key": ["team"],
+      "steps": [
+        {"id": "played", "op": "filter", "from": "matches",
+         "where": "is_set(row.home_score) and is_set(row.away_score)"},
+        {"id": "home", "op": "compute", "from": "played", "keep": [],
+         "set": {"team": "row.home", "gf": "row.home_score", "ga": "row.away_score"}},
+        {"id": "away", "op": "compute", "from": "played", "keep": [],
+         "set": {"team": "row.away", "gf": "row.away_score", "ga": "row.home_score"}},
+        {"id": "both", "op": "union", "from": ["home", "away"]},
+        {"id": "result", "op": "compute", "from": "both",
+         "set": {"won": "if(row.gf > row.ga, 1, 0)",
+                 "drawn": "if(row.gf = row.ga, 1, 0)",
+                 "lost": "if(row.gf < row.ga, 1, 0)"}},
+        {"id": "totals", "op": "group", "from": "result",
+         "by": {"team": "row.team"},
+         "set": {"played": "count()", "won": "sum(row.won)", "drawn": "sum(row.drawn)",
+                 "lost": "sum(row.lost)", "goals_for": "sum(row.gf)",
+                 "goals_against": "sum(row.ga)"}},
+        {"id": "points", "op": "compute", "from": "totals",
+         "set": {"points": "param.points_win * row.won + param.points_draw * row.drawn",
+                 "goal_diff": "row.goals_for - row.goals_against"}},
+        {"id": "ranked", "op": "running", "from": "points",
+         "order_by": ["-row.points", "-row.goal_diff", "-row.goals_for"],
+         "set": {"rank": "rank()"}},
+        {"op": "write", "from": "ranked"}
+      ],
+      "examples": [
+        {
+          "doc": "Three teams, one match not yet played.",
+          "inputs": {"matches": [
+            {"home": 1, "away": 2, "home_score": 2, "away_score": 1},
+            {"home": 2, "away": 3, "home_score": 0, "away_score": 0},
+            {"home": 3, "away": 1, "home_score": 3, "away_score": 1},
+            {"home": 1, "away": 3}
+          ]},
+          "expect": [
+            {"team": 3, "played": 2, "won": 1, "drawn": 1, "lost": 0, "goals_for": 3, "goals_against": 1, "goal_diff": 2,  "points": 4, "rank": 1},
+            {"team": 1, "played": 2, "won": 1, "drawn": 0, "lost": 1, "goals_for": 3, "goals_against": 4, "goal_diff": -1, "points": 3, "rank": 2},
+            {"team": 2, "played": 2, "won": 0, "drawn": 1, "lost": 1, "goals_for": 1, "goals_against": 2, "goal_diff": -1, "points": 1, "rank": 3}
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "bom_explosion",
+      "use_case": "kitchen",
+      "label": "Shopping list from planned meals",
+      "doc": "Multiplies each planned meal's recipe by its servings, totals the ingredients, subtracts what is in stock and keeps what is still needed.",
+      "inputs": {
+        "meals": {
+          "recipe":   {"type": "ref"},
+          "servings": {"type": "decimal"}
+        },
+        "recipe_lines": {
+          "recipe":          {"type": "ref"},
+          "ingredient":      {"type": "ref"},
+          "unit":            {"type": "string", "optional": true},
+          "qty_per_serving": {"type": "decimal"}
+        },
+        "stock": {
+          "ingredient": {"type": "ref"},
+          "unit":       {"type": "string", "optional": true},
+          "quantity":   {"type": "decimal"}
+        }
+      },
+      "params": {},
+      "output": {"ingredient": "ref", "unit": "string", "need": "decimal"},
+      "key": ["ingredient", "unit"],
+      "steps": [
+        {"id": "lines", "op": "join", "left": "meals", "right": "recipe_lines",
+         "on": [{"left": "row.recipe", "right": "row.recipe"}]},
+        {"id": "qty", "op": "compute", "from": "lines",
+         "set": {"qty": "row.servings * row.qty_per_serving"}},
+        {"id": "needed", "op": "group", "from": "qty",
+         "by": {"ingredient": "row.ingredient", "unit": "coalesce(row.unit, '')"},
+         "set": {"qty": "sum(row.qty)"}},
+        {"id": "have", "op": "group", "from": "stock",
+         "by": {"ingredient": "row.ingredient", "unit": "coalesce(row.unit, '')"},
+         "set": {"on_hand": "sum(row.quantity)"}},
+        {"id": "compare", "op": "join", "left": "needed", "right": "have", "how": "left",
+         "on": [{"left": "row.ingredient", "right": "row.ingredient"},
+                {"left": "row.unit", "right": "row.unit"}]},
+        {"id": "need", "op": "compute", "from": "compare",
+         "set": {"need": "max(row.qty - coalesce(row.on_hand, 0), 0)"}},
+        {"id": "short", "op": "filter", "from": "need", "where": "row.need > 0"},
+        {"op": "write", "from": "short"}
+      ],
+      "examples": [
+        {
+          "doc": "Flour is covered by the pantry; two purchases of milk add up.",
+          "inputs": {
+            "meals": [
+              {"recipe": 10, "servings": 4},
+              {"recipe": 11, "servings": 2}
+            ],
+            "recipe_lines": [
+              {"recipe": 10, "ingredient": 100, "unit": "g",  "qty_per_serving": 50},
+              {"recipe": 10, "ingredient": 101,               "qty_per_serving": 0.5},
+              {"recipe": 11, "ingredient": 100, "unit": "g",  "qty_per_serving": 25},
+              {"recipe": 11, "ingredient": 102, "unit": "ml", "qty_per_serving": 100}
+            ],
+            "stock": [
+              {"ingredient": 100, "unit": "g",  "quantity": 300},
+              {"ingredient": 101,               "quantity": 1},
+              {"ingredient": 102, "unit": "ml", "quantity": 50},
+              {"ingredient": 102, "unit": "ml", "quantity": 100}
+            ]
+          },
+          "expect": [
+            {"ingredient": 101, "unit": "",   "need": 1},
+            {"ingredient": 102, "unit": "ml", "need": 50}
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "loan_schedule",
+      "use_case": "finance",
+      "label": "Loan repayment schedule",
+      "doc": "One line per monthly instalment of a fixed-rate loan: payment, interest, principal repaid and remaining balance, in closed form.",
+      "inputs": {"loans": {
+        "loan":        {"type": "ref"},
+        "principal":   {"type": "decimal"},
+        "annual_rate": {"type": "decimal", "doc": "percent per year, e.g. 3.5"},
+        "months":      {"type": "integer"},
+        "start":       {"type": "date", "doc": "the date the loan is paid out; the first instalment is one month later"}
+      }},
+      "params": {},
+      "output": {"loan": "ref", "number": "integer", "date": "date", "payment": "decimal",
+                 "interest": "decimal", "principal_part": "decimal", "balance": "decimal"},
+      "key": ["loan", "number"],
+      "steps": [
+        {"id": "instalments", "op": "repeat", "from": "loans", "times": "row.months"},
+        {"id": "line", "op": "compute", "from": "instalments",
+         "set": {
+           "r": "row.annual_rate / 1200",
+           "payment": "if(row.r = 0, row.principal / row.months, row.principal * row.r / (1 - (1 + row.r) ** -row.months))",
+           "number": "row.index + 1",
+           "date": "add_months(row.start, row.number)",
+           "before": "if(row.r = 0, row.principal - row.payment * row.index, row.principal * (1 + row.r) ** row.index - row.payment * ((1 + row.r) ** row.index - 1) / row.r)",
+           "interest": "row.before * row.r",
+           "principal_part": "row.payment - row.interest",
+           "balance": "row.before - row.principal_part"
+         }},
+        {"op": "write", "from": "line"}
+      ],
+      "examples": [
+        {
+          "doc": "An interest-free loan paid out on 31 January: instalments on the last day of each month.",
+          "inputs": {"loans": [
+            {"loan": 7, "principal": 1200, "annual_rate": 0, "months": 3, "start": "2026-01-31"}
+          ]},
+          "expect": [
+            {"loan": 7, "number": 1, "date": "2026-02-28", "payment": 400, "interest": 0, "principal_part": 400, "balance": 800},
+            {"loan": 7, "number": 2, "date": "2026-03-31", "payment": 400, "interest": 0, "principal_part": 400, "balance": 400},
+            {"loan": 7, "number": 3, "date": "2026-04-30", "payment": 400, "interest": 0, "principal_part": 400, "balance": 0}
+          ]
+        },
+        {
+          "doc": "One percent a month over two months.",
+          "inputs": {"loans": [
+            {"loan": 8, "principal": 1000, "annual_rate": 12, "months": 2, "start": "2026-03-15"}
+          ]},
+          "expect": [
+            {"loan": 8, "number": 1, "date": "2026-04-15", "payment": 507.51, "interest": 10.00, "principal_part": 497.51, "balance": 502.49},
+            {"loan": 8, "number": 2, "date": "2026-05-15", "payment": 507.51, "interest": 5.02,  "principal_part": 502.49, "balance": 0}
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "detect_recurring",
+      "use_case": "finance",
+      "label": "Recurring entry detection",
+      "doc": "Finds labels that come back at a weekly, monthly or yearly rhythm and proposes them as recurring entries. A heuristic: its rows are proposals a person confirms, never input to a projection.",
+      "inputs": {"entries": {
+        "date":   {"type": "date"},
+        "amount": {"type": "decimal"},
+        "label":  {"type": "string"}
+      }},
+      "params": {
+        "min_occurrences": {"type": "integer", "default": 3, "min": 2, "max": 24}
+      },
+      "output": {"key": "string", "label": "string", "every": "integer", "unit": "string",
+                 "amount": "decimal", "next_date": "date", "occurrences": "integer",
+                 "status": "string"},
+      "key": ["key"],
+      "steps": [
+        {"id": "norm", "op": "compute", "from": "entries",
+         "set": {"key": "lower(trim(row.label))"}},
+        {"id": "gaps", "op": "running", "from": "norm",
+         "partition_by": ["row.key"], "order_by": ["row.date"],
+         "set": {"gap": "days_between(previous(row.date), row.date)"}},
+        {"id": "series", "op": "group", "from": "gaps",
+         "by": {"key": "row.key"},
+         "set": {"label": "last(row.label)", "occurrences": "count()",
+                 "gap": "median(row.gap)", "amount": "median(row.amount)",
+                 "last_date": "max(row.date)"}},
+        {"id": "rhythm", "op": "compute", "from": "series",
+         "set": {
+           "unit": "if(row.gap >= 6 and row.gap <= 8, 'week', if(row.gap >= 27 and row.gap <= 33, 'month', if(row.gap >= 355 and row.gap <= 375, 'year', null)))",
+           "every": "1",
+           "next_date": "if(row.unit = 'week', add_weeks(row.last_date, 1), if(row.unit = 'month', add_months(row.last_date, 1), add_years(row.last_date, 1)))",
+           "status": "'proposed'"
+         }},
+        {"id": "recurring", "op": "filter", "from": "rhythm",
+         "where": "row.occurrences >= param.min_occurrences and is_set(row.unit)"},
+        {"op": "write", "from": "recurring"}
+      ],
+      "examples": [
+        {
+          "doc": "A monthly subscription and a weekly gym fee written three different ways are found; irregular coffee and a twice-seen rent are not.",
+          "inputs": {"entries": [
+            {"date": "2026-01-03", "amount": -12.99, "label": "Netflix"},
+            {"date": "2026-02-03", "amount": -12.99, "label": "Netflix"},
+            {"date": "2026-03-03", "amount": -12.99, "label": "Netflix"},
+            {"date": "2026-01-05", "amount": -10, "label": "Gym"},
+            {"date": "2026-01-12", "amount": -10, "label": "GYM "},
+            {"date": "2026-01-19", "amount": -10, "label": "gym"},
+            {"date": "2026-01-26", "amount": -10, "label": "Gym"},
+            {"date": "2026-01-01", "amount": -3, "label": "Café"},
+            {"date": "2026-01-02", "amount": -3, "label": "Café"},
+            {"date": "2026-01-20", "amount": -3, "label": "Café"},
+            {"date": "2026-01-01", "amount": -870, "label": "Loyer"},
+            {"date": "2026-02-01", "amount": -870, "label": "Loyer"}
+          ]},
+          "expect": [
+            {"key": "netflix", "label": "Netflix", "every": 1, "unit": "month", "amount": -12.99, "next_date": "2026-04-03", "occurrences": 3, "status": "proposed"},
+            {"key": "gym", "label": "Gym", "every": 1, "unit": "week", "amount": -10, "next_date": "2026-02-02", "occurrences": 4, "status": "proposed"}
+          ]
+        }
+      ]
+    }
+  ]
+}

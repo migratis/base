@@ -68,6 +68,7 @@ INSTALLED_APPS = [
     # 'migratis.credits.apps.CreditsConfig',
     # 'migratis.routing.apps.RoutingConfig',
     # 'migratis.datasource.apps.DataSourceConfig',
+    # 'migratis.derive.apps.DeriveConfig',
 ]
 
 # django.contrib.postgres requires a live PostgreSQL backend — exclude for SQLite.
@@ -374,6 +375,18 @@ DATASOURCE_RATE_PER_MINUTE = int(env('DATASOURCE_RATE_PER_MINUTE', default='0'))
 DATASOURCE_DAILY_PER_APPLICATION = int(
     env('DATASOURCE_DAILY_PER_APPLICATION', default='2000'))
 DATASOURCE_BREAKER_SECONDS = int(env('DATASOURCE_BREAKER_SECONDS', default='300'))
+
+# Calculated tables (SCOPE_calculated_tables.md §6.5). A run past a ceiling is
+# refused whole, never truncated. DERIVE_DECLARATIONS is extended by each
+# installed module's settings patch (its derivations.json).
+DERIVE_DECLARATIONS = []
+DERIVE_MAX_INPUT_ROWS = int(env('DERIVE_MAX_INPUT_ROWS', default='10000'))
+DERIVE_MAX_ROWS = int(env('DERIVE_MAX_ROWS', default='50000'))
+DERIVE_MAX_WRITE_ROWS = int(env('DERIVE_MAX_WRITE_ROWS', default='5000'))
+DERIVE_MAX_EXPANSION = int(env('DERIVE_MAX_EXPANSION', default='1000'))
+DERIVE_TIME_BUDGET = float(env('DERIVE_TIME_BUDGET', default='10'))
+DERIVE_MAX_CHAIN_DEPTH = int(env('DERIVE_MAX_CHAIN_DEPTH', default='5'))
+DERIVE_MAX_REACTIVE_ANCHORS = int(env('DERIVE_MAX_REACTIVE_ANCHORS', default='20'))
 
 CRONJOBS = []
 

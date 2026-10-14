@@ -100,6 +100,8 @@ _FRAMEWORK_ROUTERS = [
     # an application that declared a source got a form with no lookup button and
     # a backend with no endpoint behind it.
     ('datasource',   'datasource_router',   'migratis.datasource.views',   '/datasource/'),
+    # Calculated tables: Recalculate and the strip's status (SCOPE_calculated_tables.md §9).
+    ('derive',       'derive_router',       'migratis.derive.views',       '/derive/'),
 ]
 
 
@@ -1497,6 +1499,7 @@ def _apply_upgrade(zip_bytes: bytes, backend_root: Path, confirm: bool) -> dict:
         'restart_required':     not _backend_autoreloads(),
         **_routing_service_notice(backend_root, manifest),
         **_datasource_key_notice(backend_root, manifest),
+        **_derivation_schedule_notice(manifest),
         **_home_route_notice(home, module),
     }
 
@@ -1722,6 +1725,7 @@ def _apply_package(zip_bytes: bytes, config: dict = None) -> dict:
         'restart_required': not _backend_autoreloads(),
         **_routing_service_notice(backend_root, manifest),
         **_datasource_key_notice(backend_root, manifest),
+        **_derivation_schedule_notice(manifest),
     }
 
 
@@ -1971,6 +1975,31 @@ def _datasource_key_notice(backend_root: Path, manifest: dict = None) -> dict:
                 'Django reads, not the Compose one beside it.',
                 'Restart the backend.',
             ],
+        }
+    }
+
+
+def _derivation_schedule_notice(manifest: dict = None) -> dict:
+    """The crontab trap, said out loud (SCOPE_calculated_tables.md §9).
+
+    `manage.py crontab add` runs once, at container boot. A module that brings a
+    scheduled calculated table appends to CRONJOBS through its settings patch,
+    and that schedule stays inert until something re-runs the command — which
+    the backend's restart does. Returns {} when nothing is scheduled.
+    """
+    schedules = list((manifest or {}).get('derivation_schedules') or [])
+    if not schedules:
+        return {}
+    return {
+        'derivation_schedule_requires_restart': {
+            'reason': 'derivation-schedule-inert-until-restart',
+            'message': (
+                'This application recalculates some of its tables on a schedule '
+                f'({", ".join(schedules)}). The schedule is registered when the '
+                'backend container starts, so it does not run until the backend '
+                'is restarted.'
+            ),
+            'steps': ['Restart the backend container (it re-runs `manage.py crontab add`).'],
         }
     }
 

@@ -231,6 +231,12 @@
   padding: 20px 24px;
   border-bottom: none;
 
+  // `Modal.Title` carries Bootstrap's `.h4`, which the heading rule paints
+  // `--color-text-dark` — the header's own background, so the title vanished.
+  .modal-title {
+    color: inherit;
+  }
+
   .btn-close {
     filter: invert(1);
     opacity: 0.7;
@@ -1372,4 +1378,47 @@
 .page-block.page-block-chart > .page-block-body,
 .page-block.page-block-map > .page-block-body {
   overflow: hidden;
+}
+
+// ============================================================================
+// Calculated table strip (SCOPE_calculated_tables.md §6.6)
+//
+// One line on a calculated table's tab: when it ran, how many rows, whether an
+// input moved since. Ships under somebody else's brand, so tokens only.
+// ============================================================================
+.calculated-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  background-color: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-primary);
+  border-radius: var(--border-radius);
+  font-size: 0.9rem;
+}
+
+.calculated-strip-title {
+  font-weight: 600;
+}
+
+.calculated-strip-item + .calculated-strip-item::before,
+.calculated-strip-title + .calculated-strip-item::before {
+  content: '·';
+  margin-right: 12px;
+  color: var(--color-mid-gray);
+}
+
+.calculated-strip-refused {
+  color: var(--color-orange);
+}
+
+.calculated-strip-hint {
+  color: var(--color-mid-gray);
+}
+
+.calculated-strip-run {
+  margin-left: auto;
 }
